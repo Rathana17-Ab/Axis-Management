@@ -80,8 +80,9 @@ class AxisSystemSeeder extends Seeder
             'status' => WorkStatus::Processing,
         ]);
 
-        foreach ($modules as $projectData) {
+        foreach ($modules as $position => $projectData) {
             $module = $project->modules()->create([
+                'sort_order' => $position + 1,
                 'code' => $projectData['code'],
                 'name' => $projectData['name'],
                 'proj_badge' => $projectData['projBadge'],

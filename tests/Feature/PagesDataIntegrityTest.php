@@ -24,10 +24,25 @@ it('verifies Dashboard page loads and renders live KPIs and project overview', f
 
     // Verify page shell elements and data
     $response->assertSee('id="dash-kpi-strip"', false)
-        ->assertSee('Needs attention')
+        ->assertSee('id="dash-modules-cards"', false)
+        ->assertSee('id="dash-modules-order"', false)
+        ->assertSee('id="dash-project-cards"', false)
+        ->assertSee('id="dash-project-order"', false)
+        ->assertSee('id="dash-task-cards"', false)
+        ->assertSee('id="dash-task-order"', false)
         ->assertSee('Team workload')
+        ->assertSee('id="dash-team-body"', false)
+        ->assertDontSee('id="dash-modules-card"', false)
+        ->assertDontSee('Needs attention')
+        ->assertDontSee('id="dash-attention"', false)
         ->assertSee('Axis Core System')
         ->assertSee('PROJ-1888');
+
+    $html = $response->getContent();
+    expect(strpos($html, 'dash-kpi-strip'))->toBeLessThan(strpos($html, 'dash-modules-toolbar'))
+        ->and(strpos($html, 'dash-modules-toolbar'))->toBeLessThan(strpos($html, 'dash-project-toolbar'))
+        ->and(strpos($html, 'dash-project-toolbar'))->toBeLessThan(strpos($html, 'dash-task-toolbar'))
+        ->and(strpos($html, 'dash-task-toolbar'))->toBeLessThan(strpos($html, 'dash-team-title'));
 });
 
 it('verifies Modules page loads and renders all 9 Axis product modules', function () {
@@ -45,6 +60,7 @@ it('verifies Modules page loads and renders all 9 Axis product modules', functio
     $response->assertSee('Axis Core System')
         ->assertSee('Axis Sales')
         ->assertSee('id="sticky-filter-bar"', false)
+        ->assertDontSee('id="flt-customer"', false)
         ->assertSee('id="projects-tbody"', false);
 });
 

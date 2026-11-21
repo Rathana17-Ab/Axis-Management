@@ -23,6 +23,7 @@ describe('store', function () {
 
         $response->assertCreated()
             ->assertJsonPath('data.code', 'PROJ-1889')
+            ->assertJsonPath('data.sortOrder', 2)
             ->assertJsonPath('data.projBadge', 'A')
             ->assertJsonPath('data.custBadge', 'M')
             ->assertJsonPath('data.team', ['Ti Tong', 'Kong Rathana'])
@@ -30,10 +31,16 @@ describe('store', function () {
             ->assertJsonPath('data.tasks.0.name', 'Module Architecture & Setup')
             ->assertJsonPath('data.tasks.0.handler', 'Ti Tong')
             ->assertJsonPath('data.tasks.0.employeeId', $lead->id)
-            ->assertJsonPath('data.projectId', $project->id);
+            ->assertJsonPath('data.projectId', $project->id)
+            ->assertJsonPath('data.customer', 'Ms. Dara')
+            ->assertJsonPath('data.customerSub', '(Axis Client)')
+            ->assertJsonPath('data.product', 'Axis Core Suite')
+            ->assertJsonPath('data.manager', 'Ti Tong')
+            ->assertJsonPath('data.status', 'Processing');
 
         $module = Module::firstWhere('code', 'PROJ-1889');
         expect($module->project_id)->toBe($project->id)
+            ->and($module->sort_order)->toBe(2)
             ->and($module->status)->toBe(WorkStatus::Processing)
             ->and($module->tasks()->count())->toBe(1);
     });

@@ -6,16 +6,16 @@
     --bg-obsidian: #081121;
     --axis-navy-deep: #091326;
     --axis-navy-panel: #132544;
-    --axis-navy-card: rgba(18, 36, 66, 0.90);
-    --axis-navy-card-inner: rgba(11, 24, 46, 0.88);
-    --axis-border-blue: rgba(56, 189, 248, 0.16);
-    --axis-border-subtle: rgba(148, 163, 184, 0.14);
+    --axis-navy-card: rgba(18, 36, 66, 0.96);
+    --axis-navy-card-inner: rgba(11, 24, 46, 0.95);
+    --axis-border-blue: rgba(56, 189, 248, 0.24);
+    --axis-border-subtle: rgba(148, 163, 184, 0.22);
     --axis-green-btn: #3E6B48;
     --axis-green-btn-hover: #4A7D56;
-    --axis-green-border: rgba(110, 231, 183, 0.28);
-    --glass-surface: rgba(18, 36, 66, 0.88);
-    --glass-input: rgba(10, 22, 42, 0.92);
-    --border-specular: rgba(56, 189, 248, 0.16);
+    --axis-green-border: rgba(110, 231, 183, 0.36);
+    --glass-surface: rgba(18, 36, 66, 0.95);
+    --glass-input: rgba(10, 22, 42, 0.97);
+    --border-specular: rgba(56, 189, 248, 0.24);
     --ease-spring: cubic-bezier(0.16, 1, 0.3, 1);
 }
 
@@ -53,8 +53,8 @@ body {
 /* Axis Sales Midnight Cerulean Cards */
 .ent-card {
     background: linear-gradient(180deg, rgba(20, 40, 74, 0.94) 0%, rgba(14, 29, 55, 0.94) 100%);
-    backdrop-filter: blur(20px) saturate(150%);
-    -webkit-backdrop-filter: blur(20px) saturate(150%);
+    backdrop-filter: blur(10px) saturate(150%);
+    -webkit-backdrop-filter: blur(10px) saturate(150%);
     border: 1px solid var(--axis-border-blue);
     border-radius: 16px;
     box-shadow: 0 14px 34px -8px rgba(3, 8, 20, 0.7), inset 0 1px 0 0 rgba(125, 211, 252, 0.1);
@@ -317,8 +317,8 @@ body {
 
 .glass-topbar {
     background: rgba(10, 20, 40, 0.92);
-    backdrop-filter: blur(20px) saturate(160%);
-    -webkit-backdrop-filter: blur(20px) saturate(160%);
+    backdrop-filter: blur(8px) saturate(160%);
+    -webkit-backdrop-filter: blur(8px) saturate(160%);
     border-bottom: 1px solid rgba(56, 189, 248, 0.15);
 }
 

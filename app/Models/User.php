@@ -89,6 +89,14 @@ class User extends Authenticatable
     }
 
     /**
+     * Whether this employee is a developer (can be assigned tasks).
+     */
+    public function isDeveloper(): bool
+    {
+        return $this->position === EmployeePosition::Developer;
+    }
+
+    /**
      * Two-letter avatar initials, falling back to the name when none are stored.
      *
      * @return Attribute<string, never>

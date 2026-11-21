@@ -35,6 +35,87 @@ it('returns 404 for the task list of a missing project', function () {
     $this->get('/admin/project-task-list/999')->assertNotFound();
 });
 
+it('offers only developers as assignees and only leaders as assigners in the new task drawer', function () {
+    $developer = User::factory()->create(['name' => 'Dev One']);
+    $leader = User::factory()->leader()->create(['name' => 'Lead One']);
+    User::factory()->inactive()->create(['name' => 'Former Dev']);
+
+    $response = $this->get(route('admin.projects.index'));
+
+    $response->assertViewHas(
+        'developers',
+        fn ($developers): bool => $developers->pluck('id')->all() === [$developer->id]
+    );
+
+    $html = $response->getContent();
+    preg_match('/<select id="new-task-handler"[^>]*>(.*?)<\/select>/s', $html, $assignees);
+    preg_match('/<select id="new-task-assigned-by"[^>]*>(.*?)<\/select>/s', $html, $assigners);
+
+    expect($assignees[1])
+        ->toContain('Dev One')
+        ->not->toContain('Lead One')
+        ->not->toContain('Former Dev')
+        ->and($assigners[1])
+        ->toContain('Lead One')
+        ->not->toContain('Dev One');
+});
+
+it('renders overall KPIs first with module, project, task and team lists on the dashboard', function () {
+    Module::factory()->create(['name' => 'Zeta Module', 'sort_order' => 2]);
+    Module::factory()->create(['name' => 'Alpha Module', 'sort_order' => 1]);
+
+    $response = $this->get(route('admin.dashboard'));
+    $html = $response->getContent();
+
+    $response->assertOk()
+        ->assertSee('id="dash-kpi-strip"', false)
+        ->assertSee('id="dash-modules-toolbar"', false)
+        ->assertSee('id="dash-modules-cards" class="flex flex-wrap gap-4 p-5"', false)
+        ->assertSee('id="dash-modules-order"', false)
+        ->assertSee('id="dash-module-search"', false)
+        ->assertSee('id="dash-module-project-filter"', false)
+        ->assertSee('id="dash-module-status-filter"', false)
+        ->assertSee('id="dash-modules-count"', false)
+        ->assertSee('id="dash-modules-sort-label"', false)
+        ->assertSee('Order number')
+        ->assertSee('Click a card to open the Modules page.')
+        ->assertSee('id="dash-project-toolbar"', false)
+        ->assertSee('id="dash-project-cards"', false)
+        ->assertSee('id="dash-project-order"', false)
+        ->assertSee('id="dash-project-search"', false)
+        ->assertSee('id="dash-project-status-filter"', false)
+        ->assertSee('id="dash-project-count"', false)
+        ->assertSee('id="dash-project-sort-label"', false)
+        ->assertSee('Click a card to open the Projects page.')
+        ->assertSee('id="dash-task-toolbar"', false)
+        ->assertSee('class="flex flex-wrap items-center gap-2 ml-auto"', false)
+        ->assertSee('id="dash-task-cards"', false)
+        ->assertSee('id="dash-task-order"', false)
+        ->assertSee('id="dash-task-search"', false)
+        ->assertSee('id="dash-task-module-filter"', false)
+        ->assertSee('id="dash-task-status-filter"', false)
+        ->assertSee('id="dash-task-priority-filter"', false)
+        ->assertSee('id="dash-task-count"', false)
+        ->assertSee('id="dash-task-sort-label"', false)
+        ->assertSee('Click a card to open the Tasks page.')
+        ->assertSee('id="dash-team-body"', false)
+        ->assertSee('Team workload')
+        ->assertSee('aria-label="Scroll projects right"', false)
+        ->assertSee('aria-label="Scroll tasks right"', false)
+        ->assertDontSee('aria-label="Scroll modules right"', false)
+        ->assertDontSee('id="dash-modules-card"', false);
+
+    expect(strpos($html, 'dash-kpi-strip'))->toBeLessThan(strpos($html, 'dash-modules-toolbar'))
+        ->and(strpos($html, 'dash-modules-toolbar'))->toBeLessThan(strpos($html, 'dash-project-toolbar'))
+        ->and(strpos($html, 'dash-project-toolbar'))->toBeLessThan(strpos($html, 'dash-task-toolbar'))
+        ->and(strpos($html, 'dash-task-toolbar'))->toBeLessThan(strpos($html, 'dash-team-title'));
+
+    $bootstrap = $response->viewData('bootstrap');
+    expect(collect($bootstrap['projects'])->pluck('sortOrder')->sort()->values()->all())->toBe([1, 2])
+        ->and($bootstrap['axisProjects'])->not->toBeEmpty()
+        ->and(collect($bootstrap['axisProjects'])->first())->toHaveKey('moduleCount');
+});
+
 it('hydrates running timers with server-accurate elapsed seconds', function () {
     $this->freezeTime();
     $task = ProjectTask::factory()->running()->create(['act_seconds' => 100]);

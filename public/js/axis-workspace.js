@@ -18,6 +18,7 @@ const employees = (keepIds = []) => teamMembers
     .filter(m => m.status !== 'inactive' || keepIds.includes(m.id))
     .sort((a, b) => a.name.localeCompare(b.name));
 const leaders = (keepIds = []) => employees(keepIds).filter(m => m.position === 'leader');
+const developers = (keepIds = []) => employees(keepIds).filter(m => m.position === 'developer');
 // Shared status for projects, modules and tasks (CTO sheet).
 const WORK_STATUSES = ['Not yet started', 'Processing', 'Finished'];
 const workStatusOptions = current => WORK_STATUSES
@@ -476,7 +477,7 @@ const AxisSearch = (() => {
         const box = el('axis-palette-results');
 
         if (results.length === 0) {
-            box.innerHTML = `<div class="axis-palette__empty"><i class="fa-solid fa-magnifying-glass text-slate-600 text-lg mb-2 block"></i>No results for “${escapeHtml(query)}”.<div class="text-xs text-slate-500 mt-1">Try a project code, a person's name, or part of a task.</div></div>`;
+            box.innerHTML = `<div class="axis-palette__empty"><i class="fa-solid fa-magnifying-glass text-slate-500 text-lg mb-2 block"></i>No results for “${escapeHtml(query)}”.<div class="text-xs text-slate-500 mt-1">Try a project code, a person's name, or part of a task.</div></div>`;
             el('axis-palette-count').textContent = 'No results';
             el('axis-palette-input').removeAttribute('aria-activedescendant');
             return;
@@ -894,104 +895,372 @@ function renderDashboard() {
 
     revealKpiCards('dash-kpi-strip');
     renderDashboardModules();
-    renderDashboardAttention({ overdue, dueSoon, openIssues, open });
+    renderDashboardProjectCards();
+    renderDashboardTaskCards();
     renderDashboardTeam();
 }
 
-function renderDashboardModules() {
-    const body = document.getElementById('dash-modules-body');
-    if (!body) return;
-    if (projects.length === 0) {
-        body.innerHTML = '<tr><td colspan="6" class="py-10 text-center text-sm text-slate-400">No modules yet.</td></tr>';
+/** Shared helpers for the dashboard card rows: search, visible count, sort label and scroll arrows. */
+function dashboardSearchMatch(query, values) {
+    return !query || values.some(value => String(value ?? '').toLowerCase().includes(query));
+}
+
+function dashboardFilterValue(id) {
+    return document.getElementById(id)?.value || 'all';
+}
+
+function dashboardNoMatchText(search, noun) {
+    const query = search.trim();
+    return query ? `No ${noun} match "${escapeHtml(query)}".` : `No ${noun} match these filters.`;
+}
+
+function setDashboardCardMeta(countId, sortSelectId, sortLabelId, shown, total, noun) {
+    const count = document.getElementById(countId);
+    if (count) {
+        count.textContent = shown === total
+            ? `${total} ${noun}${total === 1 ? '' : 's'}`
+            : `${shown} of ${total} ${noun}${total === 1 ? '' : 's'}`;
+    }
+    const select = document.getElementById(sortSelectId);
+    const label = document.getElementById(sortLabelId);
+    if (select && label) {
+        label.textContent = `· Sorted by: ${select.options[select.selectedIndex]?.textContent || ''}`;
+    }
+}
+
+function updateDashboardScrollButtons(containerId) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+    const controls = container.closest('[data-dashboard-row]')?.querySelector('[data-dashboard-scroll]');
+    if (!controls) return;
+    const previous = controls.querySelector('[data-scroll-dir="-1"]');
+    const next = controls.querySelector('[data-scroll-dir="1"]');
+    const maxScroll = Math.max(0, container.scrollWidth - container.clientWidth);
+    if (previous) previous.disabled = container.scrollLeft <= 1;
+    if (next) next.disabled = container.scrollLeft >= maxScroll - 1;
+}
+
+function initDashboardScrollButtons() {
+    const ids = ['dash-project-cards', 'dash-modules-cards', 'dash-task-cards'];
+    ids.forEach(id => {
+        const container = document.getElementById(id);
+        if (!container || container.dataset.scrollBound === '1') return;
+        container.dataset.scrollBound = '1';
+        container.addEventListener('scroll', () => updateDashboardScrollButtons(id), { passive: true });
+        updateDashboardScrollButtons(id);
+    });
+    if (!window.dashboardScrollResizeBound) {
+        window.dashboardScrollResizeBound = true;
+        window.addEventListener('resize', () => ids.forEach(updateDashboardScrollButtons));
+    }
+}
+
+window.scrollDashboardCards = function(containerId, direction) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+    const card = container.querySelector('.axis-list-card');
+    const amount = card ? card.offsetWidth + 12 : container.clientWidth * 0.8;
+    container.scrollBy({ left: direction * amount, behavior: 'smooth' });
+};
+
+let dashboardProjectOrder = 'name:asc';
+let dashboardProjectSearch = '';
+
+window.setDashboardProjectSearch = function(value) {
+    dashboardProjectSearch = value;
+    renderDashboardProjectCards();
+};
+
+window.setDashboardProjectStatusFilter = function() {
+    renderDashboardProjectCards();
+};
+
+window.setDashboardProjectOrder = function(value) {
+    dashboardProjectOrder = value;
+    renderDashboardProjectCards();
+};
+
+function renderDashboardProjectCards() {
+    const container = document.getElementById('dash-project-cards');
+    if (!container) return;
+
+    const query = dashboardProjectSearch.trim().toLowerCase();
+    const status = dashboardFilterValue('dash-project-status-filter');
+    const candidates = axisProjects.filter(ap =>
+        (status === 'all' || ap.status === status)
+        && dashboardSearchMatch(query, [ap.name, ap.description, ap.status]));
+    setDashboardCardMeta('dash-project-count', 'dash-project-order', 'dash-project-sort-label', candidates.length, axisProjects.length, 'project');
+
+    if (axisProjects.length === 0 || candidates.length === 0) {
+        container.innerHTML = axisProjects.length === 0
+            ? '<p class="py-6 text-center text-xs text-slate-400">No projects yet.</p>'
+            : `<p class="py-6 text-center text-xs text-slate-400">${dashboardNoMatchText(dashboardProjectSearch, 'projects')}</p>`;
+        updateDashboardScrollButtons('dash-project-cards');
         return;
     }
-    // Unfinished first, soonest deadline first; no deadline last
-    const rows = [...projects].sort((a, b) =>
-        (a.status === 'Finished') - (b.status === 'Finished') ||
-        (!a.deadline) - (!b.deadline) ||
-        (a.deadline && b.deadline ? a.deadline.localeCompare(b.deadline) : 0));
-    body.innerHTML = rows.map(m => {
+
+    const [key, dir = 'asc'] = dashboardProjectOrder.split(':');
+    const direction = dir === 'desc' ? -1 : 1;
+    const sortValue = {
+        name: ap => ap.name.toLowerCase(),
+        status: ap => AXIS_STATUS_ORDER[ap.status] ?? 9,
+        progress: ap => axisProjectProgress(ap.id),
+        deadline: ap => ap.deadline || '9999-12-31',
+        issues: ap => axisProjectStats(ap).openIssues,
+        modules: ap => axisProjectStats(ap).mods.length,
+    }[key] ?? (ap => ap.name.toLowerCase());
+
+    const sorted = candidates.slice().sort((a, b) => {
+        const left = sortValue(a), right = sortValue(b);
+        return (left < right ? -1 : left > right ? 1 : 0) * direction || a.name.localeCompare(b.name);
+    });
+    const open = "switchPage('projects')";
+
+    container.innerHTML = sorted.map(ap => {
+        const st = axisProjectStats(ap);
+        const due = deadlineInfo(ap);
+        const name = escapeHtml(ap.name);
+        return `
+            <article class="axis-list-card w-[280px] shrink-0" role="button" tabindex="0"
+                     onclick="${open}" onkeydown="if (event.key === 'Enter' && event.target === this) ${open}"
+                     aria-label="Open the Projects page">
+                <div class="flex items-start justify-between gap-3">
+                    <div class="min-w-0">
+                        <h3 class="text-sm font-semibold text-white truncate" title="${name}">${name}</h3>
+                        <p class="text-xs text-slate-400 mt-0.5 line-clamp-2">${escapeHtml(ap.description || 'No description')}</p>
+                    </div>
+                    <span class="text-[10px] text-slate-400 whitespace-nowrap shrink-0">${escapeHtml(ap.status)}</span>
+                </div>
+                <div class="mt-3">${progressBarHtml(Math.round(st.progress), projectProgressExplain(ap))}</div>
+                <dl class="grid grid-cols-3 gap-x-4 gap-y-2 mt-3 text-xs">
+                    <div><dt class="text-slate-500">Modules</dt><dd class="text-slate-100 font-mono mt-0.5">${st.mods.length}</dd></div>
+                    <div><dt class="text-slate-500">Tasks done</dt><dd class="text-slate-100 font-mono mt-0.5">${st.tasksDone} / ${st.tasksTotal}</dd></div>
+                    <div><dt class="text-slate-500">Open issues</dt><dd class="mt-0.5 ${st.openIssues ? 'text-amber-300 font-semibold' : 'text-slate-400'}">${st.openIssues || 'None'}</dd></div>
+                </dl>
+                <div class="flex items-center justify-between gap-3 mt-3 pt-3 border-t border-white/[0.06]">
+                    <span class="text-[11px] font-semibold text-sky-300 whitespace-nowrap shrink-0">Project list <i class="fa-solid fa-arrow-right text-[10px] ml-1" aria-hidden="true"></i></span>
+                    <div class="text-right text-xs">
+                        <div class="text-slate-300 whitespace-nowrap">${shortDate(ap.deadline)}</div>
+                        <div class="${due.cls}">${escapeHtml(due.text)}</div>
+                    </div>
+                </div>
+            </article>`;
+    }).join('');
+    updateDashboardScrollButtons('dash-project-cards');
+}
+
+let dashboardModuleOrder = 'order:asc';
+let dashboardModuleSearch = '';
+
+window.setDashboardModuleSearch = function(value) {
+    dashboardModuleSearch = value;
+    renderDashboardModules();
+};
+
+window.setDashboardModuleProjectFilter = function() {
+    renderDashboardModules();
+};
+
+window.setDashboardModuleStatusFilter = function() {
+    renderDashboardModules();
+};
+
+window.setDashboardModuleOrder = function(value) {
+    dashboardModuleOrder = value;
+    renderDashboardModules();
+};
+
+function renderDashboardModules() {
+    const container = document.getElementById('dash-modules-cards');
+    if (!container) return;
+
+    const query = dashboardModuleSearch.trim().toLowerCase();
+    const projectFilter = dashboardFilterValue('dash-module-project-filter');
+    const status = dashboardFilterValue('dash-module-status-filter');
+    const candidates = projects.filter(m =>
+        (projectFilter === 'all' || Number(m.projectId) === parseInt(projectFilter, 10))
+        && (status === 'all' || m.status === status)
+        && dashboardSearchMatch(query, [m.name, m.code, m.projectName, m.manager, m.customer, m.customerSub, m.status]));
+    setDashboardCardMeta('dash-modules-count', 'dash-modules-order', 'dash-modules-sort-label', candidates.length, projects.length, 'module');
+
+    if (projects.length === 0 || candidates.length === 0) {
+        container.innerHTML = projects.length === 0
+            ? '<p class="py-6 text-center text-xs text-slate-400">No modules yet.</p>'
+            : `<p class="py-6 text-center text-xs text-slate-400">${dashboardNoMatchText(dashboardModuleSearch, 'modules')}</p>`;
+        updateDashboardScrollButtons('dash-modules-cards');
+        return;
+    }
+
+    const openIssueCount = m => (m.tasks || []).reduce(
+        (sum, t) => sum + (t.issues || []).filter(i => i.status !== 'Resolved').length, 0);
+    const [key, dir = 'asc'] = dashboardModuleOrder.split(':');
+    const direction = dir === 'desc' ? -1 : 1;
+    const sortValue = {
+        order: m => Number(m.sortOrder || 0),
+        deadline: m => `${m.status === 'Finished' ? 1 : 0}-${m.deadline || '9999-12-31'}`,
+        name: m => (m.name || '').toLowerCase(),
+        progress: m => computeProjectCompletion(m),
+        issues: m => openIssueCount(m),
+    }[key] ?? (m => Number(m.sortOrder || 0));
+
+    const sorted = candidates.slice().sort((a, b) => {
+        const left = sortValue(a), right = sortValue(b);
+        return (left < right ? -1 : left > right ? 1 : 0) * direction || a.name.localeCompare(b.name);
+    });
+    const open = 'openModulesOfProject(null)';
+
+    container.innerHTML = sorted.map(m => {
         const tasks = m.tasks || [];
         const done = tasks.filter(t => t.status === 'Finished').length;
         const pct = Math.round(computeProjectCompletion(m));
         const due = deadlineInfo(m);
-        const openIss = tasks.reduce((sum, t) => sum + (t.issues || []).filter(i => i.status !== 'Resolved').length, 0);
+        const issues = openIssueCount(m);
+        const order = Number(m.sortOrder || 0);
+        const name = escapeHtml(m.name);
         return `
-            <tr class="cursor-pointer" tabindex="0" onclick="openProjectTaskList(${m.id})" onkeydown="if (event.key === 'Enter') openProjectTaskList(${m.id})" aria-label="Open the tasks of ${escapeHtml(m.name)}">
-                <td class="py-3 pl-5 pr-3">
-                    <div class="text-sm font-semibold text-white whitespace-nowrap">${escapeHtml(m.name)}</div>
-                    <div class="text-xs text-slate-400 mt-0.5 whitespace-nowrap"><span class="font-mono text-slate-500">${escapeHtml(m.code)}</span> · ${escapeHtml(m.projectName || 'No project')}</div>
-                </td>
-                <td class="py-3 px-3 text-sm text-slate-200 whitespace-nowrap">${escapeHtml(m.manager || '—')}</td>
-                <td class="py-3 px-3 text-sm text-slate-200 font-mono whitespace-nowrap">${done} <span class="text-slate-500">/ ${tasks.length}</span></td>
-                <td class="py-3 px-3">
-                    <div class="flex items-center gap-2 w-[140px]" title="${escapeHtml(moduleProgressExplain(m))}">
-                        <div class="flex-1 h-1.5 rounded-full bg-white/[0.08] overflow-hidden"><div class="h-full rounded-full ${pct >= 100 ? 'bg-emerald-400' : 'bg-sky-400'}" style="width:${pct}%"></div></div>
-                        <span class="text-xs font-mono text-slate-200 w-9 text-right">${pct}%</span>
+            <article class="axis-list-card dash-module-card w-full sm:w-[280px]" role="button" tabindex="0"
+                     onclick="${open}" onkeydown="if (event.key === 'Enter' && event.target === this) ${open}"
+                     aria-label="Open the Modules page">
+                <div class="flex items-center gap-2.5 min-w-0">
+                    <span class="w-6 h-6 rounded-md grid place-items-center shrink-0 bg-sky-500/10 text-sky-300 text-[11px] font-mono" title="Order ${order}">${order}</span>
+                    <span class="w-8 h-8 rounded-lg ${m.badgeClass} font-bold text-xs flex items-center justify-center shrink-0">${escapeHtml(m.projBadge)}</span>
+                    <div class="min-w-0">
+                        <h3 class="text-sm font-semibold text-white truncate" title="${name}">${name}</h3>
+                        <p class="text-xs text-slate-400 truncate mt-0.5"><span class="font-mono text-slate-500">${escapeHtml(m.code)}</span> · ${escapeHtml(m.projectName || 'No project')}</p>
                     </div>
-                </td>
-                <td class="py-3 px-3 whitespace-nowrap">
-                    <div class="text-sm text-slate-100">${m.deadline ? escapeHtml(shortDate(m.deadline)) : 'Not set'}</div>
-                    <div class="text-xs ${due.cls}">${escapeHtml(due.text)}</div>
-                </td>
-                <td class="py-3 pl-3 pr-5 text-right">${openIss
-                    ? `<span class="inline-flex items-center gap-1.5 text-xs font-semibold text-amber-300"><span class="w-1.5 h-1.5 rounded-full bg-amber-400" aria-hidden="true"></span>${openIss}</span>`
-                    : '<span class="text-xs text-slate-500">None</span>'}</td>
-            </tr>`;
+                </div>
+                <div class="mt-3">${progressBarHtml(pct, moduleProgressExplain(m))}</div>
+                <dl class="grid grid-cols-3 gap-x-4 gap-y-2 mt-3 text-xs">
+                    <div class="min-w-0"><dt class="text-slate-500">Lead</dt><dd class="text-slate-100 truncate mt-0.5" title="${escapeHtml(m.manager || '')}">${escapeHtml(m.manager || '—')}</dd></div>
+                    <div><dt class="text-slate-500">Tasks done</dt><dd class="text-slate-100 font-mono mt-0.5">${done} / ${tasks.length}</dd></div>
+                    <div><dt class="text-slate-500">Open issues</dt><dd class="mt-0.5 ${issues ? 'text-amber-300 font-semibold' : 'text-slate-400'}">${issues || 'None'}</dd></div>
+                </dl>
+                <div class="flex justify-end mt-3 pt-3 border-t border-white/[0.06]">
+                    <div class="text-right text-xs shrink-0">
+                        <div class="text-slate-300 whitespace-nowrap">${m.deadline ? escapeHtml(shortDate(m.deadline)) : 'Not set'}</div>
+                        <div class="${due.cls}">${escapeHtml(due.text)}</div>
+                    </div>
+                </div>
+            </article>`;
     }).join('');
+    updateDashboardScrollButtons('dash-modules-cards');
 }
 
-function renderDashboardAttention({ overdue, dueSoon, openIssues, open }) {
-    const list = document.getElementById('dash-attention');
-    if (!list) return;
-    const items = [];
-    const where = (t, m) => `TASK-${t.id} · ${m.name}${t.handler ? ` · ${t.handler}` : ''}`;
-    overdue.sort((a, b) => a.t.endDate.localeCompare(b.t.endDate)).forEach(({ t, m }) => {
-        const late = -daysFromToday(t.endDate);
-        items.push({ tone: 'rose', icon: 'fa-calendar-xmark', title: t.name, meta: where(t, m), tag: `${late} day${late === 1 ? '' : 's'} late`, moduleId: m.id });
-    });
-    dueSoon.sort((a, b) => a.t.endDate.localeCompare(b.t.endDate)).forEach(({ t, m }) => {
-        const days = daysFromToday(t.endDate);
-        items.push({ tone: 'amber', icon: 'fa-calendar-day', title: t.name, meta: where(t, m), tag: days === 0 ? 'Due today' : `Due in ${days} day${days === 1 ? '' : 's'}`, moduleId: m.id });
-    });
-    const byTask = new Map();
-    openIssues.forEach(({ t, m }) => byTask.set(t.id, { t, m, n: (byTask.get(t.id)?.n || 0) + 1 }));
-    byTask.forEach(({ t, m, n }) => items.push({ tone: 'amber', icon: 'fa-bug', title: t.name, meta: where(t, m), tag: `${n} open issue${n === 1 ? '' : 's'}`, moduleId: m.id, taskId: t.id }));
-    open.filter(({ t }) => !t.employeeId).forEach(({ t, m }) => items.push({ tone: 'slate', icon: 'fa-user-slash', title: t.name, meta: `TASK-${t.id} · ${m.name}`, tag: 'No assignee', moduleId: m.id }));
+let dashboardTaskOrder = 'deadline:asc';
+let dashboardTaskSearch = '';
 
-    const badge = document.getElementById('dash-attention-count');
-    badge.textContent = String(items.length);
-    badge.classList.toggle('hidden', items.length === 0);
+window.setDashboardTaskSearch = function(value) {
+    dashboardTaskSearch = value;
+    renderDashboardTaskCards();
+};
 
-    if (items.length === 0) {
-        list.innerHTML = `
-            <li class="px-5 py-10 text-center">
-                <span class="inline-grid place-items-center w-9 h-9 rounded-xl bg-emerald-500/15 text-emerald-300"><i class="fa-solid fa-check" aria-hidden="true"></i></span>
-                <div class="text-sm font-semibold text-white mt-2.5">Nothing needs attention</div>
-                <p class="text-xs text-slate-400 mt-1">No late tasks, no deadlines this week and no open issues.</p>
-            </li>`;
+window.setDashboardTaskModuleFilter = function() {
+    renderDashboardTaskCards();
+};
+
+window.setDashboardTaskStatusFilter = function() {
+    renderDashboardTaskCards();
+};
+
+window.setDashboardTaskPriorityFilter = function() {
+    renderDashboardTaskCards();
+};
+
+window.setDashboardTaskOrder = function(value) {
+    dashboardTaskOrder = value;
+    renderDashboardTaskCards();
+};
+
+function renderDashboardTaskCards() {
+    const container = document.getElementById('dash-task-cards');
+    if (!container) return;
+
+    const tasks = projects.flatMap(m => (m.tasks || []).map(t => ({ t, m })));
+    const query = dashboardTaskSearch.trim().toLowerCase();
+    const moduleFilter = dashboardFilterValue('dash-task-module-filter');
+    const status = dashboardFilterValue('dash-task-status-filter');
+    const priority = dashboardFilterValue('dash-task-priority-filter');
+    const candidates = tasks.filter(({ t, m }) =>
+        (moduleFilter === 'all' || m.id === parseInt(moduleFilter, 10))
+        && (status === 'all' || t.status === status)
+        && (priority === 'all' || t.priority === priority)
+        && dashboardSearchMatch(query, [t.name, `TASK-${t.id}`, m.name, t.handler, t.status, t.priority]));
+    setDashboardCardMeta('dash-task-count', 'dash-task-order', 'dash-task-sort-label', candidates.length, tasks.length, 'task');
+
+    if (tasks.length === 0 || candidates.length === 0) {
+        container.innerHTML = tasks.length === 0
+            ? '<p class="py-6 text-center text-xs text-slate-400">No tasks yet.</p>'
+            : `<p class="py-6 text-center text-xs text-slate-400">${dashboardNoMatchText(dashboardTaskSearch, 'tasks')}</p>`;
+        updateDashboardScrollButtons('dash-task-cards');
         return;
     }
-    const TONES = {
-        rose: 'bg-rose-500/15 text-rose-300',
-        amber: 'bg-amber-500/15 text-amber-300',
-        slate: 'bg-white/[0.06] text-slate-300',
+
+    const urgency = ({ t }) => {
+        const days = t.endDate ? daysFromToday(t.endDate) : null;
+        if (t.status !== 'Finished' && days !== null && days < 0) return 0;
+        if (t.status !== 'Finished' && days !== null && days <= 7) return 1;
+        if (t.status !== 'Finished') return 2;
+        return 3;
     };
-    const TAG = { rose: 'text-rose-300', amber: 'text-amber-300', slate: 'text-slate-400' };
-    const LIMIT = 8;
-    list.innerHTML = items.slice(0, LIMIT).map(item => `
-        <li>
-            <button type="button" onclick="openProjectTaskList(${item.moduleId})${item.taskId ? `; openDevIssueDrawer(${item.taskId})` : ''}" class="w-full flex items-start gap-3 px-5 py-3 text-left hover:bg-white/[0.04] transition-colors">
-                <span class="w-7 h-7 rounded-lg grid place-items-center shrink-0 ${TONES[item.tone]}"><i class="fa-solid ${item.icon} text-[11px]" aria-hidden="true"></i></span>
-                <span class="min-w-0 flex-1">
-                    <span class="block text-sm font-medium text-white truncate">${escapeHtml(item.title)}</span>
-                    <span class="block text-xs text-slate-400 truncate">${escapeHtml(item.meta)}</span>
-                </span>
-                <span class="text-xs font-semibold whitespace-nowrap ${TAG[item.tone]}">${escapeHtml(item.tag)}</span>
-            </button>
-        </li>`).join('') + (items.length > LIMIT
-            ? `<li class="px-5 py-2.5 text-xs text-slate-400">and ${items.length - LIMIT} more. Open a module to see all of its tasks.</li>`
-            : '');
+    const priorityRank = { High: 0, Medium: 1, Low: 2 };
+    const statusRank = { Processing: 0, 'Not yet started': 1, Finished: 2 };
+    const [key, dir = 'asc'] = dashboardTaskOrder.split(':');
+    const direction = dir === 'desc' ? -1 : 1;
+    const sortValue = {
+        deadline: ({ t }) => `${t.status === 'Finished' ? 1 : 0}-${t.endDate || '9999-12-31'}`,
+        priority: ({ t }) => priorityRank[t.priority] ?? 9,
+        status: ({ t }) => statusRank[t.status] ?? 9,
+        name: ({ t }) => (t.name || '').toLowerCase(),
+    }[key] ?? (({ t }) => `${t.status === 'Finished' ? 1 : 0}-${t.endDate || '9999-12-31'}`);
+
+    const sorted = candidates.slice().sort((a, b) => {
+        const left = sortValue(a), right = sortValue(b);
+        return (left < right ? -1 : left > right ? 1 : 0) * direction || a.t.name.localeCompare(b.t.name);
+    });
+
+    container.innerHTML = sorted.map(({ t, m }) => {
+        const level = urgency({ t });
+        const toneCls = level === 0 ? 'bg-rose-500/15 text-rose-300'
+            : level === 1 ? 'bg-amber-500/15 text-amber-300'
+            : level === 3 ? 'bg-emerald-500/15 text-emerald-300'
+            : 'bg-sky-500/15 text-sky-300';
+        const icon = level === 0 ? 'fa-calendar-xmark'
+            : level === 1 ? 'fa-calendar-day'
+            : level === 3 ? 'fa-circle-check'
+            : 'fa-list-check';
+        const statusCls = t.status === 'Finished' ? 'text-emerald-300'
+            : t.status === 'Processing' ? 'text-sky-300'
+            : 'text-amber-300';
+        const issues = (t.issues || []).filter(i => i.status !== 'Resolved').length;
+        const pct = Math.round(Number(t.progress) || 0);
+        const due = deadlineInfo({ status: t.status, deadline: t.endDate });
+        const taskName = escapeHtml(t.name);
+        const moduleName = escapeHtml(m.name);
+        const open = `openProjectTaskList(${m.id})`;
+        return `
+            <article class="axis-list-card w-[280px] shrink-0" role="button" tabindex="0"
+                     onclick="${open}" onkeydown="if (event.key === 'Enter' && event.target === this) ${open}"
+                     aria-label="Open the task page for ${moduleName}">
+                <div class="flex items-center gap-2.5 min-w-0">
+                    <span class="w-8 h-8 rounded-lg grid place-items-center shrink-0 ${toneCls}"><i class="fa-solid ${icon} text-xs" aria-hidden="true"></i></span>
+                    <div class="min-w-0">
+                        <h3 class="text-sm font-semibold text-white truncate" title="${taskName}">${taskName}</h3>
+                        <p class="text-[11px] text-slate-400 truncate mt-0.5">TASK-${t.id} · ${moduleName} · ${escapeHtml(t.handler || 'Unassigned')}</p>
+                    </div>
+                </div>
+                <div class="mt-3">${progressBarHtml(pct, `Task progress: ${pct}%`)}</div>
+                <dl class="grid grid-cols-3 gap-x-4 gap-y-2 mt-3 text-xs">
+                    <div><dt class="text-slate-500">Status</dt><dd class="${statusCls} mt-0.5 truncate">${escapeHtml(t.status || '—')}</dd></div>
+                    <div><dt class="text-slate-500">Priority</dt><dd class="text-slate-100 mt-0.5 truncate">${escapeHtml(t.priority || '—')}</dd></div>
+                    <div><dt class="text-slate-500">Open issues</dt><dd class="mt-0.5 ${issues ? 'text-amber-300 font-semibold' : 'text-slate-400'}">${issues || 'None'}</dd></div>
+                </dl>
+                <div class="mt-3 pt-3 border-t border-white/[0.06] flex items-center justify-between gap-3 text-[11px]">
+                    <span class="text-slate-300">${t.endDate ? escapeHtml(shortDate(t.endDate)) : 'No deadline'}</span>
+                    <span class="${due.cls}">${escapeHtml(due.text)}</span>
+                </div>
+            </article>`;
+    }).join('');
+    updateDashboardScrollButtons('dash-task-cards');
 }
 
 function renderDashboardTeam() {
@@ -1648,7 +1917,6 @@ function populateModuleDropdowns() {
 }
 
 window.resetProjectFilters = function() {
-    document.getElementById('flt-customer').value = 'all';
     document.getElementById('flt-project').value = 'all';
     document.getElementById('flt-product').value = 'all';
     document.getElementById('flt-status').value = 'all';
@@ -1659,7 +1927,6 @@ window.resetProjectFilters = function() {
 };
 
 window.clearSingleFilter = function(filterKey) {
-    if (filterKey === 'customer') document.getElementById('flt-customer').value = 'all';
     if (filterKey === 'project') document.getElementById('flt-project').value = 'all';
     if (filterKey === 'product') document.getElementById('flt-product').value = 'all';
     if (filterKey === 'status') document.getElementById('flt-status').value = 'all';
@@ -1683,13 +1950,11 @@ window.applyAndNavigateFilters = function() {
 };
 
 function syncActiveFilterUI(filteredCount) {
-    const custEl = document.getElementById('flt-customer');
     const projEl = document.getElementById('flt-project');
     const prodEl = document.getElementById('flt-product');
     const statEl = document.getElementById('flt-status');
     const srchEl = document.getElementById('flt-search');
 
-    const custVal = custEl?.value || 'all';
     const projVal = projEl?.value || 'all';
     const prodVal = prodEl?.value || 'all';
     const statVal = statEl?.value || 'all';
@@ -1703,9 +1968,6 @@ function syncActiveFilterUI(filteredCount) {
 
     // Build Active Filter Chips
     const chips = [];
-    if (custVal !== 'all') {
-        chips.push({ key: 'customer', label: `Customer: ${custVal}` });
-    }
     if (projVal !== 'all') {
         chips.push({ key: 'project', label: `Project: ${moduleProjectFilterName() || projVal}` });
     }
@@ -2009,26 +2271,29 @@ function renderProjectKpis() {
     revealKpiCards();
 }
 
+/** Whether a module passes the current Modules page filters. Shared by the list and the create flow. */
+function moduleMatchesModuleFilters(p) {
+    const value = id => document.getElementById(id)?.value || 'all';
+    const projVal = value('flt-project');
+    const prodVal = value('flt-product');
+    const statVal = value('flt-status');
+    const srchVal = (document.getElementById('flt-search')?.value || '').toLowerCase().trim();
+
+    return (projVal === 'all' || Number(p.projectId) === parseInt(projVal, 10))
+        && (prodVal === 'all' || p.product === prodVal)
+        && (statVal === 'all' || p.status === statVal)
+        && (!srchVal || [p.name, p.code, p.manager, p.customer, ...(p.team || [])]
+            .join(' ').toLowerCase().includes(srchVal));
+}
+
 window.renderProjectsTable = function(shouldScroll = false) {
     const tbody = document.getElementById('projects-tbody');
     if (!tbody) return;
 
     renderProjectKpis();
 
-    const custVal = document.getElementById('flt-customer')?.value || 'all';
     const projVal = document.getElementById('flt-project')?.value || 'all';
-    const prodVal = document.getElementById('flt-product')?.value || 'all';
-    const statVal = document.getElementById('flt-status')?.value || 'all';
-    const srchVal = (document.getElementById('flt-search')?.value || '').toLowerCase().trim();
-
-    const filtered = projects.filter(p => {
-        const matchCust = custVal === 'all' || p.customer.toLowerCase().includes(custVal.toLowerCase()) || p.customerSub.toLowerCase().includes(custVal.toLowerCase());
-        const matchProj = projVal === 'all' || p.projectId === parseInt(projVal, 10);
-        const matchProd = prodVal === 'all' || p.product === prodVal;
-        const matchStat = statVal === 'all' || p.status === statVal;
-        const matchSrch = !srchVal || p.name.toLowerCase().includes(srchVal) || p.code.toLowerCase().includes(srchVal) || p.manager.toLowerCase().includes(srchVal) || p.customer.toLowerCase().includes(srchVal) || (p.team || []).some(m => m.toLowerCase().includes(srchVal));
-        return matchCust && matchProj && matchProd && matchStat && matchSrch;
-    });
+    const filtered = projects.filter(moduleMatchesModuleFilters);
 
     syncActiveFilterUI(filtered.length);
     renderContextBar();
@@ -2333,13 +2598,20 @@ window.updateProjectStatus = function(projId, newStatus) {
 
 window.handleAddProject = function(e) {
     e.preventDefault();
+    const projectSelect = document.getElementById('add-proj-project');
     const name = document.getElementById('add-proj-name').value.trim();
-    const customer = document.getElementById('add-proj-customer').value.trim();
-    const manager = document.getElementById('add-proj-manager').value;
     const deadline = document.getElementById('add-proj-deadline').value;
-    const projectId = document.getElementById('add-proj-project').value;
+    const projectId = projectSelect.value;
     const description = document.getElementById('add-proj-desc').value.trim();
     const startDate = document.getElementById('add-proj-start').value;
+
+    // Customer and Lead are no longer collected in the form: inherit the customer
+    // from the selected project and use the signed-in member as the lead.
+    const customer = projectSelect.options[projectSelect.selectedIndex]?.text.trim() || '';
+    const teamMembers = window.AxisBootstrap?.teamMembers || [];
+    const manager = teamMembers.find(member => member.id === window.AxisBootstrap?.currentUserId)?.name
+        || teamMembers[0]?.name
+        || '';
 
     AxisDrawer.submit('modal-add-project', async () => {
         const res = await AxisAPI.request(AxisAPI.url('modules.store'), 'POST', {
@@ -2351,11 +2623,24 @@ window.handleAddProject = function(e) {
             start_date: startDate || null,
             deadline: deadline
         });
-        projects.unshift(res.data);
-        const parent = axisProjects.find(ap => ap.id === res.data.projectId);
+        const created = res.data;
+        projects.unshift(created);
+        const parent = axisProjects.find(ap => ap.id === created.projectId);
         if (parent && typeof parent.moduleCount === 'number') parent.moduleCount++;
+
+        // A just-created module must be visible on the Modules page. If the current
+        // filters would hide it, clear them so the new row is not silently lost.
+        if (!moduleMatchesModuleFilters(created)) {
+            ['flt-project', 'flt-product', 'flt-status'].forEach(id => {
+                const select = document.getElementById(id);
+                if (select) select.value = 'all';
+            });
+            const search = document.getElementById('flt-search');
+            if (search) search.value = '';
+        }
+
         populateModuleDropdowns();
-        renderProjectsTable();
+        renderProjectsTable(true);
         renderAxisProjectsPage();
         syncQuickModulePercentages();
         updateDynamicHeader(activePageId);
@@ -3794,7 +4079,7 @@ function renderTaskRow(t) {
     const timeUsed = estSeconds ? Math.min(100, (t.actSeconds / estSeconds) * 100) : 0;
     const chevron = '<i class="fa-solid fa-chevron-down text-[9px] text-slate-500 opacity-0 group-hover:opacity-100 transition-opacity absolute right-1.5 top-1/2 -translate-y-1/2 pointer-events-none" aria-hidden="true"></i>';
 
-    const handlerOptions = (t.employeeId ? '' : '<option value="" selected>Unassigned</option>') + employees([t.employeeId]).map(m =>
+    const handlerOptions = (t.employeeId ? '' : '<option value="" selected>Unassigned</option>') + developers([t.employeeId]).map(m =>
         `<option value="${m.id}" ${t.employeeId === m.id ? 'selected' : ''}>${escapeHtml(m.name)}</option>`
     ).join('');
     const assignerOptions = `<option value="" ${t.assignedById ? '' : 'selected'}>Not recorded</option>` + leaders([t.assignedById]).map(m =>
@@ -4333,7 +4618,7 @@ window.openTaskEdit = function(taskId) {
     document.getElementById('edit-task-desc').value = t.description || '';
     document.getElementById('edit-task-handler').innerHTML =
         (t.employeeId ? '' : '<option value="" selected disabled>Choose someone</option>') +
-        employees([t.employeeId]).map(m => `<option value="${m.id}" ${m.id === t.employeeId ? 'selected' : ''}>${escapeHtml(m.name)}</option>`).join('');
+        developers([t.employeeId]).map(m => `<option value="${m.id}" ${m.id === t.employeeId ? 'selected' : ''}>${escapeHtml(m.name)}</option>`).join('');
     document.getElementById('edit-task-assigned-by').innerHTML =
         `<option value="" ${t.assignedById ? '' : 'selected'}>Not recorded</option>` +
         leaders([t.assignedById]).map(m => `<option value="${m.id}" ${m.id === t.assignedById ? 'selected' : ''}>${escapeHtml(m.name)}</option>`).join('');
@@ -4540,17 +4825,17 @@ window.renderReportsPage = function() {
             <div class="p-4 rounded-xl border border-white/[0.08] bg-white/[0.02]">
                 <div class="text-xs font-semibold text-slate-400">Total hours logged</div>
                 <div class="text-lg font-bold text-emerald-400 mt-1 font-mono">${+totalHours.toFixed(1)}h</div>
-                <div class="text-[11px] text-emerald-400/70 mt-0.5">Verified standups</div>
+                <div class="text-[11px] text-emerald-400 mt-0.5">Verified standups</div>
             </div>
             <div class="p-4 rounded-xl border border-white/[0.08] bg-white/[0.02]">
                 <div class="text-xs font-semibold text-slate-400">Modules covered</div>
                 <div class="text-lg font-bold text-sky-400 mt-1">${uniqueModules} modules</div>
-                <div class="text-[11px] text-sky-400/70 mt-0.5">Tested across team</div>
+                <div class="text-[11px] text-sky-400 mt-0.5">Tested across team</div>
             </div>
             <div class="p-4 rounded-xl border border-white/[0.08] bg-white/[0.02]">
                 <div class="text-xs font-semibold text-slate-400">Telegram format</div>
                 <div class="text-lg font-bold text-indigo-300 mt-1">100% Ready</div>
-                <div class="text-[11px] text-indigo-400/70 mt-0.5">1-click copy &amp; paste</div>
+                <div class="text-[11px] text-indigo-300 mt-0.5">1-click copy &amp; paste</div>
             </div>
         `;
     }
@@ -4576,7 +4861,7 @@ window.renderReportsPage = function() {
             tbody.innerHTML = `
                 <tr>
                     <td colspan="7" class="py-12 text-center text-slate-500 text-xs">
-                        <i class="fa-solid fa-file-circle-question text-2xl text-slate-600 block mb-2"></i>
+                        <i class="fa-solid fa-file-circle-question text-2xl text-slate-500 block mb-2"></i>
                         No reports match your filters. Click <strong>New report</strong> to submit one.
                     </td>
                 </tr>
@@ -4630,7 +4915,7 @@ window.renderReportsPage = function() {
                         <td class="py-3 px-3">${blockerHtml}</td>
                         <td class="py-3 px-3 text-center font-mono font-semibold text-emerald-300">${r.hours || 0}h</td>
                         <td class="py-3 px-3 text-right">
-                            <div class="flex items-center justify-end gap-1 opacity-80 group-hover:opacity-100 transition-opacity" onclick="event.stopPropagation()">
+                            <div class="flex items-center justify-end gap-1 opacity-100 transition-opacity" onclick="event.stopPropagation()">
                                 <button type="button" onclick="copyReportTelegramById(${r.id}, event)" class="p-1.5 rounded-lg text-sky-400 hover:text-white hover:bg-sky-500/20 text-xs transition-colors" title="Copy for Telegram">
                                     <i class="fa-solid fa-copy"></i>
                                 </button>
@@ -5424,14 +5709,14 @@ window.renderTeamTable = function() {
                 <div class="font-medium text-white whitespace-nowrap">${escapeHtml(m.name)}</div>
                 ${m.title ? `<div class="text-xs text-slate-500 mt-0.5">${escapeHtml(m.title)}</div>` : ''}
             </td>
-            <td class="py-3.5 px-3 text-slate-300">${m.department ? escapeHtml(m.department) : '<span class="text-slate-600">—</span>'}</td>
+            <td class="py-3.5 px-3 text-slate-300">${m.department ? escapeHtml(m.department) : '<span class="text-slate-500">—</span>'}</td>
             <td class="py-3.5 px-3">
                 <span class="px-2.5 py-0.5 rounded-full text-xs font-semibold border ${m.position === 'leader' ? 'bg-sky-500/15 text-sky-200 border-sky-400/30' : 'bg-white/5 text-slate-300 border-white/10'}">${m.position === 'leader' ? 'Leader' : 'Developer'}</span>
             </td>
             <td class="py-3.5 px-3 text-xs text-slate-400">
-                <div class="max-w-[220px] truncate" title="${escapeHtml(m.description || '')}">${m.description ? escapeHtml(m.description) : '<span class="text-slate-600">—</span>'}</div>
+                <div class="max-w-[220px] truncate" title="${escapeHtml(m.description || '')}">${m.description ? escapeHtml(m.description) : '<span class="text-slate-500">—</span>'}</div>
             </td>
-            <td class="py-3.5 px-3 font-mono text-slate-400">${m.email ? escapeHtml(m.email) : '<span class="text-slate-600">—</span>'}</td>
+            <td class="py-3.5 px-3 font-mono text-slate-400">${m.email ? escapeHtml(m.email) : '<span class="text-slate-500">—</span>'}</td>
             <td class="py-3.5 px-3 text-center">
                 <button type="button" onclick="toggleEmployeeStatus(${m.id})" title="${m.status === 'inactive' ? 'Mark as active' : 'Mark as inactive'}"
                     class="px-2.5 py-0.5 rounded-full text-xs font-semibold border ${m.status === 'inactive' ? 'bg-white/5 text-slate-400 border-white/10' : 'bg-emerald-500/15 text-emerald-300 border-emerald-400/30'}">
@@ -5750,6 +6035,7 @@ window.exportProjectsCSV = function() {
 // =====================================================================
 window.addEventListener('DOMContentLoaded', () => {
     populateModuleDropdowns();
+    initDashboardScrollButtons();
     renderProjectsTable();
     renderTaskDetailPage();
     renderReportsPage();

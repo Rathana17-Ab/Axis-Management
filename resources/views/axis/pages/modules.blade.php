@@ -69,16 +69,6 @@
                                 aria-label="Search modules">
                             <button type="button" id="flt-clear-search-btn" onclick="clearSingleFilter('search')" class="hidden axis-field-shell__clear" aria-label="Clear search">&times;</button>
                         </label>
-                        <select id="flt-customer" onchange="applyAndNavigateFilters()" class="ent-input axis-select-control" aria-label="Customer">
-                            <option value="all">All customers</option>
-                            <option value="Mr. CHE">Mr. CHE (Desanana Co.,Ltd)</option>
-                            <option value="EOT Core Suite">EOT Core Suite (Axis Enterprise)</option>
-                            <option value="Moliyka Yotsoeun">Moliyka Yotsoeun (Cambodia Catering)</option>
-                            <option value="Sarai Resort">Sarai Resort &amp; Spa (Hotel Link)</option>
-                            <option value="Mrs. Sophay">Mrs. Sophay (Dental Clinic)</option>
-                            <option value="Khun Sathy">Khun Sathy (Offizify)</option>
-                            <option value="Steven Phich">Mr Steven Phich (Mini Palaces)</option>
-                        </select>
                         <select id="flt-project" onchange="applyAndNavigateFilters()" class="ent-input axis-select-control" aria-label="Project">
                             <option value="all">All projects</option>
                             @foreach ($axisProjects as $axisProject)

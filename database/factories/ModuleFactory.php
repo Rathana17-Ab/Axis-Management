@@ -24,6 +24,7 @@ class ModuleFactory extends Factory
 
         return [
             'project_id' => Project::factory(),
+            'sort_order' => 1,
             'code' => 'PROJ-'.fake()->unique()->numberBetween(1000, 1799),
             'name' => $name,
             'proj_badge' => strtoupper($name[0]),

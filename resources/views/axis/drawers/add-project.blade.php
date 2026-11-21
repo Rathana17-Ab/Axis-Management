@@ -13,22 +13,12 @@
         <x-axis.drawer.field label="Module name" for="add-proj-name" name="name" required span="full">
             <input type="text" id="add-proj-name" placeholder="e.g. Axis Spa & Wellness" class="axis-input" required maxlength="255">
         </x-axis.drawer.field>
-        <x-axis.drawer.field label="Customer" for="add-proj-customer" name="customer_name" required span="full">
-            <input type="text" id="add-proj-customer" placeholder="e.g. Sarai Resort & Spa" class="axis-input" required maxlength="255">
-        </x-axis.drawer.field>
         <x-axis.drawer.field label="Description" for="add-proj-desc" name="description" span="full">
             <textarea id="add-proj-desc" rows="3" placeholder="What this module does" class="axis-input" maxlength="5000"></textarea>
         </x-axis.drawer.field>
     </x-axis.drawer.section>
 
     <x-axis.drawer.section title="Planning">
-        <x-axis.drawer.field label="Lead" for="add-proj-manager" name="manager_name" required>
-            <select id="add-proj-manager" class="axis-input" required>
-                @foreach ($employees as $employee)
-                    <option value="{{ $employee->name }}">{{ $employee->name }}</option>
-                @endforeach
-            </select>
-        </x-axis.drawer.field>
         <x-axis.drawer.field label="Start date" for="add-proj-start" name="start_date">
             <input type="date" id="add-proj-start" value="{{ now()->toDateString() }}" class="axis-input">
         </x-axis.drawer.field>

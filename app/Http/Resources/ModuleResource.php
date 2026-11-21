@@ -20,6 +20,7 @@ class ModuleResource extends JsonResource
     {
         return [
             'id' => $this->id,
+            'sortOrder' => $this->sort_order,
             'projectId' => $this->project_id,
             'projectName' => $this->whenLoaded('project', fn () => $this->project?->name),
             'code' => $this->code,

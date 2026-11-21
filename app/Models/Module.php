@@ -20,7 +20,7 @@ class Module extends Model
      * @var list<string>
      */
     protected $fillable = [
-        'project_id', 'code', 'name', 'description', 'proj_badge', 'badge_class', 'customer_name', 'customer_sub', 'cust_badge',
+        'project_id', 'sort_order', 'code', 'name', 'description', 'proj_badge', 'badge_class', 'customer_name', 'customer_sub', 'cust_badge',
         'product_domain', 'start_date', 'deadline', 'manager_name', 'team_members', 'maint_end',
         'closed_at_label', 'status', 'overdue_label',
     ];

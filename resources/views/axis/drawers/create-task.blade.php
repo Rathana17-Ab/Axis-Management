@@ -17,9 +17,9 @@
                              hint="Start a line with * for a main item, or - for a sub-item.">
             <textarea id="new-task-desc" rows="4" placeholder="*Implement controller endpoint&#10;- Add unit tests" class="axis-input" required></textarea>
         </x-axis.drawer.field>
-        <x-axis.drawer.field label="Assignee" for="new-task-handler" name="emp_id" required>
+        <x-axis.drawer.field label="Assignee" for="new-task-handler" name="emp_id" required hint="Only active developers can be assigned tasks.">
             <select id="new-task-handler" class="axis-input" required>
-                @foreach ($employees as $employee)
+                @foreach ($developers as $employee)
                     <option value="{{ $employee->id }}" @selected($employee->id === $currentUser?->id)>{{ $employee->name }}</option>
                 @endforeach
             </select>

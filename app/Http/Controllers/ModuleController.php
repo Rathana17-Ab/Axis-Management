@@ -37,6 +37,7 @@ class ModuleController extends Controller
         $module = DB::transaction(function () use ($validated, $deadline, $actingName, $actingMember, $lead): Module {
             $module = Module::create([
                 'project_id' => $validated['project_id'],
+                'sort_order' => ((int) Module::max('sort_order')) + 1,
                 'code' => Module::nextCode(),
                 'name' => $validated['name'],
                 'description' => $validated['description'] ?? null,

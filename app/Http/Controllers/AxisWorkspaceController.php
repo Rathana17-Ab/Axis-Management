@@ -82,6 +82,7 @@ class AxisWorkspaceController extends Controller
         $teamMembers = User::query()->orderBy('id')->get();
         $activeEmployees = $teamMembers->filter(fn (User $member): bool => $member->status === EmployeeStatus::Active);
         $leaders = $activeEmployees->filter(fn (User $member): bool => $member->isLeader())->values();
+        $developers = $activeEmployees->filter(fn (User $member): bool => $member->isDeveloper())->sortBy('name')->values();
         $currentUser = $this->actingMember();
 
         $activeProject = $projects->firstWhere('id', $activeProjectId) ?? $projects->sortBy('id')->first();
@@ -104,6 +105,7 @@ class AxisWorkspaceController extends Controller
             'teamMembers' => $teamMembers,
             'employees' => $activeEmployees->sortBy('name')->values(),
             'leaders' => $leaders,
+            'developers' => $developers,
             'axisProjects' => $axisProjects,
             'quickSwitchMembers' => $quickSwitchMembers->isNotEmpty() ? $quickSwitchMembers : $teamMembers->take(4),
             'currentUser' => $currentUser,
