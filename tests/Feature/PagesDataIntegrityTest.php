@@ -44,7 +44,7 @@ it('verifies Dashboard page loads with only the module, project, task and team l
         ->and(strpos($html, 'dash-task-toolbar'))->toBeLessThan(strpos($html, 'dash-team-title'));
 });
 
-it('verifies Modules page loads and renders all 9 Axis product modules', function () {
+it('verifies Modules page loads with the module list and no customer column', function () {
     $response = $this->get(route('admin.modules.index'))
         ->assertOk()
         ->assertViewIs('axis.workspace')
@@ -60,6 +60,8 @@ it('verifies Modules page loads and renders all 9 Axis product modules', functio
         ->assertSee('Axis Sales')
         ->assertSee('id="sticky-filter-bar"', false)
         ->assertDontSee('id="flt-customer"', false)
+        ->assertDontSee('data-mod-sort="customer"', false)
+        ->assertDontSee('value="customer:asc"', false)
         ->assertSee('id="projects-tbody"', false);
 });
 
