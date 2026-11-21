@@ -1,0 +1,871 @@
+{
+  "handlers": [
+    "Kong Rathana",
+    "Ti Tong",
+    "Phal Kristar",
+    "Phoeun Chantha",
+    "Maco Buntheoun",
+    "Sopha Eot",
+    "Chan Darong",
+    "Lon Sreyheng",
+    "Ing Vaniy",
+    "Thoeun Sreypov"
+  ],
+  "projects": [
+    {
+      "id": 1,
+      "code": "PROJ-1888",
+      "customer": "Mr. CHE",
+      "customerSub": "(Desanana Co.,Ltd)",
+      "custBadge": "M",
+      "name": "Axis Core System",
+      "projBadge": "C",
+      "badgeClass": "bg-rose-500/20 text-rose-300 border border-rose-400/30",
+      "product": "Axis Core Suite",
+      "deadline": "2026-09-30",
+      "startDate": "2026-02-12",
+      "manager": "Ti Tong",
+      "team": [
+        "Chan Darong",
+        "Phal Kristar",
+        "Ti Tong"
+      ],
+      "maintEnd": "-",
+      "closedAt": "-",
+      "status": "Processing",
+      "overdue": "29 days remaining",
+      "tasks": [
+        {
+          "id": 101,
+          "name": "Login",
+          "description": "*login by email and password\n- add toggle button\n*forgot password",
+          "priority": "High",
+          "startDate": "2026-02-15",
+          "endDate": "2026-03-05",
+          "handler": "Ti Tong",
+          "status": "Finished",
+          "progress": 100,
+          "estHours": 6,
+          "actSeconds": 12287,
+          "running": false,
+          "issues": [
+            {
+              "id": 9101,
+              "type": "UI / State",
+              "severity": "Medium",
+              "branch": "feat/core-auth",
+              "status": "Resolved",
+              "encountered": "Password visibility eye-toggle button caused form auto-submit in Safari & mobile webviews because button lacked explicit type='button'.",
+              "resolution": "Added explicit type='button' and bound Alpine/Vanilla toggle listener with e.preventDefault(); verified across macOS Sonoma Safari & Chrome.",
+              "author": "Ti Tong",
+              "timestamp": "Mar 02, 2026 16:20"
+            },
+            {
+              "id": 9102,
+              "type": "API / DB Issue",
+              "severity": "High",
+              "branch": "fix/auth-throttle",
+              "status": "Resolved",
+              "encountered": "Forgot-password token throttle threw 429 rate-limit exception when testing multiple staff accounts behind the same office NAT IP.",
+              "resolution": "Scoped Laravel RateLimiter key by sha256(email + ip) instead of IP-only in RouteServiceProvider.",
+              "author": "Kong Rathana",
+              "timestamp": "Mar 04, 2026 11:05"
+            }
+          ]
+        },
+        {
+          "id": 102,
+          "name": "Sidebar",
+          "description": "*Add double side bar\n- Primary side bar (level 1 for switching business domain store submenu)",
+          "priority": "High",
+          "startDate": "2026-03-06",
+          "endDate": "2026-03-25",
+          "handler": "Phal Kristar",
+          "status": "Processing",
+          "progress": 87.32,
+          "estHours": 173,
+          "actSeconds": 50710,
+          "running": true,
+          "issues": [
+            {
+              "id": 9103,
+              "type": "Bug / Blocker",
+              "severity": "Critical",
+              "branch": "feat/double-sidebar",
+              "status": "Open",
+              "encountered": "Switching Level-1 Business Domain store in the primary rail resets Level-2 active submenu scroll position and flashes unstyled submenu items on slow connections.",
+              "resolution": "Investigating persistent store_id state caching in localStorage + Livewire wire:navigate morphing.",
+              "author": "Phal Kristar",
+              "timestamp": "Nov 10, 2026 14:40"
+            },
+            {
+              "id": 9104,
+              "type": "UI / State",
+              "severity": "Medium",
+              "branch": "fix/sidebar-zindex",
+              "status": "Resolved",
+              "encountered": "Double sidebar z-index overlapped the Frosted Glass filter dropdowns on 13-inch MacBook viewports (1280px).",
+              "resolution": "Normalized sidebar z-index to z-20 and elevated header popovers/modals to z-50+ with responsive collapse.",
+              "author": "Kong Rathana",
+              "timestamp": "Nov 09, 2026 18:12"
+            }
+          ]
+        },
+        {
+          "id": 103,
+          "name": "Dashboard",
+          "description": "*Remove tab bar\n*Page header\n- add employee",
+          "priority": "High",
+          "startDate": "2026-03-26",
+          "endDate": "2026-04-15",
+          "handler": "Ti Tong",
+          "status": "Processing",
+          "progress": 90,
+          "estHours": 22,
+          "actSeconds": 27616,
+          "running": false,
+          "issues": [
+            {
+              "id": 9105,
+              "type": "UI / State",
+              "severity": "Low",
+              "branch": "ui/header-singleline",
+              "status": "Resolved",
+              "encountered": "Top page header wrapped onto 2 lines when both the long project-task-list URL breadcrumb and live running stopwatch pill were visible.",
+              "resolution": "Consolidated header controls into a strict single-line h-8 layout with truncated URL pill and unified Audio Control popover.",
+              "author": "Kong Rathana",
+              "timestamp": "Nov 10, 2026 21:30"
+            }
+          ]
+        },
+        {
+          "id": 104,
+          "name": "Employees",
+          "description": "*Remove widget\n- Total employee\n- Active employee",
+          "priority": "High",
+          "startDate": "2026-04-16",
+          "endDate": "2026-05-10",
+          "handler": "Phoeun Chantha",
+          "status": "Finished",
+          "progress": 100,
+          "estHours": 20,
+          "actSeconds": 78213,
+          "running": false,
+          "issues": [
+            {
+              "id": 9106,
+              "type": "API / DB Issue",
+              "severity": "High",
+              "branch": "perf/employee-eagerload",
+              "status": "Resolved",
+              "encountered": "N+1 Eloquent query on Employee department & role badges caused 1.4s load time when rendering 300+ staff records.",
+              "resolution": "Added ->with(['department:id,name', 'roles:id,name']) eager loading and composite index on (company_id, status).",
+              "author": "Phoeun Chantha",
+              "timestamp": "May 08, 2026 15:45"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "code": "PROJ-1887",
+      "customer": "EOT Core Suite",
+      "customerSub": "(Axis Enterprise)",
+      "custBadge": "E",
+      "name": "Axis Sales",
+      "projBadge": "S",
+      "badgeClass": "bg-sky-500/20 text-sky-300 border border-sky-400/30",
+      "product": "Axis Commercial POS",
+      "deadline": "2026-11-30",
+      "startDate": "2026-03-01",
+      "manager": "Kong Rathana",
+      "team": [
+        "Sopha Eot",
+        "Maco Buntheoun",
+        "Kong Rathana"
+      ],
+      "maintEnd": "-",
+      "closedAt": "-",
+      "status": "Processing",
+      "overdue": "20 days remaining",
+      "tasks": [
+        {
+          "id": 201,
+          "name": "Deal & Booking Opportunity",
+          "description": "*Multi-role sales workflow (rathana & ratanaSales branch)\n*Proposal Response Inbox",
+          "priority": "High",
+          "startDate": "2026-03-10",
+          "endDate": "2026-06-15",
+          "handler": "Kong Rathana",
+          "status": "Finished",
+          "progress": 80,
+          "estHours": 45,
+          "actSeconds": 144000,
+          "running": false,
+          "issues": [
+            {
+              "id": 9201,
+              "type": "API / DB Issue",
+              "status": "Resolved",
+              "encountered": "Merging rathana and ratanaSales branches caused duplicate migration timestamps on deal_stage_histories table.",
+              "resolution": "Re-sequenced migration filenames and added Schema::hasTable guard before foreign key constraints.",
+              "author": "Kong Rathana",
+              "timestamp": "Oct 19, 2026 17:15"
+            }
+          ]
+        },
+        {
+          "id": 202,
+          "name": "P61 Target Detail",
+          "description": "*Owner / Agent sales commission calculation\n*Monthly target KPI breakdown",
+          "priority": "High",
+          "startDate": "2026-06-16",
+          "endDate": "2026-11-30",
+          "handler": "Maco Buntheoun",
+          "status": "Processing",
+          "progress": 50,
+          "estHours": 35,
+          "actSeconds": 93600,
+          "running": false,
+          "issues": [
+            {
+              "id": 9202,
+              "type": "Bug / Blocker",
+              "status": "Investigating",
+              "encountered": "Floating-point rounding discrepancy ($0.01) when splitting multi-currency (USD/KHR) agent tiers on P61 Target Detail.",
+              "resolution": "Refactoring commission engine to store minor units (cents/riel integers) using Brick Money.",
+              "author": "Maco Buntheoun",
+              "timestamp": "Nov 10, 2026 10:20"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "code": "PROJ-1886",
+      "customer": "Moliyka Yotsoeun",
+      "customerSub": "(Cambodia Catering)",
+      "custBadge": "M",
+      "name": "Axis Hotel PMS",
+      "projBadge": "P",
+      "badgeClass": "bg-emerald-500/20 text-emerald-300 border border-emerald-400/30",
+      "product": "Axis Hospitality PMS",
+      "deadline": "2026-12-11",
+      "startDate": "2026-03-15",
+      "manager": "Lon Sreyheng",
+      "team": [
+        "Kong Rathana",
+        "Ing Vaniy"
+      ],
+      "maintEnd": "-",
+      "closedAt": "-",
+      "status": "Processing",
+      "overdue": "28 days remaining",
+      "tasks": [
+        {
+          "id": 301,
+          "name": "Front Desk Check-In & Stay",
+          "description": "*Open checkin session (HPM-H08-CMD-001)\n*Issue key credential & room assignment",
+          "priority": "High",
+          "startDate": "2026-04-01",
+          "endDate": "2026-08-30",
+          "handler": "Kong Rathana",
+          "status": "Finished",
+          "progress": 90,
+          "estHours": 60,
+          "actSeconds": 198000,
+          "running": false,
+          "issues": [
+            {
+              "id": 9301,
+              "type": "Edge Case",
+              "status": "Resolved",
+              "encountered": "SOD-008 violation allowed Front Desk operator to approve their own blocked arrival override when Duty Manager was offline.",
+              "resolution": "Enforced strict SOD-001/SOD-008 policy check in ArrivalOverridePolicy: requester_id !== approver_id.",
+              "author": "Kong Rathana",
+              "timestamp": "Aug 24, 2026 09:50"
+            }
+          ]
+        },
+        {
+          "id": 302,
+          "name": "Folio Routing & Night Audit",
+          "description": "*Configure folio routing (HPM-H16-CMD-003)\n*Close business date (HPM-H21-CMD-008)",
+          "priority": "High",
+          "startDate": "2026-09-01",
+          "endDate": "2026-12-11",
+          "handler": "Ing Vaniy",
+          "status": "Processing",
+          "progress": 66,
+          "estHours": 50,
+          "actSeconds": 115200,
+          "running": false,
+          "issues": [
+            {
+              "id": 9302,
+              "type": "Bug / Blocker",
+              "status": "Open",
+              "encountered": "Night Audit business-date rollover (HPM-H21-CMD-008) locks if an unposted minibar batch from POS is still queued.",
+              "resolution": "Adding pre-close validation checklist modal with dual-control Finance Controller sign-off (SOD-006).",
+              "author": "Ing Vaniy",
+              "timestamp": "Nov 10, 2026 19:05"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "code": "PROJ-1885",
+      "customer": "Sarai Resort & Spa",
+      "customerSub": "(Hotel Link)",
+      "custBadge": "S",
+      "name": "Axis Hotel Commerce",
+      "projBadge": "H",
+      "badgeClass": "bg-indigo-500/20 text-indigo-300 border border-indigo-400/30",
+      "product": "Axis Hospitality PMS",
+      "deadline": "2026-12-24",
+      "startDate": "2026-04-10",
+      "manager": "Maco Buntheoun",
+      "team": [
+        "Ing Vaniy",
+        "Phoeun Chantha"
+      ],
+      "maintEnd": "-",
+      "closedAt": "-",
+      "status": "Processing",
+      "overdue": "44 days remaining",
+      "tasks": [
+        {
+          "id": 401,
+          "name": "Direct Booking Engine & Rate Plan",
+          "description": "*Publish rate season (HPM-H04-CMD-002)\n*Channel distribution mapping",
+          "priority": "High",
+          "startDate": "2026-04-15",
+          "endDate": "2026-12-24",
+          "handler": "Phoeun Chantha",
+          "status": "Processing",
+          "progress": 45,
+          "estHours": 48,
+          "actSeconds": 86400,
+          "running": false
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "code": "PROJ-1884",
+      "customer": "Unknown Customer",
+      "customerSub": "(Hotelink)",
+      "custBadge": "N",
+      "name": "Axis POS & Outlets",
+      "projBadge": "O",
+      "badgeClass": "bg-amber-500/20 text-amber-300 border border-amber-400/30",
+      "product": "Axis Commercial POS",
+      "deadline": "2026-12-15",
+      "startDate": "2026-05-01",
+      "manager": "Thoeun Sreypov",
+      "team": [
+        "Thoeun Sreypov"
+      ],
+      "maintEnd": "-",
+      "closedAt": "-",
+      "status": "Processing",
+      "overdue": "35 days remaining",
+      "tasks": [
+        {
+          "id": 501,
+          "name": "Outlet Charge & Room Posting",
+          "description": "*Authorize room charge (HPM-H15-CMD-001)\n*Ingest outlet posting batch (HPM-H15-CMD-002)",
+          "priority": "High",
+          "startDate": "2026-05-05",
+          "endDate": "2026-12-15",
+          "handler": "Thoeun Sreypov",
+          "status": "Processing",
+          "progress": 52,
+          "estHours": 36,
+          "actSeconds": 68400,
+          "running": false
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "code": "PROJ-1883",
+      "customer": "EOT Core Suite",
+      "customerSub": "(Loyalty & Guest)",
+      "custBadge": "E",
+      "name": "Axis CRM & Loyalty",
+      "projBadge": "L",
+      "badgeClass": "bg-purple-500/20 text-purple-300 border border-purple-400/30",
+      "product": "Axis Hospitality PMS",
+      "deadline": "2026-11-28",
+      "startDate": "2026-03-20",
+      "manager": "Phoeun Chantha",
+      "team": [
+        "Kong Rathana",
+        "Phoeun Chantha"
+      ],
+      "maintEnd": "-",
+      "closedAt": "-",
+      "status": "Processing",
+      "overdue": "18 days remaining",
+      "tasks": [
+        {
+          "id": 601,
+          "name": "Loyalty Ledger & Tier Benefits",
+          "description": "*Create loyalty membership (HPM-H24-CMD-001)\n*Redeem loyalty benefit (HPM-H24-CMD-004)",
+          "priority": "Medium",
+          "startDate": "2026-04-01",
+          "endDate": "2026-11-28",
+          "handler": "Kong Rathana",
+          "status": "Processing",
+          "progress": 88,
+          "estHours": 30,
+          "actSeconds": 95400,
+          "running": false
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "code": "PROJ-1876",
+      "customer": "Mrs. Sophay",
+      "customerSub": "(Chea Leang Heng Dental Clinic)",
+      "custBadge": "M",
+      "name": "Axis Finance & AR",
+      "projBadge": "F",
+      "badgeClass": "bg-cyan-500/20 text-cyan-300 border border-cyan-400/30",
+      "product": "Axis Enterprise Finance",
+      "deadline": "2027-01-20",
+      "startDate": "2026-06-01",
+      "manager": "Lon Sreyheng",
+      "team": [
+        "Chan Darong"
+      ],
+      "maintEnd": "-",
+      "closedAt": "-",
+      "status": "Processing",
+      "overdue": "71 days remaining",
+      "tasks": [
+        {
+          "id": 701,
+          "name": "City Ledger & Direct Bill AR",
+          "description": "*Approve credit profile (HPM-H19-CMD-002)\n*Transfer folio to city ledger (HPM-H19-CMD-003)",
+          "priority": "High",
+          "startDate": "2026-06-10",
+          "endDate": "2027-01-20",
+          "handler": "Chan Darong",
+          "status": "Processing",
+          "progress": 40,
+          "estHours": 42,
+          "actSeconds": 61200,
+          "running": false
+        }
+      ]
+    },
+    {
+      "id": 8,
+      "code": "PROJ-1875",
+      "customer": "Khun Sathy",
+      "customerSub": "(Offizify Stationary)",
+      "custBadge": "K",
+      "name": "Axis Housekeeping & Maintenance",
+      "projBadge": "M",
+      "badgeClass": "bg-teal-500/20 text-teal-300 border border-teal-400/30",
+      "product": "Axis Hospitality PMS",
+      "deadline": "2026-12-20",
+      "startDate": "2026-05-15",
+      "manager": "Ti Tong",
+      "team": [
+        "Phal Kristar"
+      ],
+      "maintEnd": "20-Mar-2026",
+      "closedAt": "-",
+      "status": "Processing",
+      "overdue": "132 days remaining",
+      "tasks": [
+        {
+          "id": 801,
+          "name": "Room Discrepancy & Work Orders",
+          "description": "*Create housekeeping task (HPM-H10-CMD-001)\n*Return unit to inventory dual-control (HPM-H22-CMD-006)",
+          "priority": "Medium",
+          "startDate": "2026-05-20",
+          "endDate": "2026-12-20",
+          "handler": "Phal Kristar",
+          "status": "Processing",
+          "progress": 60,
+          "estHours": 32,
+          "actSeconds": 72000,
+          "running": false
+        }
+      ]
+    },
+    {
+      "id": 9,
+      "code": "PROJ-1874",
+      "customer": "Mr Steven Phich",
+      "customerSub": "(Mini Palaces)",
+      "custBadge": "M",
+      "name": "Axis Channel Manager",
+      "projBadge": "T",
+      "badgeClass": "bg-orange-500/20 text-orange-300 border border-orange-400/30",
+      "product": "Axis Hospitality PMS",
+      "deadline": "2027-01-08",
+      "startDate": "2026-06-15",
+      "manager": "Maco Buntheoun",
+      "team": [
+        "Sopha Eot"
+      ],
+      "maintEnd": "14-Nov-2026",
+      "closedAt": "-",
+      "status": "Processing",
+      "overdue": "61 days remaining",
+      "tasks": [
+        {
+          "id": 901,
+          "name": "OTA Inventory & Rate Sync",
+          "description": "*Real-time webhook sync with Booking.com & Agoda\n*Release block inventory (HPM-H06-CMD-006)",
+          "priority": "High",
+          "startDate": "2026-06-20",
+          "endDate": "2027-01-08",
+          "handler": "Sopha Eot",
+          "status": "Processing",
+          "progress": 30,
+          "estHours": 55,
+          "actSeconds": 57600,
+          "running": false
+        }
+      ]
+    }
+  ],
+  "ctoReports": [
+    {
+      "id": 5,
+      "type": "Weekly",
+      "recipient": "Dear Bong and team",
+      "date": "2026-11-13",
+      "date_from": "2026-11-10",
+      "date_to": "2026-11-13",
+      "handler": "Kong Rathana",
+      "module": "Axis Sales",
+      "summary": "Dear Bong and team,\nHere is my weekly report (10 Nov – 13 Nov 2026):\n\nI Axis system - Axis Sales\n1. Tested and Fixed on Team Lead Role:\n+ TL 04 — Watch the team on the Team Sales Dashboard and Salesperson Performance  : (100% | 0%)\n- P58 · Team Sales Dashboard\n- P59 · Salesperson Performance\n+ TL 05 — Read the branch pipeline and the forecast : (100% | 0%)\n- P62 · Branch Pipeline View : (100% | 0%)\n- P73 · Forecast : (100% | 0%)\n+ TL 06 — Read the hospitality and source dashboards : (100% | 0%)\n- P41 · Hospitality Sales Dashboard : (100% | 0%)\n- P42 · Inquiry / Booking Source Dashboard : (100% | 0%)\n+ TL 07 — View team targets read-only : (100% | 0%)\n- P60 · Targets : (100% | 0%)\n- P61 · Target Detail : (100% | 0%)\n+ TL 08 — Handle team client responses and read the commercial activity log : (100% | 0%)\n- P27 · Proposal Response Inbox : (100% | 0%)\n- P40 · Commercial Activity Log : (100% | 0%)\n+ TL 09 — Assignment rules and the reference states  : (100% | 0%)\n- P17 · Owner / Assignment Basic (Assignment Rules) : (100% | 0%)\n- P18 · Access & Upgrade States : (100% | 0%)\n2.Tested and fixed on Sales Manager role  \n+ SM 05 — Review a contract the Salesperson submitted  : (100% | 0%)\n- P33 · Contract / Agreement List : (100% | 0%)\n- P34 · Contract / Agreement Builder : (100% | 0%)\n- P23 · Internal Review / Approval Lite : (100% | 0%)\n+ SM 06 — Check contract document and renewal alerts  : (100% | 0%)\n- P35 · Contract PDF / Send / Sign Status : (100% | 0%)\n- P36 · Contract Renewal / Expiry Alerts\n+ SM 07 — Read corporate rate agreements : (100% | 0%)\n- P51 · Rate Agreement List : (100% | 0%)\n- P52 · Rate Agreement Detail : (100% | 0%)\n+ SM 08 — Create and approve a team sales target : (100% | 0%)\n- P60 · Targets : (100% | 0%)\n- P61 · Target Detail : (100% | 0%)\n+ SM 09 — File a forecast and read the KPI dashboard : (100% | 0%)\n - P73 · Forecast : (100% | 0%)\n - P67 · KPI Dashboard Advanced : (100% | 0%)\n+ SM 10 — Open reports from the hub and export summaries : (100% | 0%)\n - P68 · Reports Hub : (100% | 0%)\n - P69 · Lead Source Report : (100% | 0%)\n - P70 · Pipeline Report : (100% | 0%)\n\n🕔 Total time used: 30 hours\n\nThank you.",
+      "content_json": {
+        "sections": [
+          {
+            "title": "1. Tested and Fixed on Team Lead Role",
+            "items": [
+              {
+                "code": "TL 04",
+                "title": "Watch the team on the Team Sales Dashboard and Salesperson Performance",
+                "done_percent": 100,
+                "issue_percent": 0,
+                "sub_items": [
+                  {
+                    "code": "P58",
+                    "title": "Team Sales Dashboard"
+                  },
+                  {
+                    "code": "P59",
+                    "title": "Salesperson Performance"
+                  }
+                ]
+              },
+              {
+                "code": "TL 05",
+                "title": "Read the branch pipeline and the forecast",
+                "done_percent": 100,
+                "issue_percent": 0,
+                "sub_items": [
+                  {
+                    "code": "P62",
+                    "title": "Branch Pipeline View"
+                  },
+                  {
+                    "code": "P73",
+                    "title": "Forecast"
+                  }
+                ]
+              },
+              {
+                "code": "TL 06",
+                "title": "Read the hospitality and source dashboards",
+                "done_percent": 100,
+                "issue_percent": 0,
+                "sub_items": [
+                  {
+                    "code": "P41",
+                    "title": "Hospitality Sales Dashboard"
+                  },
+                  {
+                    "code": "P42",
+                    "title": "Inquiry / Booking Source Dashboard"
+                  }
+                ]
+              },
+              {
+                "code": "TL 07",
+                "title": "View team targets read-only",
+                "done_percent": 100,
+                "issue_percent": 0,
+                "sub_items": [
+                  {
+                    "code": "P60",
+                    "title": "Targets"
+                  },
+                  {
+                    "code": "P61",
+                    "title": "Target Detail"
+                  }
+                ]
+              },
+              {
+                "code": "TL 08",
+                "title": "Handle team client responses and read the commercial activity log",
+                "done_percent": 100,
+                "issue_percent": 0,
+                "sub_items": [
+                  {
+                    "code": "P27",
+                    "title": "Proposal Response Inbox"
+                  },
+                  {
+                    "code": "P40",
+                    "title": "Commercial Activity Log"
+                  }
+                ]
+              },
+              {
+                "code": "TL 09",
+                "title": "Assignment rules and the reference states",
+                "done_percent": 100,
+                "issue_percent": 0,
+                "sub_items": [
+                  {
+                    "code": "P17",
+                    "title": "Owner / Assignment Basic (Assignment Rules)"
+                  },
+                  {
+                    "code": "P18",
+                    "title": "Access & Upgrade States"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "title": "2. Tested and fixed on Sales Manager role",
+            "items": [
+              {
+                "code": "SM 05",
+                "title": "Review a contract the Salesperson submitted",
+                "done_percent": 100,
+                "issue_percent": 0,
+                "sub_items": [
+                  {
+                    "code": "P33",
+                    "title": "Contract / Agreement List"
+                  },
+                  {
+                    "code": "P34",
+                    "title": "Contract / Agreement Builder"
+                  },
+                  {
+                    "code": "P23",
+                    "title": "Internal Review / Approval Lite"
+                  }
+                ]
+              },
+              {
+                "code": "SM 06",
+                "title": "Check contract document and renewal alerts",
+                "done_percent": 100,
+                "issue_percent": 0,
+                "sub_items": [
+                  {
+                    "code": "P35",
+                    "title": "Contract PDF / Send / Sign Status"
+                  },
+                  {
+                    "code": "P36",
+                    "title": "Contract Renewal / Expiry Alerts"
+                  }
+                ]
+              },
+              {
+                "code": "SM 07",
+                "title": "Read corporate rate agreements",
+                "done_percent": 100,
+                "issue_percent": 0,
+                "sub_items": [
+                  {
+                    "code": "P51",
+                    "title": "Rate Agreement List"
+                  },
+                  {
+                    "code": "P52",
+                    "title": "Rate Agreement Detail"
+                  }
+                ]
+              },
+              {
+                "code": "SM 08",
+                "title": "Create and approve a team sales target",
+                "done_percent": 100,
+                "issue_percent": 0,
+                "sub_items": [
+                  {
+                    "code": "P60",
+                    "title": "Targets"
+                  },
+                  {
+                    "code": "P61",
+                    "title": "Target Detail"
+                  }
+                ]
+              },
+              {
+                "code": "SM 09",
+                "title": "File a forecast and read the KPI dashboard",
+                "done_percent": 100,
+                "issue_percent": 0,
+                "sub_items": [
+                  {
+                    "code": "P73",
+                    "title": "Forecast"
+                  },
+                  {
+                    "code": "P67",
+                    "title": "KPI Dashboard Advanced"
+                  }
+                ]
+              },
+              {
+                "code": "SM 10",
+                "title": "Open reports from the hub and export summaries",
+                "done_percent": 100,
+                "issue_percent": 0,
+                "sub_items": [
+                  {
+                    "code": "P68",
+                    "title": "Reports Hub"
+                  },
+                  {
+                    "code": "P69",
+                    "title": "Lead Source Report"
+                  },
+                  {
+                    "code": "P70",
+                    "title": "Pipeline Report"
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "blocker": "None",
+      "hours": 30
+    },
+    {
+      "id": 1,
+      "type": "Daily",
+      "date": "2026-11-10",
+      "handler": "Kong Rathana",
+      "module": "Axis Core System",
+      "summary": "Delivered rock-solid Frosted Glass EOT CoreSystem prototype with bulletproof page routing and 35-role SoD inspector.",
+      "blocker": "Ready for CTO sign-off",
+      "hours": 8
+    },
+    {
+      "id": 2,
+      "type": "Daily",
+      "date": "2026-11-10",
+      "handler": "Ti Tong",
+      "module": "Axis Core System",
+      "summary": "Completed Login email/password toggle, forgot password flow, and Dashboard header cleanup.",
+      "blocker": "None",
+      "hours": 7.5
+    },
+    {
+      "id": 3,
+      "type": "Weekly",
+      "date": "2026-11-09",
+      "handler": "Maco Buntheoun",
+      "module": "Axis Sales",
+      "summary": "Merged P61 Target Detail commission calculations and verified multi-role branch testing.",
+      "blocker": "None",
+      "hours": 40
+    },
+    {
+      "id": 4,
+      "type": "Weekly",
+      "date": "2026-11-09",
+      "handler": "Sopha Eot",
+      "module": "Axis Channel Manager",
+      "summary": "Configured OTA rate distribution webhook queues and HPM-H04 rate restrictions.",
+      "blocker": "None",
+      "hours": 38.5
+    }
+  ],
+  "teamMembers": [
+    {
+      "id": 1,
+      "name": "Kong Rathana",
+      "position": "Lead Full-Stack Developer",
+      "email": "rathana@eocambo.dev",
+      "active": true
+    },
+    {
+      "id": 2,
+      "name": "Chief Tech Officer",
+      "position": "CTO / Executive",
+      "email": "cto@eocambo.dev",
+      "active": true
+    },
+    {
+      "id": 3,
+      "name": "Ti Tong",
+      "position": "Core System Lead",
+      "email": "titong@eocambo.dev",
+      "active": true
+    },
+    {
+      "id": 4,
+      "name": "Phal Kristar",
+      "position": "Laravel Developer",
+      "email": "kristar@eocambo.dev",
+      "active": true
+    },
+    {
+      "id": 5,
+      "name": "Phoeun Chantha",
+      "position": "Full-Stack Developer",
+      "email": "chantha@eocambo.dev",
+      "active": true
+    },
+    {
+      "id": 6,
+      "name": "Maco Buntheoun",
+      "position": "Project Manager",
+      "email": "maco@eocambo.dev",
+      "active": true
+    },
+    {
+      "id": 7,
+      "name": "Sopha Eot",
+      "position": "Backend System Architect",
+      "email": "sopha@eocambo.dev",
+      "active": true
+    },
+    {
+      "id": 8,
+      "name": "Lon Sreyheng",
+      "position": "Senior Project Manager",
+      "email": "sreyheng@eocambo.dev",
+      "active": true
+    }
+  ]
+}
