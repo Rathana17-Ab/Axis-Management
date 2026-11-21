@@ -95,6 +95,32 @@ it('updates an existing report', function () {
     expect($report->fresh()->hours_logged)->toBe(12.0);
 });
 
+it('keeps not-null report fields valid when the update clears them', function () {
+    $this->freezeTime();
+    $report = CtoReport::factory()->create([
+        'recipient' => 'Dear Bong and team',
+        'handler_name' => 'Ti Tong',
+        'blocker' => 'None',
+        'hours_logged' => 8,
+    ]);
+
+    $this->patchJson(route('admin.api.reports.update', $report), [
+        'recipient' => null,
+        'report_date' => null,
+        'handler_name' => null,
+        'blocker' => null,
+        'hours_logged' => null,
+    ])
+        ->assertOk()
+        ->assertJsonPath('data.recipient', 'Dear Bong and team')
+        ->assertJsonPath('data.blocker', 'None')
+        ->assertJsonPath('data.hours', 8);
+
+    $report->refresh();
+    expect($report->report_date->toDateString())->toBe(now()->toDateString())
+        ->and($report->handler_name)->toBe('Unknown Developer');
+});
+
 it('deletes a report', function () {
     $report = CtoReport::factory()->create();
 

@@ -7,7 +7,7 @@ beforeEach(function () {
     $this->seed(AxisSystemSeeder::class);
 });
 
-it('verifies Dashboard page loads and renders live KPIs and project overview', function () {
+it('verifies Dashboard page loads with only the module, project, task and team lists', function () {
     $response = $this->get(route('admin.dashboard'))
         ->assertOk()
         ->assertViewIs('axis.workspace')
@@ -23,7 +23,7 @@ it('verifies Dashboard page loads and renders live KPIs and project overview', f
         ->and(count($bootstrap['ctoReports']))->toBe(5);
 
     // Verify page shell elements and data
-    $response->assertSee('id="dash-kpi-strip"', false)
+    $response->assertDontSee('id="dash-kpi-strip"', false)
         ->assertSee('id="dash-modules-cards"', false)
         ->assertSee('id="dash-modules-order"', false)
         ->assertSee('id="dash-project-cards"', false)
@@ -39,8 +39,7 @@ it('verifies Dashboard page loads and renders live KPIs and project overview', f
         ->assertSee('PROJ-1888');
 
     $html = $response->getContent();
-    expect(strpos($html, 'dash-kpi-strip'))->toBeLessThan(strpos($html, 'dash-modules-toolbar'))
-        ->and(strpos($html, 'dash-modules-toolbar'))->toBeLessThan(strpos($html, 'dash-project-toolbar'))
+    expect(strpos($html, 'dash-modules-toolbar'))->toBeLessThan(strpos($html, 'dash-project-toolbar'))
         ->and(strpos($html, 'dash-project-toolbar'))->toBeLessThan(strpos($html, 'dash-task-toolbar'))
         ->and(strpos($html, 'dash-task-toolbar'))->toBeLessThan(strpos($html, 'dash-team-title'));
 });
@@ -114,7 +113,7 @@ it('verifies Reports page loads with weekly and daily reports, scope highlights 
         ->assertSee('id="reports-tbody"', false);
 });
 
-it('verifies Team Management page loads with all 8 engineering squad members', function () {
+it('verifies Team Management page loads with all 11 team members', function () {
     $response = $this->get(route('admin.team.index'))
         ->assertOk()
         ->assertViewIs('axis.workspace')

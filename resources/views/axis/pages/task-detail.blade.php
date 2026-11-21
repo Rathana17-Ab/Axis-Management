@@ -13,7 +13,7 @@
 
                             <div class="flex flex-wrap items-center gap-x-3 gap-y-1.5 mt-2">
                                 {{-- The title is the module switcher (toggleModuleSwitcher / renderModuleSwitcher) --}}
-                                <div class="relative z-30">
+                                <div class="relative z-40">
                                     <h1 class="text-2xl font-bold text-white tracking-tight">
                                         <button type="button" id="td-switch-btn" onclick="toggleModuleSwitcher()" class="axis-module-switch"
                                             aria-haspopup="listbox" aria-expanded="false" aria-controls="td-switch-menu" title="Switch module">

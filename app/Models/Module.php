@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Carbon;
 
 class Module extends Model
 {
@@ -67,6 +68,18 @@ class Module extends Model
         }
 
         return round($tasks->avg(fn (ProjectTask $task): float => $task->progress), 2);
+    }
+
+    /**
+     * Human-friendly remaining / overdue label for a deadline, computed from the current date.
+     */
+    public static function overdueLabel(Carbon $deadline): string
+    {
+        $days = (int) today()->diffInDays($deadline->copy()->startOfDay(), false);
+
+        return $days >= 0
+            ? $days.' days remaining'
+            : abs($days).' days overdue';
     }
 
     /**

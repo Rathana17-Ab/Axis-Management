@@ -26,6 +26,10 @@ class UpdateModuleRequest extends FormRequest
      */
     public function rules(): array
     {
+        $startDate = $this->input('start_date')
+            ?? $this->route('module')?->start_date?->toDateString()
+            ?? today()->toDateString();
+
         return [
             'project_id' => ['sometimes', 'integer', 'exists:projects,id'],
             'name' => ['sometimes', 'required', 'string', 'max:255'],
@@ -33,7 +37,7 @@ class UpdateModuleRequest extends FormRequest
             'status' => ['sometimes', Rule::enum(WorkStatus::class)],
             'description' => ['sometimes', 'nullable', 'string', 'max:5000'],
             'manager_name' => ['sometimes', 'string', 'max:255'],
-            'deadline' => ['sometimes', 'nullable', 'date'],
+            'deadline' => ['sometimes', 'nullable', 'date', 'after_or_equal:'.$startDate],
             'start_date' => ['sometimes', 'nullable', 'date'],
             'team_members' => ['sometimes', 'array'],
             'team_members.*' => ['string', 'max:255', 'distinct'],

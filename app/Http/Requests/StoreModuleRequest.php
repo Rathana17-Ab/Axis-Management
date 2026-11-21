@@ -31,7 +31,11 @@ class StoreModuleRequest extends FormRequest
             'customer_name' => ['required', 'string', 'max:255'],
             'manager_name' => ['required', 'string', 'max:255'],
             'start_date' => ['nullable', 'date'],
-            'deadline' => ['required', 'date', 'after_or_equal:start_date'],
+            'deadline' => [
+                'required',
+                'date',
+                $this->filled('start_date') ? 'after_or_equal:start_date' : 'after_or_equal:today',
+            ],
         ];
     }
 }

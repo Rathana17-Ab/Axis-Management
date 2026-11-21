@@ -10,6 +10,14 @@ use Illuminate\Http\JsonResponse;
 
 class CtoReportController extends Controller
 {
+    private const DEFAULT_RECIPIENT = 'Dear Bong and team';
+
+    private const DEFAULT_BLOCKER = 'None';
+
+    private const DEFAULT_HOURS = 8;
+
+    private const UNKNOWN_HANDLER = 'Unknown Developer';
+
     /**
      * Submit a daily or weekly CTO standup report as the acting team member.
      */
@@ -17,21 +25,9 @@ class CtoReportController extends Controller
     {
         $validated = $request->validated();
 
-        $report = CtoReport::create([
-            'report_type' => $validated['report_type'],
-            'recipient' => $validated['recipient'] ?? 'Dear Bong and team',
-            'report_date' => $validated['report_date'] ?? today(),
-            'date_from' => $validated['date_from'] ?? null,
-            'date_to' => $validated['date_to'] ?? null,
-            'handler_name' => filled($validated['handler_name'] ?? null)
-                ? $validated['handler_name']
-                : ($this->actingMember()?->name ?? 'Unknown Developer'),
-            'module_name' => $validated['module_name'],
-            'summary' => $validated['summary'],
-            'content_json' => $validated['content_json'] ?? null,
-            'blocker' => filled($validated['blocker'] ?? null) ? $validated['blocker'] : 'None',
-            'hours_logged' => $validated['hours_logged'] ?? 8,
-        ]);
+        $report = CtoReport::create(
+            $this->normalizeReportFields($validated, true, $this->actingMember()?->name)
+        );
 
         return CtoReportResource::make($report)->response()->setStatusCode(201);
     }
@@ -49,9 +45,9 @@ class CtoReportController extends Controller
      */
     public function update(UpdateCtoReportRequest $request, CtoReport $report): JsonResponse
     {
-        $validated = $request->validated();
-
-        $report->update($validated);
+        $report->update(
+            $this->normalizeReportFields($request->validated(), false, $this->actingMember()?->name)
+        );
 
         return CtoReportResource::make($report->fresh())->response();
     }
@@ -67,5 +63,38 @@ class CtoReportController extends Controller
             'success' => true,
             'message' => 'Report deleted successfully.',
         ]);
+    }
+
+    /**
+     * Keep not-null columns valid while preserving partial updates.
+     *
+     * @param  array<string, mixed>  $validated
+     * @return array<string, mixed>
+     */
+    private function normalizeReportFields(array $validated, bool $applyDefaults, ?string $actingName): array
+    {
+        $hasField = fn (string $key): bool => $applyDefaults || array_key_exists($key, $validated);
+
+        if ($hasField('recipient') && ! filled($validated['recipient'] ?? null)) {
+            $validated['recipient'] = self::DEFAULT_RECIPIENT;
+        }
+
+        if ($hasField('report_date') && ! filled($validated['report_date'] ?? null)) {
+            $validated['report_date'] = today();
+        }
+
+        if ($hasField('handler_name') && ! filled($validated['handler_name'] ?? null)) {
+            $validated['handler_name'] = $actingName ?? self::UNKNOWN_HANDLER;
+        }
+
+        if ($hasField('blocker') && ! filled($validated['blocker'] ?? null)) {
+            $validated['blocker'] = self::DEFAULT_BLOCKER;
+        }
+
+        if ($hasField('hours_logged') && ! filled($validated['hours_logged'] ?? null)) {
+            $validated['hours_logged'] = self::DEFAULT_HOURS;
+        }
+
+        return $validated;
     }
 }

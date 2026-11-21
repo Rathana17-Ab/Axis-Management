@@ -172,6 +172,7 @@ class ProjectTask extends Model
             $this->pauseTimer();
         } elseif ($status === WorkStatus::NotStarted) {
             $this->progress = 0;
+            $this->pauseTimer();
         } elseif ($this->progress >= 100) {
             $this->progress = 99;
         }

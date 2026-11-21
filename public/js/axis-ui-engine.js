@@ -13,6 +13,7 @@ window.SoundFX = (function() {
     const SETTINGS_KEY = 'axis.sound';
     const VOLUME_LEVELS = [0.3, 0.6, 1];
     let lastHoverTime = 0;
+    let lastKeyTime = 0;
     let lastScrubTime = 0;
     let eqTimeout = null;
     let tickCounter = 0;
@@ -76,7 +77,7 @@ window.SoundFX = (function() {
     }
 
     function pulseEqualizer(label) {
-        const eq = document.getElementById('sound-eq') || document.getElementById('sfx-eq-indicator');
+        const eq = document.getElementById('sound-eq');
         if (eq && !muted) {
             eq.classList.add('sfx-playing');
             const bars = eq.querySelectorAll('.sfx-eq-bar');
@@ -140,6 +141,33 @@ window.SoundFX = (function() {
         g.connect(dest);
         osc.start(now);
         osc.stop(now + 0.009);
+    }
+
+    /** Short, quiet key-tick for text entry. Throttled so fast typing stays comfortable. */
+    function keyTick() {
+        const perfNow = performance.now();
+        if (perfNow - lastKeyTime < 35) return;
+        lastKeyTime = perfNow;
+
+        const c = getContext();
+        if (!c) return;
+        const mod = PRESET_MOD[preset];
+        const dest = createStereoOut(c, 0.05);
+        const now = c.currentTime;
+
+        playNoiseBurst(c, dest, 0.006, 'highpass', 2400 * mod.filterMult, 1.4, 0.045 * masterVolume * mod.gainMult);
+
+        const osc = c.createOscillator();
+        const g = c.createGain();
+        osc.type = preset === 'mechanical' ? 'square' : 'sine';
+        osc.frequency.setValueAtTime(1250 * mod.pitchMult, now);
+        osc.frequency.exponentialRampToValueAtTime(760 * mod.pitchMult, now + 0.012);
+        g.gain.setValueAtTime(0.05 * masterVolume * mod.gainMult, now);
+        g.gain.exponentialRampToValueAtTime(0.0005, now + 0.013);
+        osc.connect(g);
+        g.connect(dest);
+        osc.start(now);
+        osc.stop(now + 0.014);
     }
 
     // 2. buttonTap(pan): Crisp macOS/Linear-style tactile switch tap
@@ -667,6 +695,7 @@ window.SoundFX = (function() {
     return {
         // 16 Explicit Studio Profiles
         hoverTick,
+        keyTick,
         buttonTap,
         navSwitch,
         dropdownSelect,
