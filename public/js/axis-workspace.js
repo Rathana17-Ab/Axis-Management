@@ -259,14 +259,12 @@ window.updateDynamicHeader = function(pageId) {
     const cfg = headerConfig[activePageId] || headerConfig['projects'];
 
     const secEl = document.getElementById('header-section-label');
-    const bcEl = document.getElementById('header-breadcrumb');
     const titleEl = document.getElementById('header-page-title');
     const badgeEl = document.getElementById('header-page-badge');
     const createLbl = document.getElementById('header-create-label');
     const hdrModSelect = document.getElementById('header-module-select');
 
     if (secEl) secEl.textContent = cfg.section;
-    if (bcEl) bcEl.textContent = cfg.route;
     if (titleEl) titleEl.textContent = cfg.title;
     if (badgeEl) badgeEl.textContent = cfg.badge;
     if (createLbl) createLbl.textContent = cfg.createLabel;
@@ -684,7 +682,6 @@ window.switchPage = function(pageId, history = true) {
 
     // Trigger fresh render for the destination page
     if (pageId === 'dashboard') {
-        prepareKpiEntrance('dash-kpi-strip');
         renderDashboard();
     }
     if (pageId === 'projects') {
@@ -828,72 +825,6 @@ function formatDuration(totalSeconds) {
 }
 
 function renderDashboard() {
-    if (!document.getElementById('dash-kpi-strip')) return;
-    const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`;
-    const all = projects.flatMap(m => (m.tasks || []).map(t => ({ t, m })));
-    const open = all.filter(({ t }) => t.status !== 'Finished');
-    const dueIn = ({ t }) => (t.endDate ? daysFromToday(t.endDate) : null);
-    const overdue = open.filter(x => dueIn(x) !== null && dueIn(x) < 0);
-    const dueSoon = open.filter(x => dueIn(x) !== null && dueIn(x) >= 0 && dueIn(x) <= 7);
-    const issues = all.flatMap(({ t, m }) => (t.issues || []).map(i => ({ i, t, m })));
-    const openIssues = issues.filter(x => x.i.status !== 'Resolved');
-
-    setKpiText('dash-scope', `${plural(axisProjects.length, 'project')} · ${plural(projects.length, 'module')} · ${plural(all.length, 'task')} · ${plural(employees().length, 'active employee')}`);
-
-    // 1. Tasks finished — split by status
-    const byStatus = s => all.filter(({ t }) => t.status === s).length;
-    const done = byStatus('Finished');
-    const segments = [
-        { label: 'Finished', count: done, color: '#34D399' },
-        { label: 'Processing', count: byStatus('Processing'), color: '#38BDF8' },
-        { label: 'Not yet started', count: byStatus('Not yet started'), color: '#FBBF24' },
-    ];
-    setKpiValue(document.getElementById('kpi-dash-tasks'), done);
-    setKpiStatus('dash-tasks', all.length ? `${Math.round((done / all.length) * 100)}% done` : 'No tasks');
-    setKpiText('kpi-dash-tasks-desc', all.length ? `of ${plural(all.length, 'task')} across every module` : 'No tasks yet');
-    document.getElementById('kpi-dash-tasks-visual').innerHTML = all.length ? kpiBarHtml(segments, `Tasks: ${segments.map(s => `${s.count} ${s.label.toLowerCase()}`).join(', ')}`) : '';
-    document.getElementById('kpi-dash-tasks-footer').innerHTML = `<span>${segments[1].count} processing · ${segments[2].count} not started</span>`;
-
-    // 2. Average progress — mean module completion (same figure as the Modules page)
-    const mods = projects.map(m => ({ m, pct: computeProjectCompletion(m) })).sort((a, b) => b.pct - a.pct);
-    const avg = mods.length ? mods.reduce((sum, x) => sum + x.pct, 0) / mods.length : 0;
-    setKpiValue(document.getElementById('kpi-dash-progress'), +avg.toFixed(1), { decimals: 1, unit: '%' });
-    setKpiText('kpi-dash-progress-desc', `Average across ${plural(mods.length, 'module')}`);
-    document.getElementById('kpi-dash-progress-visual').innerHTML = mods.length
-        ? `<div class="axis-kpi-columns" role="img" aria-label="Completion per module, highest to lowest">
-            ${mods.map((x, i) => `<span class="axis-kpi-columns__bar" style="height:${Math.max(4, x.pct)}%;transition-delay:${i * 40}ms" title="${escapeHtml(x.m.name)}: ${Math.round(x.pct)}%"></span>`).join('')}
-           </div>`
-        : '';
-    document.getElementById('kpi-dash-progress-footer').innerHTML = mods.length
-        ? `<span title="${escapeHtml(mods[mods.length - 1].m.name)}">Lowest <span class="text-slate-200 font-mono">${Math.round(mods[mods.length - 1].pct)}%</span></span><span title="${escapeHtml(mods[0].m.name)}">Highest <span class="text-slate-200 font-mono">${Math.round(mods[0].pct)}%</span></span>`
-        : '<span>No modules yet</span>';
-
-    // 3. Overdue tasks — unfinished and past their deadline
-    setKpiValue(document.getElementById('kpi-dash-overdue'), overdue.length);
-    setKpiStatus('dash-overdue', overdue.length ? 'Late' : 'On track', overdue.length ? 'warn' : null);
-    setKpiText('kpi-dash-overdue-desc', `${plural(dueSoon.length, 'task')} due in the next 7 days`);
-    document.getElementById('kpi-dash-overdue-visual').innerHTML = '';
-    const nextDue = open.filter(x => dueIn(x) !== null && dueIn(x) >= 0).sort((a, b) => a.t.endDate.localeCompare(b.t.endDate))[0];
-    document.getElementById('kpi-dash-overdue-footer').innerHTML = nextDue
-        ? `<span class="truncate" title="${escapeHtml(nextDue.t.name)}">Next: <span class="text-slate-200">${escapeHtml(nextDue.t.name)}</span></span><span class="text-slate-400 shrink-0">${escapeHtml(shortDate(nextDue.t.endDate))}</span>`
-        : '<span>No upcoming task deadline</span>';
-
-    // 4. Open issues — issue notes not yet fixed
-    const investigating = openIssues.filter(x => x.i.status === 'Investigating').length;
-    setKpiValue(document.getElementById('kpi-dash-issues'), openIssues.length);
-    setKpiStatus('dash-issues', openIssues.length ? `${openIssues.length} open` : 'All fixed', openIssues.length ? 'warn' : null);
-    setKpiText('kpi-dash-issues-desc', `${openIssues.length - investigating} open · ${investigating} investigating · ${issues.length - openIssues.length} fixed`);
-    document.getElementById('kpi-dash-issues-visual').innerHTML = issues.length
-        ? kpiBarHtml([
-            { label: 'Open', count: openIssues.length - investigating, color: '#FBBF24' },
-            { label: 'Investigating', count: investigating, color: '#38BDF8' },
-            { label: 'Fixed', count: issues.length - openIssues.length, color: '#34D399' },
-        ], 'Issue notes by status')
-        : '';
-    const tasksWithOpen = new Set(openIssues.map(x => x.t.id)).size;
-    document.getElementById('kpi-dash-issues-footer').innerHTML = `<span>${issues.length ? `On ${plural(tasksWithOpen, 'task')}` : 'No issue notes logged yet'}</span>`;
-
-    revealKpiCards('dash-kpi-strip');
     renderDashboardModules();
     renderDashboardProjectCards();
     renderDashboardTaskCards();
@@ -1118,7 +1049,7 @@ function renderDashboardModules() {
         const order = Number(m.sortOrder || 0);
         const name = escapeHtml(m.name);
         return `
-            <article class="axis-list-card dash-module-card w-full sm:w-[280px]" role="button" tabindex="0"
+            <article class="axis-list-card dash-module-card min-w-0" role="button" tabindex="0"
                      onclick="${open}" onkeydown="if (event.key === 'Enter' && event.target === this) ${open}"
                      aria-label="Open the Modules page">
                 <div class="flex items-center gap-2.5 min-w-0">
@@ -1326,10 +1257,6 @@ function syncQuickModulePercentages() {
         if (dashPct) dashPct.textContent = pct + '%';
         if (dashBar) dashBar.style.width = pct + '%';
     });
-    const projBadge = document.getElementById('sidebar-proj-count');
-    if (projBadge) projBadge.textContent = String(projects.length);
-    const axisProjBadge = document.getElementById('sidebar-axis-proj-count');
-    if (axisProjBadge) axisProjBadge.textContent = String(axisProjects.length);
 }
 
 // =====================================================================
@@ -2922,9 +2849,6 @@ window.renderTaskDetailPage = function() {
     if (!p) return;
     activeProjectId = p.id;
 
-    const sbCode = document.getElementById('sidebar-active-code');
-    if (sbCode) sbCode.textContent = p.code.replace('PROJ-', '');
-
     const titleEl = document.getElementById('td-title');
     if (titleEl) titleEl.textContent = p.name;
     const statusBadge = document.getElementById('td-status-badge');
@@ -3205,7 +3129,12 @@ window.setTaskIssueFilter = function(filterMode) {
 let lastAddedIssue = null;
 let lastAddedIssueTimer = null;
 
-window.openDevIssueDrawer = function(taskId) {
+window.openDevIssueDrawer = function(taskId, projectId = null) {
+    if (projectId !== null && projectId !== undefined) {
+        const target = projects.find(x => String(x.id) === String(projectId));
+        if (target) activeProjectId = target.id;
+    }
+
     const p = projects.find(x => x.id === activeProjectId) || projects[0];
     if (!p || !p.tasks || p.tasks.length === 0) return;
 
@@ -3280,12 +3209,10 @@ window.renderDevIssueDrawerContent = function() {
     activeDrawerTaskId = t.id;
     if (!Array.isArray(t.issues)) t.issues = [];
 
-    const modBadge = document.getElementById('did-module-badge');
     const statusBadge = document.getElementById('did-task-status');
     const titleEl = document.getElementById('did-task-title');
     const authorEl = document.getElementById('did-author-pill');
 
-    if (modBadge) modBadge.textContent = `${p.code} • ${p.name}`;
     if (statusBadge) statusBadge.textContent = `${t.status} (${Math.round(t.progress)}%)`;
     if (titleEl) titleEl.textContent = `Task ${tIdx + 1}: ${t.name} · ${t.handler}`;
     AxisDrawer.configure('dev-issue-drawer', {
@@ -4764,9 +4691,7 @@ function startGlobalStopwatchLoop() {
                     if (p.id === activeProjectId) {
                         const hms = formatHMS(t.actSeconds);
                         const mainCell = document.getElementById('task-main-act-' + t.id);
-                        const subCell = document.getElementById('task-sub-act-' + t.id);
                         if (mainCell) mainCell.textContent = hms;
-                        if (subCell) subCell.textContent = 'Act: ' + hms;
                     }
                 }
             });
@@ -5725,8 +5650,8 @@ window.renderTeamTable = function() {
             </td>
             <td class="py-3.5 px-3 text-center">
                 ${m.hasAccount === false
-                    ? '<span class="px-2.5 py-0.5 rounded-full text-xs font-medium bg-white/5 text-slate-400 border border-white/10">No account</span>'
-                    : `<span class="px-2.5 py-0.5 rounded-full text-xs font-semibold ${m.active ? 'bg-emerald-500/15 text-emerald-300 border border-emerald-400/30' : 'bg-rose-500/15 text-rose-300 border-rose-400/30'}">${m.active ? 'Can Login' : 'Locked'}</span>`}
+                    ? '<span class="px-2.5 py-0.5 rounded-full text-xs font-medium whitespace-nowrap bg-white/5 text-slate-400 border border-white/10">No account</span>'
+                    : `<span class="px-2.5 py-0.5 rounded-full text-xs font-semibold whitespace-nowrap ${m.active ? 'bg-emerald-500/15 text-emerald-300 border border-emerald-400/30' : 'bg-rose-500/15 text-rose-300 border-rose-400/30'}">${m.active ? 'Can login' : 'Locked'}</span>`}
             </td>
             <td class="py-3.5 px-3 text-center whitespace-nowrap space-x-1.5">
                 <button type="button" onclick="openTeamMemberEdit(${m.id})" class="btn-glass px-2.5 py-1 text-xs" aria-label="Edit ${escapeHtml(m.name)}">Edit</button>
@@ -5741,8 +5666,6 @@ window.renderTeamTable = function() {
         </tr>
     `).join('');
 
-    const cnt = document.getElementById('sidebar-team-count');
-    if (cnt) cnt.textContent = String(teamMembers.length);
 };
 
 let editingTeamMemberId = null;
@@ -6045,6 +5968,33 @@ window.addEventListener('DOMContentLoaded', () => {
     syncHeaderTimerPill();
     startGlobalStopwatchLoop();
 
+    // Subtle typing tick, scoped to the Project page and its drawers.
+    const projectTypingDrawers = new Set([
+        'drawer-project-create',
+        'drawer-axis-project-edit',
+        'modal-add-project',
+        'drawer-project-edit',
+        'drawer-project-view',
+    ]);
+    const projectTypedFieldTypes = new Set(['text', 'search', 'email', 'url', 'tel', 'password']);
+
+    document.addEventListener('input', (event) => {
+        if (!window.SoundFX || SoundFX.isMuted()) return;
+
+        const target = event.target;
+        const isTextArea = target instanceof HTMLTextAreaElement;
+        const isTextField = target instanceof HTMLInputElement && projectTypedFieldTypes.has(target.type);
+        if (!isTextArea && !isTextField) return;
+
+        const activePage = document.querySelector('.app-page.active-page');
+        const onProjectPage = activePage?.id === 'page-projects' && Boolean(target.closest('#page-projects'));
+        const drawer = target.closest('[data-axis-drawer]');
+        const inProjectDrawer = Boolean(drawer && projectTypingDrawers.has(drawer.id));
+        if (!onProjectPage && !inProjectDrawer) return;
+
+        SoundFX.keyTick();
+    });
+
     // Close the Audio Control popover when clicking anywhere outside it
     document.addEventListener('click', (e) => {
         const wrap = document.getElementById('audio-control-wrapper');
@@ -6061,14 +6011,6 @@ window.addEventListener('DOMContentLoaded', () => {
             closeModal('modal-sound-lab');
             closeModal('login-modal');
             toggleSidebar(false);
-        }
-    });
-
-
-    // Close Dev Issue Drawer on Escape key
-    document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape') {
-            closeDevIssueDrawer();
         }
     });
 

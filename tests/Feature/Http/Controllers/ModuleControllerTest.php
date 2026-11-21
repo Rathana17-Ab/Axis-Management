@@ -62,6 +62,23 @@ describe('store', function () {
             ->assertJsonPath('data.startDate', '2026-12-01');
     });
 
+    it('returns 422 when the deadline is before the default start date', function () {
+        $this->freezeTime();
+        $project = Project::factory()->create();
+
+        $this->postJson(route('admin.api.modules.store'), [
+            'project_id' => $project->id,
+            'name' => 'Axis Payroll',
+            'customer_name' => 'Ms. Dara',
+            'manager_name' => 'Ti Tong',
+            'deadline' => now()->subDay()->toDateString(),
+        ])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('deadline');
+
+        expect(Module::count())->toBe(0);
+    });
+
     it('returns 422 when the required module fields are missing', function () {
         $this->postJson(route('admin.api.modules.store'), [])
             ->assertUnprocessable()
@@ -89,6 +106,27 @@ describe('update', function () {
         $this->patchJson(route('admin.api.modules.update', $module), ['deadline' => now()->subDays(3)->toDateString()])
             ->assertOk()
             ->assertJsonPath('data.overdue', '3 days overdue');
+    });
+
+    it('returns 422 when the new deadline is before the module start date', function () {
+        $module = Module::factory()->create(['start_date' => '2026-12-01']);
+
+        $this->patchJson(route('admin.api.modules.update', $module), ['deadline' => '2026-11-30'])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('deadline');
+    });
+
+    it('derives the overdue label from the current date rather than a stale snapshot', function () {
+        $this->freezeTime();
+        $module = Module::factory()->create([
+            'deadline' => now()->addDays(4)->toDateString(),
+            'overdue_label' => '90 days remaining',
+        ]);
+
+        $bootstrap = $this->get(route('admin.dashboard'))->viewData('bootstrap');
+        $moduleData = collect($bootstrap['projects'])->firstWhere('id', $module->id);
+
+        expect($moduleData['overdue'])->toBe('4 days remaining');
     });
 
     it('replaces the team attendees', function () {

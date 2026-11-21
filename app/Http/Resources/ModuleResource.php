@@ -39,7 +39,7 @@ class ModuleResource extends JsonResource
             'maintEnd' => $this->maint_end,
             'closedAt' => $this->closed_at_label,
             'status' => $this->status->value,
-            'overdue' => $this->overdue_label,
+            'overdue' => $this->deadline ? Module::overdueLabel($this->deadline) : null,
             'tasks' => ProjectTaskResource::collection($this->whenLoaded('tasks')),
         ];
     }

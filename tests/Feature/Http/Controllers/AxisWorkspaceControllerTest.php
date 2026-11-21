@@ -60,7 +60,7 @@ it('offers only developers as assignees and only leaders as assigners in the new
         ->not->toContain('Dev One');
 });
 
-it('renders overall KPIs first with module, project, task and team lists on the dashboard', function () {
+it('renders only the module, project, task and team lists on the dashboard', function () {
     Module::factory()->create(['name' => 'Zeta Module', 'sort_order' => 2]);
     Module::factory()->create(['name' => 'Alpha Module', 'sort_order' => 1]);
 
@@ -68,9 +68,9 @@ it('renders overall KPIs first with module, project, task and team lists on the 
     $html = $response->getContent();
 
     $response->assertOk()
-        ->assertSee('id="dash-kpi-strip"', false)
+        ->assertDontSee('id="dash-kpi-strip"', false)
         ->assertSee('id="dash-modules-toolbar"', false)
-        ->assertSee('id="dash-modules-cards" class="flex flex-wrap gap-4 p-5"', false)
+        ->assertSee('id="dash-modules-cards" class="grid grid-cols-[repeat(auto-fit,minmax(260px,1fr))] gap-4 p-5"', false)
         ->assertSee('id="dash-modules-order"', false)
         ->assertSee('id="dash-module-search"', false)
         ->assertSee('id="dash-module-project-filter"', false)
@@ -105,8 +105,7 @@ it('renders overall KPIs first with module, project, task and team lists on the 
         ->assertDontSee('aria-label="Scroll modules right"', false)
         ->assertDontSee('id="dash-modules-card"', false);
 
-    expect(strpos($html, 'dash-kpi-strip'))->toBeLessThan(strpos($html, 'dash-modules-toolbar'))
-        ->and(strpos($html, 'dash-modules-toolbar'))->toBeLessThan(strpos($html, 'dash-project-toolbar'))
+    expect(strpos($html, 'dash-modules-toolbar'))->toBeLessThan(strpos($html, 'dash-project-toolbar'))
         ->and(strpos($html, 'dash-project-toolbar'))->toBeLessThan(strpos($html, 'dash-task-toolbar'))
         ->and(strpos($html, 'dash-task-toolbar'))->toBeLessThan(strpos($html, 'dash-team-title'));
 

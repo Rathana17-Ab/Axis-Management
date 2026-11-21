@@ -35,6 +35,14 @@ it('returns 422 when the deadline is before the start date', function () {
     ])->assertUnprocessable()->assertJsonValidationErrors('deadline');
 });
 
+it('returns 422 when an updated deadline is before the project start date', function () {
+    $project = Project::factory()->create(['start_date' => '2026-05-01']);
+
+    $this->patchJson(route('admin.api.projects.update', $project), ['deadline' => '2026-04-01'])
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors('deadline');
+});
+
 it('updates a project and reports how many modules it has', function () {
     $project = Project::factory()->create();
     Module::factory()->count(2)->for($project)->create();

@@ -52,7 +52,7 @@ class ModuleController extends Controller
                 'manager_name' => $validated['manager_name'],
                 'team_members' => collect([$validated['manager_name'], $actingName])->filter()->unique()->values()->all(),
                 'status' => WorkStatus::Processing,
-                'overdue_label' => self::overdueLabel($deadline),
+                'overdue_label' => Module::overdueLabel($deadline),
             ]);
 
             $module->tasks()->create([
@@ -95,23 +95,11 @@ class ModuleController extends Controller
         }
 
         if ($module->isDirty('deadline')) {
-            $module->overdue_label = $module->deadline ? self::overdueLabel($module->deadline) : null;
+            $module->overdue_label = $module->deadline ? Module::overdueLabel($module->deadline) : null;
         }
 
         $module->save();
 
         return ModuleResource::make($module->load(self::RELATIONS));
-    }
-
-    /**
-     * Human-friendly remaining / overdue label for a deadline.
-     */
-    private static function overdueLabel(Carbon $deadline): string
-    {
-        $days = (int) today()->diffInDays($deadline->copy()->startOfDay(), false);
-
-        return $days >= 0
-            ? $days.' days remaining'
-            : abs($days).' days overdue';
     }
 }

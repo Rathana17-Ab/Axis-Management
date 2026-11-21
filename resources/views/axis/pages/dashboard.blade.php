@@ -1,13 +1,12 @@
                 <!-- ===================================================================== -->
-                <!-- PAGE 0: DASHBOARD (`dashboard`) — overall KPIs, modules, project, task and team lists, filled by renderDashboard() -->
+                <!-- PAGE 0: DASHBOARD (`dashboard`) — module, project, task and team lists, filled by renderDashboard() -->
                 <!-- ===================================================================== -->
                 <div id="page-dashboard" @class(['app-page', 'active-page' => $initialPage === 'dashboard', 'space-y-5'])>
 
                     <div class="flex flex-col lg:flex-row lg:items-start justify-between gap-4 pt-1">
                         <div>
                             <h1 class="text-xl font-bold text-white tracking-tight">Dashboard</h1>
-                            <p class="text-xs text-slate-300/90 mt-1 max-w-3xl">Overall progress at a glance, with module, project, task and team lists underneath.</p>
-                            <p id="dash-scope" class="text-xs text-slate-400 mt-1.5">—</p>
+                            <p class="text-xs text-slate-300/90 mt-1 max-w-3xl">Module, project, task and team lists.</p>
                         </div>
                         <div class="flex items-center gap-2 shrink-0 self-start">
                             <button type="button" onclick="switchPage('modules')" class="btn-glass px-3.5 py-2 text-xs font-medium flex items-center gap-2">
@@ -21,15 +20,7 @@
                         </div>
                     </div>
 
-                    <!-- 1. Overall KPI strip (x-axis.kpi-card) -->
-                    <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4" id="dash-kpi-strip">
-                        <x-axis.kpi-card key="dash-tasks" accent="emerald" icon="fa-circle-check" status="Done" title="Tasks finished" />
-                        <x-axis.kpi-card key="dash-progress" accent="cyan" icon="fa-chart-line" status="Avg" title="Average progress" />
-                        <x-axis.kpi-card key="dash-overdue" accent="amber" icon="fa-calendar-xmark" status="On track" title="Overdue tasks" />
-                        <x-axis.kpi-card key="dash-issues" accent="violet" icon="fa-bug" status="All fixed" title="Open issues" />
-                    </div>
-
-                    <!-- 2. Modules, with every card visible and wrapped -->
+                    <!-- 1. Modules, with every card visible and wrapped -->
                     <div class="space-y-2" data-dashboard-row="modules">
                         <div id="dash-modules-toolbar" class="flex flex-wrap items-center justify-between gap-3 px-1" aria-labelledby="dash-modules-title">
                             <div class="min-w-0">
@@ -71,11 +62,11 @@
                             </div>
                         </div>
                         <section class="ent-card overflow-hidden" aria-labelledby="dash-modules-title">
-                            <div id="dash-modules-cards" class="flex flex-wrap gap-4 p-5"></div>
+                            <div id="dash-modules-cards" class="grid grid-cols-[repeat(auto-fit,minmax(260px,1fr))] gap-4 p-5"></div>
                         </section>
                     </div>
 
-                    <!-- 3. Project list, horizontally scrollable cards -->
+                    <!-- 2. Project list, horizontally scrollable cards -->
                     <div class="space-y-2" data-dashboard-row="project">
                         <div id="dash-project-toolbar" class="flex flex-wrap items-center justify-between gap-3 px-1" aria-labelledby="dash-project-title">
                             <div class="min-w-0">
@@ -125,7 +116,7 @@
                         </section>
                     </div>
 
-                    <!-- 4. Task list, horizontally scrollable cards -->
+                    <!-- 3. Task list, horizontally scrollable cards -->
                     <div class="space-y-2" data-dashboard-row="task">
                         <div id="dash-task-toolbar" class="flex flex-wrap items-center justify-between gap-3 px-1" aria-labelledby="dash-task-title">
                             <div class="min-w-0">
@@ -184,7 +175,7 @@
                         </section>
                     </div>
 
-                    <!-- 5. Team workload: accountability per person -->
+                    <!-- 4. Team workload: accountability per person -->
                     <section class="ent-card overflow-hidden" aria-labelledby="dash-team-title">
                         <div class="px-5 py-3.5 border-b border-sky-400/15">
                             <h2 id="dash-team-title" class="text-sm font-bold text-white">Team workload</h2>

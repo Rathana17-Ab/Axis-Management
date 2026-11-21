@@ -34,7 +34,8 @@ class TaskIssueNoteController extends Controller
      */
     public function update(UpdateTaskIssueNoteRequest $request, TaskIssueNote $issue): TaskIssueNoteResource
     {
-        $issue->update(['resolution' => $request->validated('resolution') ?? '']);
+        $resolution = $request->validated('resolution');
+        $issue->update(['resolution' => filled($resolution) ? $resolution : null]);
 
         return TaskIssueNoteResource::make($issue);
     }

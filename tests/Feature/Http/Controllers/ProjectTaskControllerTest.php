@@ -298,6 +298,24 @@ describe('timer', function () {
             ->assertJsonPath('data.status', 'Not yet started');
     });
 
+    it('stops the timer when a running task is set back to not yet started', function () {
+        $this->freezeTime();
+        $task = ProjectTask::factory()->create([
+            'status' => WorkStatus::Processing,
+            'progress' => 40,
+            'is_running' => true,
+            'timer_started_at' => now(),
+        ]);
+
+        $this->patchJson(route('admin.api.tasks.update', $task), ['status' => 'Not yet started'])
+            ->assertOk()
+            ->assertJsonPath('data.running', false);
+
+        $task->refresh();
+        expect($task->is_running)->toBeFalse()
+            ->and($task->timer_started_at)->toBeNull();
+    });
+
     it('keeps a task with progress processing when its logged time is reset', function () {
         $task = ProjectTask::factory()->create(['status' => WorkStatus::Processing, 'progress' => 30, 'act_seconds' => 90, 'is_running' => false]);
 

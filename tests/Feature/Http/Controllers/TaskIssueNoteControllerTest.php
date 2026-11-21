@@ -55,6 +55,16 @@ it('updates the resolution text', function () {
         ->assertJsonPath('data.resolution', 'Scoped the rate limiter key');
 });
 
+it('clears the resolution back to null when the fix is removed', function () {
+    $note = TaskIssueNote::factory()->create(['resolution' => 'Scoped the rate limiter key']);
+
+    $this->patchJson(route('admin.api.issues.update', $note), ['resolution' => null])
+        ->assertOk()
+        ->assertJsonPath('data.resolution', '');
+
+    expect($note->fresh()->resolution)->toBeNull();
+});
+
 it('cycles the issue to its next status', function () {
     $note = TaskIssueNote::factory()->resolved()->create();
 
