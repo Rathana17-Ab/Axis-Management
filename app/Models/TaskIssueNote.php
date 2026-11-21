@@ -5,31 +5,33 @@ namespace App\Models;
 use App\Enums\IssueSeverity;
 use App\Enums\IssueStatus;
 use Database\Factories\TaskIssueNoteFactory;
-use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-#[Fillable([
-    'project_task_id', 'category', 'severity', 'git_branch', 'status', 'encountered', 'resolution', 'author_name',
-])]
 class TaskIssueNote extends Model
 {
     /** @use HasFactory<TaskIssueNoteFactory> */
     use HasFactory;
 
     /**
-     * Get the attributes that should be cast.
+     * The attributes that are mass assignable.
      *
-     * @return array<string, string>
+     * @var list<string>
      */
-    protected function casts(): array
-    {
-        return [
-            'severity' => IssueSeverity::class,
-            'status' => IssueStatus::class,
-        ];
-    }
+    protected $fillable = [
+        'project_task_id', 'category', 'severity', 'git_branch', 'status', 'encountered', 'resolution', 'author_name',
+    ];
+
+    /**
+     * The attributes that should be cast.
+     *
+     * @var array<string, string>
+     */
+    protected $casts = [
+        'severity' => IssueSeverity::class,
+        'status' => IssueStatus::class,
+    ];
 
     /**
      * @return BelongsTo<ProjectTask, $this>

@@ -5,9 +5,6 @@ namespace App\Models;
 use App\Enums\EmployeePosition;
 use App\Enums\EmployeeStatus;
 use Database\Factories\UserFactory;
-use Illuminate\Database\Eloquent\Attributes\Fillable;
-use Illuminate\Database\Eloquent\Attributes\Hidden;
-use Illuminate\Database\Eloquent\Attributes\Scope;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -16,12 +13,24 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Str;
 
-#[Fillable(['name', 'email', 'password', 'job_title', 'department', 'position', 'description', 'status', 'avatar_initials', 'can_login'])]
-#[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable
 {
     /** @use HasFactory<UserFactory> */
     use HasFactory, Notifiable;
+
+    /**
+     * The attributes that are mass assignable.
+     *
+     * @var list<string>
+     */
+    protected $fillable = ['name', 'email', 'password', 'job_title', 'department', 'position', 'description', 'status', 'avatar_initials', 'can_login'];
+
+    /**
+     * The attributes that should be hidden for serialization.
+     *
+     * @var list<string>
+     */
+    protected $hidden = ['password', 'remember_token'];
 
     /**
      * Default attribute values (mirrors the column default).
@@ -33,20 +42,17 @@ class User extends Authenticatable
     ];
 
     /**
-     * Get the attributes that should be cast.
+     * The attributes that should be cast.
      *
-     * @return array<string, string>
+     * @var array<string, string>
      */
-    protected function casts(): array
-    {
-        return [
-            'email_verified_at' => 'datetime',
-            'password' => 'hashed',
-            'can_login' => 'boolean',
-            'position' => EmployeePosition::class,
-            'status' => EmployeeStatus::class,
-        ];
-    }
+    protected $casts = [
+        'email_verified_at' => 'datetime',
+        'password' => 'hashed',
+        'can_login' => 'boolean',
+        'position' => EmployeePosition::class,
+        'status' => EmployeeStatus::class,
+    ];
 
     /**
      * Tasks assigned to this employee.
@@ -61,8 +67,7 @@ class User extends Authenticatable
     /**
      * Employees who can assign tasks to others.
      */
-    #[Scope]
-    protected function leaders(Builder $query): Builder
+    public function scopeLeaders(Builder $query): Builder
     {
         return $query->where('position', EmployeePosition::Leader);
     }
@@ -70,8 +75,7 @@ class User extends Authenticatable
     /**
      * Employees who are currently active (can be given work).
      */
-    #[Scope]
-    protected function active(Builder $query): Builder
+    public function scopeActive(Builder $query): Builder
     {
         return $query->where('status', EmployeeStatus::Active);
     }

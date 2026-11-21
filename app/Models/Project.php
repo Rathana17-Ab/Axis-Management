@@ -4,7 +4,6 @@ namespace App\Models;
 
 use App\Enums\WorkStatus;
 use Database\Factories\ProjectFactory;
-use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -12,11 +11,17 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 /**
  * Top-level project (e.g. "EOT Axis") that groups product modules.
  */
-#[Fillable(['name', 'start_date', 'deadline', 'description', 'status'])]
 class Project extends Model
 {
     /** @use HasFactory<ProjectFactory> */
     use HasFactory;
+
+    /**
+     * The attributes that are mass assignable.
+     *
+     * @var list<string>
+     */
+    protected $fillable = ['name', 'start_date', 'deadline', 'description', 'status'];
 
     /**
      * Default attribute values (mirrors the column default).
@@ -28,18 +33,15 @@ class Project extends Model
     ];
 
     /**
-     * Get the attributes that should be cast.
+     * The attributes that should be cast.
      *
-     * @return array<string, string>
+     * @var array<string, string>
      */
-    protected function casts(): array
-    {
-        return [
-            'start_date' => 'date',
-            'deadline' => 'date',
-            'status' => WorkStatus::class,
-        ];
-    }
+    protected $casts = [
+        'start_date' => 'date',
+        'deadline' => 'date',
+        'status' => WorkStatus::class,
+    ];
 
     /**
      * @return HasMany<Module, $this>

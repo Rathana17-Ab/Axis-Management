@@ -6,40 +6,42 @@ use App\Enums\TaskPriority;
 use App\Enums\WorkStatus;
 use Carbon\CarbonInterface;
 use Database\Factories\ProjectTaskFactory;
-use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-#[Fillable([
-    'module_id', 'emp_id', 'assigned_by_id', 'name', 'description', 'priority', 'start_date', 'deadline',
-    'status', 'progress', 'est_hours', 'act_seconds', 'is_running', 'timer_started_at', 'sort_order',
-])]
 class ProjectTask extends Model
 {
     /** @use HasFactory<ProjectTaskFactory> */
     use HasFactory;
 
     /**
-     * Get the attributes that should be cast.
+     * The attributes that are mass assignable.
      *
-     * @return array<string, string>
+     * @var list<string>
      */
-    protected function casts(): array
-    {
-        return [
-            'priority' => TaskPriority::class,
-            'status' => WorkStatus::class,
-            'start_date' => 'date',
-            'deadline' => 'date',
-            'progress' => 'float',
-            'est_hours' => 'float',
-            'act_seconds' => 'integer',
-            'is_running' => 'boolean',
-            'timer_started_at' => 'datetime',
-        ];
-    }
+    protected $fillable = [
+        'module_id', 'emp_id', 'assigned_by_id', 'name', 'description', 'priority', 'start_date', 'deadline',
+        'status', 'progress', 'est_hours', 'act_seconds', 'is_running', 'timer_started_at', 'sort_order',
+    ];
+
+    /**
+     * The attributes that should be cast.
+     *
+     * @var array<string, string>
+     */
+    protected $casts = [
+        'priority' => TaskPriority::class,
+        'status' => WorkStatus::class,
+        'start_date' => 'date',
+        'deadline' => 'date',
+        'progress' => 'float',
+        'est_hours' => 'float',
+        'act_seconds' => 'integer',
+        'is_running' => 'boolean',
+        'timer_started_at' => 'datetime',
+    ];
 
     /**
      * @return BelongsTo<Module, $this>
@@ -86,7 +88,7 @@ class ProjectTask extends Model
             return 0;
         }
 
-        return max(0, (int) $this->timer_started_at->diffInSeconds($at ?? now()));
+        return max(0, (int) $this->timer_started_at->diffInSeconds($at ?? now(), false));
     }
 
     /**
