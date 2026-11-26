@@ -135,8 +135,11 @@ it('verifies Team Management page loads with all 11 team members', function () {
     $response->assertSee('id="team-tbody"', false)
         ->assertSee('id="departments-tbody"', false)
         ->assertSee('id="positions-tbody"', false)
-        ->assertSee('id="form-department-create"', false)
-        ->assertSee('id="form-position-create"', false)
+        ->assertSee('id="modal-department-create"', false)
+        ->assertSee('id="modal-position-create"', false)
+        ->assertDontSee('id="drawer-department-create"', false)
+        ->assertDontSee('id="drawer-position-create"', false)
         ->assertSee('id="drawer-team-member-password"', false)
-        ->assertSee('Login username');
+        ->assertSee('Login username')
+        ->assertDontSee('>Login</th>', false);
 });

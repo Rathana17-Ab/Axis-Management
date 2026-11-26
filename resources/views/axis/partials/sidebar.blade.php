@@ -10,21 +10,6 @@
                 ['team', 'Team', "switchPage('team')", '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>'],
             ];
 
-            if ($canAccessAdministration) {
-                $sidebarPages[] = ['roles', 'Administration', "switchPage('roles')", '<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/>'];
-            }
-
-            if ($canViewWorkQueues) {
-                $sidebarPages[] = ['work-queues', 'Work queues', "switchPage('work-queues')", '<polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/>'];
-            }
-
-            if ($canViewSharing) {
-                $sidebarPages[] = ['sharing', 'Record sharing', "switchPage('sharing')", '<circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>'];
-            }
-
-            if ($canViewP18) {
-                $sidebarPages[] = ['p18', 'Access & upgrades', "switchPage('p18')", '<rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>'];
-            }
         @endphp
         <aside id="eot-sidebar" class="axis-sidebar select-none" aria-label="Main menu"
                onmouseenter="hoverSidebar(true)" onmouseleave="hoverSidebar(false)">

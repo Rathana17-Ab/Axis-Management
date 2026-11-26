@@ -130,6 +130,19 @@ it('lets Sales Person open the sales and team pages but forbids administration p
     $this->actingAs($sales)->get(route('admin.roles.index'))->assertForbidden();
 });
 
+it('keeps administration, work queues, record sharing and P18 out of the sidebar', function () {
+    $admin = workspaceMemberWithRole(WorkspaceRole::SalesAdmin);
+
+    $this->actingAs($admin)
+        ->get(route('admin.dashboard'))
+        ->assertOk()
+        ->assertSee('id="nav-team"', false)
+        ->assertDontSee('id="nav-roles"', false)
+        ->assertDontSee('id="nav-work-queues"', false)
+        ->assertDontSee('id="nav-sharing"', false)
+        ->assertDontSee('id="nav-p18"', false);
+});
+
 it('hydrates the workspace with permission-aware client flags', function () {
     $sales = workspaceMemberWithRole(WorkspaceRole::SalesPerson);
 

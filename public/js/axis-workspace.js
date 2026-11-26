@@ -336,11 +336,14 @@ window.updateDynamicHeader = function(pageId) {
 // Searches pages, projects, tasks, issue notes,
 // models, reports and people, plus quick actions. All data comes
 // from the live client state, so it always reflects unsaved-to-reload edits.
+// Recent choices are validated against that state; stale links from an older
+// workspace/project are discarded instead of pointing at current records.
 // =====================================================================
 const IS_MAC = /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent);
 
 const AxisSearch = (() => {
-    const RECENT_KEY = 'axis.search.recent.v2';
+    const RECENT_KEY = 'axis.search.recent.v3';
+    const LEGACY_RECENT_KEYS = ['axis.search.recent.v2'];
     const PER_GROUP = 6;
     const TYPE_STYLE = {
         page: { icon: 'fa-compass', cls: 'bg-slate-500/15 text-slate-200 border-white/10', label: 'Page' },
@@ -362,6 +365,8 @@ const AxisSearch = (() => {
     let activeIndex = 0;
     let returnFocus = null;
 
+    try { LEGACY_RECENT_KEYS.forEach(key => localStorage.removeItem(key)); } catch (_) { /* storage unavailable */ }
+
     const el = id => document.getElementById(id);
     const normalize = v => String(v ?? '').toLowerCase().normalize('NFKD').replace(/[̀-ͯ]/g, '');
 
@@ -374,10 +379,6 @@ const AxisSearch = (() => {
             ['modules', 'Modules', 'All modules and their progress'],
             ['reports', 'Reports', 'Daily & weekly reports'],
             ['team', 'Team', 'People and sign-in access'],
-            ...(canManageAdministration() ? [['roles', 'Administration', 'Workspace roles, teams and user access']] : []),
-            ...(canViewQueues() ? [['work-queues', 'Work queues', 'Queues shared with sales']] : []),
-            ...(canViewSharing() ? [['sharing', 'Record sharing', 'Records shared with people']] : []),
-            ...(canViewP18() ? [['p18', 'Access & upgrades', 'P18 access and upgrade states']] : []),
         ];
         pages.forEach(([id, title, subtitle]) => items.push({
             type: 'page', key: id, title, subtitle, haystack: `${title} ${subtitle}`,
@@ -482,27 +483,46 @@ const AxisSearch = (() => {
         return html;
     }
 
-    function readRecent() {
-        try { return JSON.parse(localStorage.getItem(RECENT_KEY) || '[]'); } catch (_) { return []; }
+    function writeRecent(entries) {
+        try { localStorage.setItem(RECENT_KEY, JSON.stringify(entries)); } catch (_) { /* storage unavailable: recent list is a convenience only */ }
     }
+
+    /**
+     * Recent entries are only kept when their key and title still match live
+     * workspace data. Otherwise an old project could inherit a reused id and
+     * appear to be linked to this project.
+     */
+    function readRecent(index = null) {
+        try {
+            const entries = JSON.parse(localStorage.getItem(RECENT_KEY) || '[]');
+            if (!index) return entries;
+
+            const valid = entries.filter(r => index.some(i =>
+                i.type === r.type && String(i.key) === String(r.key) && i.title === r.title));
+
+            if (valid.length !== entries.length) writeRecent(valid);
+            return valid;
+        } catch (_) { return []; }
+    }
+
     function remember(item) {
         if (item.type === 'action') return;
-        try {
-            const next = [{ type: item.type, key: item.key }, ...readRecent().filter(r => !(r.type === item.type && r.key === item.key))].slice(0, 5);
-            localStorage.setItem(RECENT_KEY, JSON.stringify(next));
-        } catch (_) { /* storage unavailable: recent list is a convenience only */ }
+        const entry = { type: item.type, key: item.key, title: item.title };
+        const next = [entry, ...readRecent().filter(r => !(r.type === item.type && String(r.key) === String(item.key)))].slice(0, 5);
+        writeRecent(next);
     }
 
     function search(query) {
         const index = buildIndex();
+        const recent = readRecent(index);
         const phrase = normalize(query).trim();
         if (!phrase) {
-            const recent = readRecent()
-                .map(r => index.find(i => i.type === r.type && String(i.key) === String(r.key)))
+            const recentItems = recent
+                .map(r => index.find(i => i.type === r.type && String(i.key) === String(r.key) && i.title === r.title))
                 .filter(Boolean)
                 .map(i => ({ ...i, group: 'recent' }));
             return [
-                ...recent,
+                ...recentItems,
                 ...index.filter(i => i.type === 'action').slice(0, 4).map(i => ({ ...i, group: 'action' })),
                 ...index.filter(i => i.type === 'page').map(i => ({ ...i, group: 'page' })),
             ];
@@ -5715,9 +5735,13 @@ function renderTeamDirectory() {
                         ${department.description ? `<div class="text-xs text-slate-500">${escapeHtml(department.description)}</div>` : ''}
                     </td>
                     <td class="py-3 px-3 text-center text-xs text-slate-300">${department.memberCount ?? 0}</td>
-                    <td class="py-3 px-3 text-right whitespace-nowrap space-x-2">
-                        <button type="button" onclick="openDepartmentEdit(${department.id})" class="text-xs font-semibold text-sky-300 hover:text-sky-200">Edit</button>
-                        <button type="button" onclick="deleteDepartment(${department.id})" class="text-xs font-semibold text-rose-300 hover:text-rose-200">Remove</button>
+                    <td class="py-3 px-3 text-right whitespace-nowrap space-x-1.5">
+                        <button type="button" onclick="openDepartmentEdit(${department.id})" class="axis-row-btn" title="Edit department" aria-label="Edit ${escapeHtml(department.name)}">
+                            <i class="fa-solid fa-pen text-xs" aria-hidden="true"></i>
+                        </button>
+                        <button type="button" onclick="deleteDepartment(${department.id})" class="axis-row-btn axis-row-btn--danger" title="Remove department" aria-label="Remove ${escapeHtml(department.name)}">
+                            <i class="fa-solid fa-trash-can text-xs" aria-hidden="true"></i>
+                        </button>
                     </td>
                 </tr>
             `).join('')
@@ -5734,9 +5758,13 @@ function renderTeamDirectory() {
                         ${position.description ? `<div class="text-xs text-slate-500">${escapeHtml(position.description)}</div>` : ''}
                     </td>
                     <td class="py-3 px-3 text-center text-xs text-slate-300">${position.memberCount ?? 0}</td>
-                    <td class="py-3 px-3 text-right whitespace-nowrap space-x-2">
-                        <button type="button" onclick="openPositionEdit(${position.id})" class="text-xs font-semibold text-sky-300 hover:text-sky-200">Edit</button>
-                        <button type="button" onclick="deletePosition(${position.id})" class="text-xs font-semibold text-rose-300 hover:text-rose-200">Remove</button>
+                    <td class="py-3 px-3 text-right whitespace-nowrap space-x-1.5">
+                        <button type="button" onclick="openPositionEdit(${position.id})" class="axis-row-btn" title="Edit position" aria-label="Edit ${escapeHtml(position.name)}">
+                            <i class="fa-solid fa-pen text-xs" aria-hidden="true"></i>
+                        </button>
+                        <button type="button" onclick="deletePosition(${position.id})" class="axis-row-btn axis-row-btn--danger" title="Remove position" aria-label="Remove ${escapeHtml(position.name)}">
+                            <i class="fa-solid fa-trash-can text-xs" aria-hidden="true"></i>
+                        </button>
                     </td>
                 </tr>
             `).join('')
@@ -5783,23 +5811,10 @@ window.renderTeamTable = function() {
                     ${m.status === 'inactive' ? 'Inactive' : 'Active'}
                 </button>
             </td>
-            <td class="py-3.5 px-3 text-center">
-                ${m.hasAccount === false
-                    ? '<span class="px-2.5 py-0.5 rounded-full text-xs font-medium whitespace-nowrap bg-white/5 text-slate-400 border border-white/10">No account</span>'
-                    : `<span class="px-2.5 py-0.5 rounded-full text-xs font-semibold whitespace-nowrap ${m.active ? 'bg-emerald-500/15 text-emerald-300 border border-emerald-400/30' : 'bg-rose-500/15 text-rose-300 border-rose-400/30'}">${m.active ? 'Can login' : 'Locked'}</span>`}
-            </td>
             <td class="py-3.5 px-3 text-center whitespace-nowrap space-x-1.5">
-                <button type="button" onclick="openTeamMemberEdit(${m.id})" class="btn-glass px-2.5 py-1 text-xs" aria-label="Edit ${escapeHtml(m.name)}">Edit</button>
-                ${m.hasAccount === false ? `
-                <button type="button" onclick="openTeamMemberPasswordReset(${m.id}, true)" class="btn-glass px-2.5 py-1 text-xs">Set up login</button>` : `
-                <button type="button" onclick="openTeamMemberPasswordReset(${m.id})" class="btn-glass px-2.5 py-1 text-xs">Password</button>
-                <button type="button" onclick="toggleMemberLoginStatus(${m.id})" class="btn-glass px-2.5 py-1 text-xs">
-                    ${m.active ? 'Lock' : 'Unlock'}
-                </button>
-                <button type="button" onclick="quickSwitchSession(${jsArg(m.email)})" class="btn-primary-glass px-2.5 py-1 text-xs">
-                    Switch User
-                </button>`}
-                ${currentUser?.id !== m.id ? `<button type="button" onclick="deleteTeamMember(${m.id})" class="text-xs font-semibold text-rose-300 hover:text-rose-200">Remove</button>` : ''}
+                <button type="button" onclick="openTeamMemberEdit(${m.id})" class="px-2.5 py-0.5 rounded-full text-xs font-semibold border bg-sky-500/15 text-sky-200 border-sky-400/30">Edit</button>
+                ${currentUser?.id !== m.id ? `
+                <button type="button" onclick="deleteTeamMember(${m.id})" class="px-2.5 py-0.5 rounded-full text-xs font-semibold border bg-rose-500/15 text-rose-300 border-rose-400/30">Remove</button>` : ''}
             </td>
         </tr>
     `).join('');
@@ -5903,23 +5918,23 @@ window.handleSaveTeamMember = function(e) {
 let editingDepartmentId = null;
 let editingPositionId = null;
 
-window.createDepartment = async function(e) {
+window.handleCreateDepartment = async function(e) {
     e.preventDefault();
-    const form = document.getElementById('form-department-create');
-    const name = form.querySelector('[name="name"]').value.trim();
+    const form = e.target;
 
     try {
         const res = await AxisAPI.request(AxisAPI.url('departments.store'), 'POST', {
-            name,
-            description: form.querySelector('[name="description"]').value.trim() || null
+            name: document.getElementById('new-department-name').value.trim(),
+            description: document.getElementById('new-department-description').value.trim() || null
         });
         departments.push(res.data);
         departments.sort((a, b) => a.name.localeCompare(b.name));
         form.reset();
+        closeModal('modal-department-create');
         renderTeamTable();
         showToast(`Added ${res.data.name}`);
     } catch (error) {
-        AxisAPI.fail(error, 'Could not add the department.');
+        AxisAPI.fail(error);
     }
 };
 
@@ -5974,22 +5989,23 @@ window.deleteDepartment = async function(id) {
     }
 };
 
-window.createPosition = async function(e) {
+window.handleCreatePosition = async function(e) {
     e.preventDefault();
-    const form = document.getElementById('form-position-create');
+    const form = e.target;
 
     try {
         const res = await AxisAPI.request(AxisAPI.url('positions.store'), 'POST', {
-            name: form.querySelector('[name="name"]').value.trim(),
-            description: form.querySelector('[name="description"]').value.trim() || null,
-            is_leader: form.querySelector('[name="is_leader"]').checked
+            name: document.getElementById('new-position-name').value.trim(),
+            description: document.getElementById('new-position-description').value.trim() || null,
+            is_leader: document.getElementById('new-position-leader').checked
         });
         positions.push(res.data);
         form.reset();
+        closeModal('modal-position-create');
         renderTeamTable();
         showToast(`Added ${res.data.name}`);
     } catch (error) {
-        AxisAPI.fail(error, 'Could not add the position.');
+        AxisAPI.fail(error);
     }
 };
 
