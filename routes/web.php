@@ -46,6 +46,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
 
         Route::post('/modules', [ModuleController::class, 'store'])->name('modules.store');
         Route::patch('/modules/{module}', [ModuleController::class, 'update'])->name('modules.update');
+        Route::post('/modules/reorder', [ModuleController::class, 'reorder'])->name('modules.reorder');
 
         Route::post('/modules/{module}/tasks', [ProjectTaskController::class, 'store'])->name('tasks.store');
         Route::patch('/tasks/{task}', [ProjectTaskController::class, 'update'])->name('tasks.update');

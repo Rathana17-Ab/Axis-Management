@@ -1,9 +1,14 @@
 <?php
 
+use App\Enums\RecordShareAbility;
+use App\Enums\WorkspaceRole;
 use App\Enums\WorkStatus;
 use App\Models\Module;
 use App\Models\Project;
+use App\Models\RecordShare;
+use App\Models\Role;
 use App\Models\User;
+use Database\Seeders\SalesAccessSeeder;
 
 describe('store', function () {
     it('creates a module with the next code and an initial architecture task', function () {
@@ -170,5 +175,125 @@ describe('update', function () {
         $this->patchJson(route('admin.api.modules.update', $module), ['status' => 'Archived'])
             ->assertUnprocessable()
             ->assertJsonValidationErrors('status');
+    });
+});
+
+describe('reorder', function () {
+    it('persists the submitted custom order', function () {
+        $modules = collect([1, 2, 3])->map(fn (int $order): Module => Module::factory()->create(['sort_order' => $order]));
+        $orderedIds = [$modules[2]->id, $modules[0]->id, $modules[1]->id];
+
+        $this->postJson(route('admin.api.modules.reorder'), ['ordered_ids' => $orderedIds])
+            ->assertOk()
+            ->assertJsonPath('data.0.id', $modules[2]->id)
+            ->assertJsonPath('data.0.sortOrder', 1)
+            ->assertJsonPath('data.2.id', $modules[1]->id)
+            ->assertJsonPath('data.2.sortOrder', 3);
+
+        expect($modules[2]->fresh()->sort_order)->toBe(1)
+            ->and($modules[0]->fresh()->sort_order)->toBe(2)
+            ->and($modules[1]->fresh()->sort_order)->toBe(3);
+    });
+
+    it('rejects an incomplete order without changing the saved order', function () {
+        $modules = collect([1, 2])->map(fn (int $order): Module => Module::factory()->create(['sort_order' => $order]));
+
+        $this->postJson(route('admin.api.modules.reorder'), ['ordered_ids' => [$modules[0]->id]])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('ordered_ids');
+
+        expect($modules[0]->fresh()->sort_order)->toBe(1)
+            ->and($modules[1]->fresh()->sort_order)->toBe(2);
+    });
+
+    it('rejects duplicate ids', function () {
+        $modules = collect([1, 2])->map(fn (int $order): Module => Module::factory()->create(['sort_order' => $order]));
+
+        $this->postJson(route('admin.api.modules.reorder'), ['ordered_ids' => [$modules[0]->id, $modules[0]->id]])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('ordered_ids.1');
+    });
+
+    it('rejects unknown module ids', function () {
+        $module = Module::factory()->create(['sort_order' => 1]);
+
+        $this->postJson(route('admin.api.modules.reorder'), ['ordered_ids' => [$module->id, 999999]])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('ordered_ids.1');
+    });
+});
+
+describe('reorder access', function () {
+    beforeEach(function () {
+        $this->seed(SalesAccessSeeder::class);
+    });
+
+    $salesPerson = fn (): User => tap(User::factory()->create(), function (User $user): void {
+        $user->roles()->attach(Role::query()->where('slug', WorkspaceRole::SalesPerson->value)->firstOrFail());
+    });
+
+    it('lets a Sales Person reorder the modules they can see', function () use ($salesPerson) {
+        $sales = $salesPerson();
+        $visible = collect([
+            Module::factory()->create(['name' => 'Alpha visible', 'sort_order' => 1, 'team_members' => []]),
+            Module::factory()->create(['name' => 'Beta visible', 'sort_order' => 2, 'team_members' => []]),
+        ]);
+        $hidden = Module::factory()->create(['name' => 'Gamma hidden', 'sort_order' => 3, 'team_members' => []]);
+
+        $visible->each(function (Module $module) use ($sales): void {
+            RecordShare::factory()->create([
+                'shareable_type' => $module->getMorphClass(),
+                'shareable_id' => $module->id,
+                'user_id' => $sales->id,
+                'ability' => RecordShareAbility::View,
+            ]);
+        });
+
+        $this->actingAs($sales)
+            ->postJson(route('admin.api.modules.reorder'), ['ordered_ids' => [$visible[1]->id, $visible[0]->id]])
+            ->assertOk()
+            ->assertJsonPath('data.0.id', $visible[1]->id)
+            ->assertJsonPath('data.0.sortOrder', 1)
+            ->assertJsonPath('data.1.id', $visible[0]->id)
+            ->assertJsonPath('data.1.sortOrder', 2);
+
+        expect($visible[1]->fresh()->sort_order)->toBe(1)
+            ->and($visible[0]->fresh()->sort_order)->toBe(2)
+            ->and($hidden->fresh()->sort_order)->toBe(3);
+    });
+
+    it('rejects a Sales Person order that includes a module they cannot see', function () use ($salesPerson) {
+        $sales = $salesPerson();
+        $visible = Module::factory()->create(['name' => 'Alpha visible', 'sort_order' => 1, 'team_members' => []]);
+        $hidden = Module::factory()->create(['name' => 'Gamma hidden', 'sort_order' => 2, 'team_members' => []]);
+
+        RecordShare::factory()->create([
+            'shareable_type' => $visible->getMorphClass(),
+            'shareable_id' => $visible->id,
+            'user_id' => $sales->id,
+            'ability' => RecordShareAbility::View,
+        ]);
+
+        $this->actingAs($sales)
+            ->postJson(route('admin.api.modules.reorder'), ['ordered_ids' => [$hidden->id, $visible->id]])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('ordered_ids');
+
+        expect($visible->fresh()->sort_order)->toBe(1)
+            ->and($hidden->fresh()->sort_order)->toBe(2);
+    });
+
+    it('forbids reordering for a member whose role has no module view permission', function () {
+        $role = Role::factory()->create();
+        $member = User::factory()->create();
+        $member->roles()->attach($role);
+        $modules = collect([1, 2])->map(fn (int $order): Module => Module::factory()->create(['sort_order' => $order]));
+
+        $this->actingAs($member)
+            ->postJson(route('admin.api.modules.reorder'), ['ordered_ids' => $modules->pluck('id')->all()])
+            ->assertForbidden();
+
+        expect($modules[0]->fresh()->sort_order)->toBe(1)
+            ->and($modules[1]->fresh()->sort_order)->toBe(2);
     });
 });

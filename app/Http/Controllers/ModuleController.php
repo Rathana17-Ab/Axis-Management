@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Enums\TaskPriority;
 use App\Enums\WorkspacePermission;
 use App\Enums\WorkStatus;
+use App\Http\Requests\ReorderModulesRequest;
 use App\Http\Requests\StoreModuleRequest;
 use App\Http\Requests\UpdateModuleRequest;
 use App\Http\Resources\ModuleResource;
@@ -106,5 +107,68 @@ class ModuleController extends Controller
         $module->save();
 
         return ModuleResource::make($module->load(self::RELATIONS));
+    }
+
+    /**
+     * Persist the drag-and-drop order of the Modules page.
+     */
+    public function reorder(ReorderModulesRequest $request): JsonResponse
+    {
+        $visibleIds = collect($request->validated()['ordered_ids'])
+            ->map(fn (mixed $id): int => (int) $id)
+            ->values()
+            ->all();
+        $currentOrder = Module::query()
+            ->orderBy('sort_order')
+            ->orderBy('id')
+            ->pluck('id')
+            ->map(fn (mixed $id): int => (int) $id)
+            ->all();
+        $fullOrder = $this->mergeVisibleModuleOrder($currentOrder, $visibleIds);
+
+        DB::transaction(function () use ($fullOrder): void {
+            collect($fullOrder)->each(fn (int $id, int $index) => Module::whereKey($id)->update(['sort_order' => $index + 1]));
+        });
+
+        $sortOrders = array_flip($fullOrder);
+
+        return response()->json([
+            'data' => collect($visibleIds)->map(fn (int $id): array => [
+                'id' => $id,
+                'sortOrder' => $sortOrders[$id] + 1,
+            ])->all(),
+        ]);
+    }
+
+    /**
+     * Place the reordered visible modules back into the full list while leaving
+     * modules the member cannot see in their existing positions.
+     *
+     * @param  list<int>  $currentOrder
+     * @param  list<int>  $visibleOrder
+     * @return list<int>
+     */
+    private function mergeVisibleModuleOrder(array $currentOrder, array $visibleOrder): array
+    {
+        if (count($currentOrder) === count($visibleOrder)) {
+            return array_values($visibleOrder);
+        }
+
+        $visibleSet = array_flip($visibleOrder);
+        $visibleIndexes = [];
+
+        foreach ($currentOrder as $index => $id) {
+            if (isset($visibleSet[$id])) {
+                $visibleIndexes[] = $index;
+            }
+        }
+
+        $merged = $currentOrder;
+
+        foreach ($visibleIndexes as $offset => $index) {
+            $merged[$index] = $visibleOrder[$offset];
+        }
+
+        return $merged;
     }
 }

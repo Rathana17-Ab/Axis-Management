@@ -1,11 +1,11 @@
     {{-- Centered create dialog for the team directory. --}}
-    <div id="modal-department-create" class="axis-sound-lab-overlay fixed inset-0 z-[245] hidden items-center justify-center p-4"
+    <div id="modal-department-create" class="axis-modal-overlay fixed inset-0 z-[245] hidden items-center justify-center p-4"
          role="dialog" aria-modal="true" aria-labelledby="modal-department-create-title"
          onclick="if (event.target === this) closeModal('modal-department-create')">
-        <div class="axis-sound-lab w-full max-w-md max-h-[calc(100dvh-2rem)] overflow-y-auto">
+        <div class="axis-modal w-full max-w-md max-h-[calc(100dvh-2rem)] overflow-y-auto">
             <div class="flex items-start justify-between gap-3 pb-4 border-b border-white/[0.08]">
                 <div class="flex items-center gap-3 min-w-0">
-                    <span class="axis-sound-lab__icon" aria-hidden="true"><i class="fa-solid fa-building text-sm"></i></span>
+                    <span class="axis-modal__icon" aria-hidden="true"><i class="fa-solid fa-building text-sm"></i></span>
                     <div class="min-w-0">
                         <h2 id="modal-department-create-title" class="text-sm font-bold text-white">New department</h2>
                         <p class="text-xs text-slate-400 mt-0.5">Add a department to the directory used on each person's profile.</p>

@@ -32,6 +32,7 @@ const canViewSharing = () => workspaceCan('records.view_all') || workspaceCan('r
 const canViewP18 = () => workspaceCan('p18.view');
 const canManageQueues = () => workspaceCan('work_queues.manage');
 const canManageRecords = () => workspaceCan('records.manage_all');
+const canReorderModules = AXIS_BOOT.canReorderModules !== false;
 const canManageP18 = () => workspaceCan('p18.manage');
 const canManageAdministration = () => workspaceCan('administration.access');
 
@@ -147,7 +148,6 @@ window.AxisAPI = {
     fail(err, rollback) {
         console.error('[AxisAPI]', err);
         if (typeof rollback === 'function') rollback();
-        if (window.SoundFX) SoundFX.sodAlert();
         showToast(`Couldn't save: ${err.message || 'network error'}`);
     }
 };
@@ -347,7 +347,7 @@ const AxisSearch = (() => {
     const PER_GROUP = 6;
     const TYPE_STYLE = {
         page: { icon: 'fa-compass', cls: 'bg-slate-500/15 text-slate-200 border-white/10', label: 'Page' },
-        action: { icon: 'fa-bolt', cls: 'bg-emerald-500/15 text-emerald-300 border-emerald-400/25', label: 'Action' },
+        action: { icon: 'fa-bolt', cls: 'bg-sky-500/15 text-sky-300 border-sky-400/25', label: 'Action' },
         project: { icon: 'fa-layer-group', cls: 'bg-cyan-500/15 text-cyan-300 border-cyan-400/25', label: 'Project' },
         module: { icon: 'fa-briefcase', cls: 'bg-sky-500/15 text-sky-300 border-sky-400/25', label: 'Module' },
         task: { icon: 'fa-list-check', cls: 'bg-sky-500/15 text-sky-300 border-sky-400/25', label: 'Task' },
@@ -396,7 +396,6 @@ const AxisSearch = (() => {
             ['add-person', 'Add a person', 'Invite someone to the team', () => openModal('modal-team-member')],
             ['new-report', 'Send a report', 'Daily or weekly update', () => openModal('modal-report')],
             ['switch-user', 'Switch user', 'Sign in as someone else', () => openModal('login-modal')],
-            ['toggle-sound', 'Turn sound on or off', 'Interface sounds', () => SoundFX.toggleMute()],
         ].forEach(([key, title, subtitle, run]) => items.push({ type: 'action', key, title, subtitle, haystack: `${title} ${subtitle}`, run }));
 
         axisProjects.forEach(ap => items.push({
@@ -615,7 +614,6 @@ const AxisSearch = (() => {
         dialog.classList.add('is-open');
         document.documentElement.classList.add('axis-search-open');
         input.focus();
-        if (window.SoundFX) SoundFX.modalOpen();
     }
 
     function close(restoreFocus = true) {
@@ -625,7 +623,6 @@ const AxisSearch = (() => {
         document.documentElement.classList.remove('axis-search-open');
         setTimeout(() => { if (!dialog.classList.contains('is-open')) dialog.hidden = true; }, 180);
         if (restoreFocus && returnFocus && document.contains(returnFocus)) returnFocus.focus({ preventScroll: true });
-        if (window.SoundFX) SoundFX.modalClose();
     }
 
     function isOpen() {
@@ -750,7 +747,6 @@ window.switchPage = function(pageId, history = true) {
     }
     const pageOrder = ['dashboard', 'projects', 'modules', 'task-detail', 'reports', 'team', 'roles', 'work-queues', 'sharing', 'p18'];
     const navIdx = Math.max(0, pageOrder.indexOf(pageId));
-    SoundFX.navSwitch(navIdx);
 
     const allPages = document.querySelectorAll('.app-page');
     allPages.forEach(p => p.classList.remove('active-page'));
@@ -866,7 +862,6 @@ window.setSidebarPinned = function(pinned, save = true) {
     }
     if (save) {
         try { localStorage.setItem(SIDEBAR_PIN_KEY, pinned ? '1' : '0'); } catch (e) { /* keep for this visit */ }
-        SoundFX.toggleSwitch(pinned);
     }
 };
 
@@ -1328,7 +1323,7 @@ function renderDashboardTeam() {
             <td class="py-2.5 px-3 text-sm font-mono ${r.finished ? 'text-emerald-300' : 'text-slate-500'}">${r.finished}</td>
             <td class="py-2.5 px-3 text-sm font-mono ${r.seconds ? 'text-slate-200' : 'text-slate-500'}">${formatDuration(r.seconds)}</td>
             <td class="py-2.5 pl-3 pr-5">${r.running
-                ? `<button type="button" onclick="openProjectTaskList(${r.running.m.id})" class="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-300 hover:text-emerald-200 max-w-[220px]" title="Timer running on ${escapeHtml(r.running.t.name)}"><span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse shrink-0" aria-hidden="true"></span><span class="truncate">${escapeHtml(r.running.t.name)}</span></button>`
+                ? `<button type="button" onclick="openProjectTaskList(${r.running.m.id})" class="inline-flex items-center gap-1.5 text-xs font-semibold text-sky-300 hover:text-sky-200 max-w-[220px]" title="Timer running on ${escapeHtml(r.running.t.name)}"><span class="w-1.5 h-1.5 rounded-full bg-sky-400 animate-pulse shrink-0" aria-hidden="true"></span><span class="truncate">${escapeHtml(r.running.t.name)}</span></button>`
                 : `<span class="text-xs text-slate-500">${r.open ? 'Timer paused' : 'No open tasks'}</span>`}</td>
         </tr>`).join('');
 
@@ -1377,7 +1372,6 @@ window.setListView = function(list, mode) {
     if (!LIST_VIEW_MODES.includes(mode)) return;
     listViews[list] = mode;
     try { localStorage.setItem(`axis.view.${list}`, mode); } catch (e) { /* storage unavailable: keep it for this visit */ }
-    SoundFX.buttonTap(0);
     if (list === 'projects') renderAxisProjectsTable(); else renderProjectsTable();
 };
 
@@ -1520,7 +1514,6 @@ window.openModulesOfProject = function(projectId) {
 window.resetAxisProjectFilters = function() {
     document.getElementById('ap-flt-search').value = '';
     document.getElementById('ap-flt-status').value = 'all';
-    SoundFX.filterReset();
     renderAxisProjectsTable();
 };
 
@@ -1650,7 +1643,6 @@ window.setAxisProjectSortFromSelect = function(value) {
 
 window.sortAxisProjects = function(key) {
     axisProjectSort = nextSort(axisProjectSort, key, ['name', 'deadline']);
-    SoundFX.buttonTap(0);
     renderAxisProjectsTable();
 };
 
@@ -1856,7 +1848,6 @@ window.exportAxisProjectsCSV = function() {
     link.download = 'Axis_Projects_Export.csv';
     link.click();
     URL.revokeObjectURL(url);
-    SoundFX.createSuccess();
     showToast('Downloaded the project list');
 };
 
@@ -1891,7 +1882,6 @@ window.handleUpdateAxisProject = function(e) {
         syncAxisProjectOptions();
         closeModal('drawer-axis-project-edit');
         renderAxisProjectsPage();
-        SoundFX.createSuccess();
         showToast(`Saved ${ap.name}`);
     });
 };
@@ -1918,7 +1908,6 @@ window.deleteAxisProject = async function(id) {
         renderAxisProjectsPage();
         syncQuickModulePercentages();
         updateDynamicHeader(activePageId);
-        if (window.SoundFX) SoundFX.playDelete();
         showToast(`Deleted ${ap.name}`);
     } catch (err) {
         AxisAPI.fail(err);
@@ -1942,7 +1931,6 @@ window.resetProjectFilters = function() {
     document.getElementById('flt-product').value = 'all';
     document.getElementById('flt-status').value = 'all';
     document.getElementById('flt-search').value = '';
-    SoundFX.filterReset();
     renderProjectsTable(true);
     showToast('Filters cleared');
 };
@@ -1952,7 +1940,6 @@ window.clearSingleFilter = function(filterKey) {
     if (filterKey === 'product') document.getElementById('flt-product').value = 'all';
     if (filterKey === 'status') document.getElementById('flt-status').value = 'all';
     if (filterKey === 'search') document.getElementById('flt-search').value = '';
-    SoundFX.buttonTap(0);
     renderProjectsTable(true);
 };
 
@@ -1966,7 +1953,6 @@ window.scrollToProjectResults = function() {
 };
 
 window.applyAndNavigateFilters = function() {
-    SoundFX.dropdownSelect();
     renderProjectsTable(true);
 };
 
@@ -2336,6 +2322,7 @@ window.renderProjectsTable = function(shouldScroll = false) {
     }
 
     const sortValue = {
+        custom: p => Number(p.sortOrder) || 9999,
         name: p => p.name.toLowerCase(),
         status: p => AXIS_STATUS_ORDER[p.status] ?? 9,
         progress: p => computeProjectCompletion(p),
@@ -2347,6 +2334,7 @@ window.renderProjectsTable = function(shouldScroll = false) {
     const dir = moduleSort.dir === 'asc' ? 1 : -1;
     const sorted = [...filtered].sort((x, y) => {
         const a = sortValue(x), b = sortValue(y);
+        if (moduleSort.key === 'custom') return a - b || x.id - y.id;
         return (a < b ? -1 : a > b ? 1 : 0) * dir || x.name.localeCompare(y.name);
     });
     syncSortHeaders('data-mod-sort', moduleSort);
@@ -2410,7 +2398,9 @@ function deadlineInfo(p) {
     return { text: `${days} day${days === 1 ? '' : 's'} left`, cls: days <= 14 ? 'text-amber-300' : 'text-emerald-300' };
 }
 
-let moduleSort = { key: 'name', dir: 'asc' };
+let moduleSort = { key: 'custom', dir: 'asc' };
+let moduleDragId = null;
+let moduleDropPoint = null;
 
 window.setModuleSortFromSelect = function(value) {
     const [key, dir] = value.split(':');
@@ -2421,9 +2411,187 @@ window.setModuleSortFromSelect = function(value) {
 
 window.sortModules = function(key) {
     moduleSort = nextSort(moduleSort, key, ['name', 'lead', 'deadline']);
-    SoundFX.buttonTap(0);
     renderProjectsTable();
 };
+
+/** Drag handle shown on module rows/cards for users who can manage records. */
+function moduleDragHandle(name, compact = false) {
+    if (!canReorderModules) return '';
+    return `<button type="button" data-module-drag-handle onclick="event.stopPropagation()"
+        class="axis-module-drag ${compact ? '-mt-0.5' : ''}" title="Drag the row to reorder" aria-label="Drag ${name} to reorder">
+        <i class="fa-solid fa-grip-vertical text-[11px]" aria-hidden="true"></i>
+    </button>`;
+}
+
+function moduleItemsContainer(zone) {
+    return zone.id === 'mod-view-table' ? document.getElementById('projects-tbody') : zone;
+}
+
+function moduleDragScope(event, zone) {
+    if (zone.id === 'mod-view-board') {
+        return event.target.closest?.('.axis-board-col') || zone.querySelector('.axis-board-col');
+    }
+
+    return zone;
+}
+
+/** Find the row/card the pointer is nearest, even when it is over empty space. */
+function moduleDropPosition(event, zone) {
+    const scope = moduleDragScope(event, zone);
+    if (!scope) return null;
+
+    const items = [...scope.querySelectorAll('[data-module-id]')];
+    if (!items.length) return null;
+
+    const direct = event.target.closest?.('[data-module-id]');
+    const element = direct && scope.contains(direct)
+        ? direct
+        : items.reduce((nearest, item) => {
+            const rect = item.getBoundingClientRect();
+            const distance = Math.hypot(
+                Math.max(rect.left - event.clientX, 0, event.clientX - rect.right),
+                Math.max(rect.top - event.clientY, 0, event.clientY - rect.bottom)
+            );
+            return !nearest || distance < nearest.distance ? { item, distance } : nearest;
+        }, null)?.item;
+
+    if (!element) return null;
+
+    const rect = element.getBoundingClientRect();
+    const pointerBelow = event.clientY > rect.top + rect.height / 2;
+    const pointerRight = event.clientX > rect.left + rect.width / 2;
+    const isCard = zone.id !== 'mod-view-table';
+    const after = pointerBelow || (isCard && event.clientY >= rect.top && event.clientY <= rect.bottom && pointerRight);
+
+    return { element, after };
+}
+
+function moduleDropAllowed(event, zone, point) {
+    if (zone.id !== 'mod-view-board' || !point) return true;
+
+    const dragged = zone.querySelector(`[data-module-id="${moduleDragId}"]`);
+    const draggedColumn = dragged?.closest('.axis-board-col');
+    const targetColumn = point.element.closest('.axis-board-col');
+
+    return !draggedColumn || !targetColumn || draggedColumn === targetColumn;
+}
+
+function clearModuleDropMarkers() {
+    document.querySelectorAll('[data-module-id].is-drop-before, [data-module-id].is-drop-after')
+        .forEach(el => el.classList.remove('is-drop-before', 'is-drop-after'));
+    moduleDropPoint = null;
+}
+
+function scrollModuleDropEdges(event) {
+    const edge = 56;
+    if (event.clientY < edge) {
+        window.scrollBy(0, -14);
+    } else if (event.clientY > window.innerHeight - edge) {
+        window.scrollBy(0, 14);
+    }
+}
+
+window.handleModuleDragStart = function(event) {
+    const item = event.target.closest?.('[data-module-id]');
+    if (!item || !item.draggable) return;
+
+    const handle = event.target.closest?.('[data-module-drag-handle]');
+    const interactive = event.target.closest?.('button:not([data-module-drag-handle]), select, input, textarea, a');
+    if (!handle && interactive) {
+        event.preventDefault();
+        return;
+    }
+
+    moduleDragId = Number(item.dataset.moduleId);
+    event.dataTransfer.effectAllowed = 'move';
+    event.dataTransfer.setData('text/plain', String(moduleDragId));
+    requestAnimationFrame(() => item.classList.add('is-dragging'));
+};
+
+window.handleModuleDragOver = function(event) {
+    if (moduleDragId === null) return;
+
+    const zone = event.currentTarget;
+    const point = moduleDropPosition(event, zone);
+    if (!moduleDropAllowed(event, zone, point)) return;
+
+    event.preventDefault();
+    event.dataTransfer.dropEffect = 'move';
+    clearModuleDropMarkers();
+    scrollModuleDropEdges(event);
+
+    if (!point || Number(point.element.dataset.moduleId) === moduleDragId) return;
+
+    point.element.classList.add(point.after ? 'is-drop-after' : 'is-drop-before');
+    moduleDropPoint = point;
+};
+
+window.handleModuleDrop = function(event) {
+    if (moduleDragId === null) return;
+
+    const zone = event.currentTarget;
+    const point = moduleDropPoint || moduleDropPosition(event, zone);
+    if (!moduleDropAllowed(event, zone, point)) return;
+
+    event.preventDefault();
+    const movedId = moduleDragId;
+    const itemContainer = moduleItemsContainer(zone);
+    handleModuleDragEnd();
+
+    if (!point || Number(point.element.dataset.moduleId) === movedId || !itemContainer) return;
+    saveModuleOrder(itemContainer, movedId, point);
+};
+
+window.handleModuleDragEnd = function() {
+    moduleDragId = null;
+    document.querySelectorAll('[data-module-id].is-dragging')
+        .forEach(el => el.classList.remove('is-dragging'));
+    clearModuleDropMarkers();
+};
+
+/** Reorder only the modules the member can see, keeping hidden modules in their relative positions. */
+function saveModuleOrder(container, movedId, point) {
+    const targetId = Number(point.element.dataset.moduleId);
+    const isVisible = id => Boolean(container.querySelector(`[data-module-id="${id}"]`));
+    if (!isVisible(movedId) || !isVisible(targetId) || targetId === movedId) return;
+
+    const previousProjects = projects.map(p => ({ ...p }));
+    const previousSort = { ...moduleSort };
+    const remainingIds = projects.map(p => p.id).filter(id => id !== movedId);
+    const targetIndex = remainingIds.indexOf(targetId);
+    if (targetIndex === -1) return;
+
+    remainingIds.splice(point.after ? targetIndex + 1 : targetIndex, 0, movedId);
+
+    const byId = new Map(projects.map(p => [p.id, p]));
+    projects = remainingIds.map(id => byId.get(id)).filter(Boolean);
+    projects.forEach((p, index) => { p.sortOrder = index + 1; });
+    moduleSort = { key: 'custom', dir: 'asc' };
+    renderProjectsTable();
+
+    AxisAPI.request(AxisAPI.url('modules.reorder'), 'POST', { ordered_ids: projects.map(p => p.id) })
+        .then(() => showToast('Module order saved'))
+        .catch(err => AxisAPI.fail(err, () => {
+            projects = previousProjects;
+            moduleSort = previousSort;
+            renderProjectsTable();
+        }));
+}
+
+function initModuleDragAndDrop() {
+    if (!canReorderModules) return;
+    ['mod-view-table', 'mod-view-cards', 'mod-view-board'].forEach(id => {
+        const zone = document.getElementById(id);
+        if (!zone) return;
+        zone.addEventListener('dragstart', handleModuleDragStart);
+        zone.addEventListener('dragover', handleModuleDragOver);
+        zone.addEventListener('drop', handleModuleDrop);
+        zone.addEventListener('dragend', handleModuleDragEnd);
+        zone.addEventListener('dragleave', event => {
+            if (!zone.contains(event.relatedTarget)) clearModuleDropMarkers();
+        });
+    });
+}
 
 /** Task roll-up for one module: finished / total tasks and unresolved issue notes. */
 function moduleStats(p) {
@@ -2453,9 +2621,10 @@ function renderModuleCard(p, compact = false, showProject = false) {
             </div>
         </div>`;
     return `
-    <article class="axis-list-card" role="button" tabindex="0" onclick="openProjectTaskList(${p.id})" onkeydown="if(event.key==='Enter'&&event.target===this)openProjectTaskList(${p.id})">
+    <article class="axis-list-card" data-module-id="${p.id}" draggable="${canReorderModules ? 'true' : 'false'}" role="button" tabindex="0" onclick="openProjectTaskList(${p.id})" onkeydown="if(event.key==='Enter'&&event.target===this)openProjectTaskList(${p.id})">
         <div class="flex items-start justify-between gap-3">
             <div class="flex items-center gap-2.5 min-w-0">
+                ${moduleDragHandle(name, compact)}
                 <span class="w-8 h-8 rounded-lg ${p.badgeClass} font-bold text-xs flex items-center justify-center shrink-0">${escapeHtml(p.projBadge)}</span>
                 <div class="min-w-0">
                     <h3 class="text-sm font-semibold text-white truncate" title="${name}">${name}</h3>
@@ -2513,9 +2682,10 @@ function renderProjectRow(p, showProject = false) {
         : '');
 
     return `
-        <tr class="cursor-pointer transition-colors group" onclick="openProjectTaskList(${p.id})">
+        <tr class="cursor-pointer transition-colors group" data-module-id="${p.id}" draggable="${canReorderModules ? 'true' : 'false'}" onclick="openProjectTaskList(${p.id})">
             <td class="py-3 pl-5 pr-3 axis-sticky-left">
-                <div class="flex items-center gap-3 w-[250px]">
+                <div class="flex items-center gap-3 w-[274px]">
+                    ${moduleDragHandle(name)}
                     <span class="w-9 h-9 rounded-xl ${p.badgeClass} font-bold text-sm flex items-center justify-center shrink-0">${escapeHtml(p.projBadge)}</span>
                     <div class="min-w-0">
                         <div class="text-sm font-semibold text-white truncate group-hover:text-sky-300 transition-colors" title="${name}">${name}</div>
@@ -2597,11 +2767,6 @@ window.updateProjectStatus = function(projId, newStatus) {
     if (p) {
         const prevStatus = p.status;
         p.status = newStatus;
-        if (newStatus === 'Finished') {
-            SoundFX.taskComplete();
-        } else {
-            SoundFX.dropdownSelect();
-        }
         showToast(`${p.code} is now ${newStatus}`);
 
         AxisAPI.idOf(p)
@@ -2638,7 +2803,7 @@ window.handleAddProject = function(e) {
             deadline: deadline
         });
         const created = res.data;
-        projects.unshift(created);
+        projects.push(created);
         const parent = axisProjects.find(ap => ap.id === created.projectId);
         if (parent && typeof parent.moduleCount === 'number') parent.moduleCount++;
 
@@ -2660,7 +2825,6 @@ window.handleAddProject = function(e) {
         updateDynamicHeader(activePageId);
         e.target.reset();
         closeModal('modal-add-project');
-        SoundFX.createSuccess();
         showToast(`Created ${res.data.name}`);
     });
 };
@@ -2684,7 +2848,6 @@ window.handleCreateAxisProject = function(e) {
         updateDynamicHeader(activePageId);
         e.target.reset();
         closeModal('drawer-project-create');
-        SoundFX.createSuccess();
         showToast(`Created project ${res.data.name}`);
     });
 };
@@ -2723,7 +2886,6 @@ function syncAxisProjectOptions(selectId = null) {
 // =====================================================================
 window.setTaskDetailViewMode = function(mode) {
     taskDetailViewMode = mode === 'cards' ? 'cards' : 'table';
-    SoundFX.buttonTap(0);
 
     const tblWrap = document.getElementById('td-table-view-wrap');
     const crdWrap = document.getElementById('td-cards-view-wrap');
@@ -2759,7 +2921,6 @@ window.resetTaskDetailFilters = function() {
     if (sortSel) sortSel.value = 'default';
     if (srch) srch.value = '';
 
-    SoundFX.filterReset();
     setTaskIssueFilter('all');
     showToast('Filters cleared');
 };
@@ -2771,7 +2932,6 @@ window.clearSingleTaskFilter = function(key) {
     if (key === 'priority') document.getElementById('td-flt-priority').value = 'all';
     if (key === 'sort') document.getElementById('td-flt-sort').value = 'default';
     if (key === 'search') document.getElementById('task-inline-search').value = '';
-    SoundFX.buttonTap(0);
     setTaskIssueFilter(taskIssueFilter);
 };
 
@@ -2844,7 +3004,6 @@ window.exportActiveTasksCSV = function() {
     a.download = `${p.code}_${p.name.replace(/\s+/g, '_')}_Tasks.csv`;
     a.click();
     URL.revokeObjectURL(url);
-    SoundFX.createSuccess();
     showToast(`Downloaded ${p.code} tasks`);
 };
 
@@ -2897,7 +3056,6 @@ window.toggleModuleSwitcher = function(force) {
     search.classList.toggle('hidden', !searchable);
     search.value = '';
     renderModuleSwitcher();
-    SoundFX.buttonTap(0);
     (searchable ? search : (menu.querySelector('.is-current') || menu.querySelector('[data-module-option]')))?.focus();
 };
 
@@ -3036,7 +3194,7 @@ window.openProjectEdit = function(projectId) {
             <span>${escapeHtml(name)}</span>
         </label>`).join('');
 
-    AxisDrawer.close('drawer-project-view', { sound: false });
+    AxisDrawer.close('drawer-project-view');
     AxisDrawer.open('drawer-project-edit', { title: `Edit ${p.name}`, breadcrumb: p.code });
 };
 
@@ -3054,7 +3212,6 @@ window.handleUpdateProject = function(e) {
     if (!deadline) errors.deadline = ['Pick a deadline.'];
     if (Object.keys(errors).length) {
         AxisDrawer.showErrors('drawer-project-edit', errors);
-        SoundFX.sodAlert();
         return;
     }
 
@@ -3093,7 +3250,6 @@ window.handleUpdateProject = function(e) {
         renderProjectsTable();
         renderAxisProjectsTable();
         if (activePageId === 'task-detail' && activeProjectId === p.id) renderTaskDetailPage();
-        if (updated.status === 'Finished') SoundFX.taskComplete(); else SoundFX.createSuccess();
         showToast(`Saved ${p.name}`);
     });
 };
@@ -3204,7 +3360,6 @@ function refreshDetailSummaryCards() {
 
 window.setTaskIssueFilter = function(filterMode) {
     taskIssueFilter = filterMode || 'all';
-    SoundFX.buttonTap(0);
 
     const issueSelect = document.getElementById('td-flt-issue');
     if (issueSelect) issueSelect.value = taskIssueFilter;
@@ -3254,7 +3409,6 @@ window.stepDevIssueTask = function(direction) {
     const idx = p.tasks.findIndex(t => t.id === activeDrawerTaskId);
     const nextIdx = (idx + direction + p.tasks.length) % p.tasks.length;
     activeDrawerTaskId = p.tasks[nextIdx].id;
-    SoundFX.navSwitch(nextIdx);
     renderDevIssueDrawerContent();
     renderTasksTableRows();
 };
@@ -3283,7 +3437,6 @@ window.setIssueComposerOpen = function(open, { focus = true } = {}) {
 
 window.setDrawerIssueFilter = function(mode) {
     drawerFilterMode = mode || 'all';
-    SoundFX.buttonTap(0);
     renderDevIssueDrawerContent();
 };
 
@@ -3421,7 +3574,6 @@ window.submitDrawerIssueNote = function(e) {
     const resolution = resolutionInput;
     if (!encountered) {
         AxisDrawer.showErrors('dev-issue-drawer', { encountered: ['Tell us what went wrong.'] });
-        SoundFX.sodAlert();
         return;
     }
 
@@ -3475,12 +3627,6 @@ window.submitDrawerIssueNote = function(e) {
     const notesList = document.getElementById('did-notes-list');
     if (notesList) notesList.closest('[data-drawer-body]').scrollTo({ top: 0, behavior: 'smooth' });
 
-    if (statusVal === 'Resolved') {
-        SoundFX.taskComplete();
-    } else {
-        SoundFX.createSuccess();
-    }
-
     renderDevIssueDrawerContent();
     renderTasksTableRows();
     showToast(`Note added to "${t.name}"`);
@@ -3500,13 +3646,10 @@ window.cycleIssueStatus = function(taskId, issueId) {
     iss.status = order[nextIdx];
 
     if (iss.status === 'Resolved') {
-        SoundFX.taskComplete();
         showToast('Marked as fixed');
     } else if (iss.status === 'Open') {
-        SoundFX.sodAlert();
         showToast('Reopened');
     } else {
-        SoundFX.dropdownSelect();
         showToast('Looking into it');
     }
 
@@ -3563,7 +3706,6 @@ window.deleteTaskIssueNote = async function(taskId, issueId) {
     if (idx === -1) return;
     const removed = t.issues[idx];
     t.issues = t.issues.filter(i => i.id !== issueId);
-    SoundFX.deleteTrash();
     renderDevIssueDrawerContent();
     renderTasksTableRows();
     showToast('Note deleted');
@@ -3755,7 +3897,7 @@ function renderTasksTableRows(flashCard = false) {
                                 <i class="fa-solid fa-bug mr-1"></i>${issues.length} notes (${openIss} open)
                             </button>
                             <div class="flex items-center gap-2">
-                                <button type="button" onclick="toggleTaskStopwatch(${t.id})" class="btn-glass px-2.5 py-1 text-xs font-semibold ${t.running ? 'text-amber-300' : 'text-emerald-300'}" aria-label="${t.running ? 'Pause timer' : 'Start timer'}">
+                                <button type="button" onclick="toggleTaskStopwatch(${t.id})" class="btn-glass px-2.5 py-1 text-xs font-semibold ${t.running ? 'text-amber-300' : 'text-sky-300'}" aria-label="${t.running ? 'Pause timer' : 'Start timer'}">
                                     <i class="fa-solid ${t.running ? 'fa-pause' : 'fa-play'} mr-1" aria-hidden="true"></i>${t.running ? 'Pause' : 'Start'}
                                 </button>
                                 ${taskActionsHtml(t)}
@@ -3815,7 +3957,6 @@ window.updateTaskSchedule = function(taskId, startDate, endDate) {
     t.startDate = startDate;
     t.endDate = endDate;
     renderTasksTableRows();
-    SoundFX.dropdownSelect();
     persistTask(t, { start_date: startDate || null, deadline: endDate || null }, () => {
         Object.assign(t, snapshot);
         renderTasksTableRows();
@@ -4052,7 +4193,6 @@ window.sortTasksByDeadline = function() {
     const sel = document.getElementById('td-flt-sort');
     if (!sel) return;
     sel.value = sel.value === 'deadline-asc' ? 'deadline-desc' : 'deadline-asc';
-    SoundFX.buttonTap(0);
     renderTasksTableRows(true);
 };
 
@@ -4069,7 +4209,7 @@ function taskActionsHtml(t) {
             <button type="button" onclick="openTaskEdit(${t.id})" class="axis-row-btn" title="Edit task" aria-label="Edit ${name}">
                 <i class="fa-solid fa-pen-to-square text-xs" aria-hidden="true"></i>
             </button>
-            <button type="button" onclick="openDevIssueDrawer(${t.id})" data-no-click-sfx="true" class="axis-row-btn" title="Issue notes" aria-label="Issue notes for ${name}">
+            <button type="button" onclick="openDevIssueDrawer(${t.id})" class="axis-row-btn" title="Issue notes" aria-label="Issue notes for ${name}">
                 <i class="fa-regular fa-note-sticky text-xs" aria-hidden="true"></i>
             </button>
             <button type="button" onclick="resetTaskStopwatch(${t.id})" class="axis-row-btn" title="Reset logged time" aria-label="Reset the logged time of ${name}">
@@ -4105,8 +4245,8 @@ function renderTaskRow(t) {
     const notesHtml = issues.length === 0
         ? '<span class="text-xs text-slate-500">None</span>'
         : openIssues > 0
-            ? `<button type="button" onclick="openDevIssueDrawer(${t.id})" data-no-click-sfx="true" title="${escapeHtml((issues.find(i => i.status !== 'Resolved') || {}).encountered || '')}" class="inline-flex items-center gap-1.5 text-xs font-semibold text-amber-300 hover:text-amber-200 whitespace-nowrap"><span class="w-1.5 h-1.5 rounded-full bg-amber-400"></span>${openIssues} open</button>`
-            : `<button type="button" onclick="openDevIssueDrawer(${t.id})" data-no-click-sfx="true" class="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-300 hover:text-emerald-200 whitespace-nowrap"><i class="fa-solid fa-check text-[10px]" aria-hidden="true"></i>${issues.length} fixed</button>`;
+            ? `<button type="button" onclick="openDevIssueDrawer(${t.id})" title="${escapeHtml((issues.find(i => i.status !== 'Resolved') || {}).encountered || '')}" class="inline-flex items-center gap-1.5 text-xs font-semibold text-amber-300 hover:text-amber-200 whitespace-nowrap"><span class="w-1.5 h-1.5 rounded-full bg-amber-400"></span>${openIssues} open</button>`
+            : `<button type="button" onclick="openDevIssueDrawer(${t.id})" class="inline-flex items-center gap-1.5 text-xs font-semibold text-sky-300 hover:text-sky-200 whitespace-nowrap"><i class="fa-solid fa-check text-[10px]" aria-hidden="true"></i>${issues.length} fixed</button>`;
 
     return `
         <tr data-task-row="${t.id}" class="${t.running ? 'timer-running-row' : ''} transition-colors group">
@@ -4115,7 +4255,7 @@ function renderTaskRow(t) {
                     <input type="text" value="${name}" title="${name}" aria-label="Task name"
                         oninput="updateTaskField(${t.id}, 'name', this.value)"
                         class="${GHOST_FIELD} w-full px-1.5 py-0.5 -ml-1.5 text-sm font-semibold text-white truncate">
-                    <button type="button" id="task-desc-preview-${t.id}" onclick="editTaskDescription(${t.id})" data-no-click-sfx="true"
+                    <button type="button" id="task-desc-preview-${t.id}" onclick="editTaskDescription(${t.id})"
                         class="w-full flex items-center gap-1.5 text-left text-xs text-slate-400 hover:text-slate-200 mt-0.5 min-w-0" title="${escapeHtml(summary || 'Add details')}">
                         <span class="font-mono text-slate-500 shrink-0">TASK-${t.id}</span>
                         <span class="text-slate-600 shrink-0">·</span>
@@ -4188,7 +4328,7 @@ function renderTaskRow(t) {
             <td class="py-3 px-3">
                 <div class="flex items-center gap-2.5 w-[200px]">
                     <button type="button" onclick="toggleTaskStopwatch(${t.id})" aria-label="${t.running ? 'Pause timer' : 'Start timer'}" title="${t.running ? 'Pause timer' : 'Start timer'}"
-                        class="w-8 h-8 rounded-full shrink-0 inline-flex items-center justify-center transition-colors ${t.running ? 'bg-amber-500/20 text-amber-300 hover:bg-amber-500/30' : 'bg-emerald-500/15 text-emerald-300 hover:bg-emerald-500/25'}">
+                        class="w-8 h-8 rounded-full shrink-0 inline-flex items-center justify-center transition-colors ${t.running ? 'bg-amber-500/20 text-amber-300 hover:bg-amber-500/30' : 'bg-sky-500/15 text-sky-300 hover:bg-sky-500/25'}">
                         <i class="fa-solid ${t.running ? 'fa-pause' : 'fa-play'} text-[10px]" aria-hidden="true"></i>
                     </button>
                     <div class="min-w-0 flex-1">
@@ -4289,11 +4429,9 @@ window.updateTaskStatus = function(taskId, newStatus) {
     if (newStatus === 'Finished') {
         t.progress = 100;
         t.running = false;
-        SoundFX.taskComplete();
     } else {
         if (newStatus === 'Not yet started') t.progress = 0;
         else if (t.progress >= 100) t.progress = 99;
-        SoundFX.dropdownSelect();
     }
     renderTasksTableRows();
     refreshDetailSummaryCards();
@@ -4408,7 +4546,7 @@ window.handleTaskProgressSliderKey = function(e, taskId) {
     setTaskProgressFromSlider(taskId, next);
 };
 
-/** While typing: only the bar previews the value — status, sounds and saving wait for the commit. */
+/** While typing: only the bar previews the value — status and saving wait for the commit. */
 window.previewTaskProgress = function(taskId, raw) {
     const pct = parseProgressInput(raw);
     if (pct !== null) paintTaskProgressBar(taskId, pct);
@@ -4468,10 +4606,8 @@ window.updateTaskProgress = function(taskId, val) {
     // 100% = Finished; 0% = Not yet started (unless its timer is running); anything between = Processing
     if (pct === 100) {
         t.status = 'Finished';
-        if (prev !== 100) SoundFX.taskComplete();
     } else {
         t.status = pct === 0 && !taskHasStartedWork(t) ? 'Not yet started' : 'Processing';
-        SoundFX.dropdownSelect();
     }
     syncTaskStatusField(t);
 
@@ -4506,7 +4642,6 @@ window.updateTaskEst = function(taskId, val) {
     const t = p.tasks.find(x => x.id === taskId);
     if (t) {
         t.estHours = Math.max(0, parseFloat(val) || 0);
-        SoundFX.sliderScrub(Math.min(100, t.estHours));
         refreshDetailSummaryCards();
         AxisAPI.debounce(`task:${taskId}:est`, () => {
             persistTask(t, { est_hours: t.estHours });
@@ -4521,12 +4656,7 @@ window.toggleTaskStopwatch = function(taskId) {
     if (!t) return;
     const snapshot = { running: t.running, status: t.status };
     t.running = !t.running;
-    if (t.running) {
-        if (t.status === 'Not yet started') t.status = 'Processing';
-        SoundFX.timerStart();
-    } else {
-        SoundFX.timerPause();
-    }
+    if (t.running && t.status === 'Not yet started') t.status = 'Processing';
     renderTasksTableRows();
     syncHeaderTimerPill();
 
@@ -4556,7 +4686,6 @@ window.resetTaskStopwatch = function(taskId) {
     t.actSeconds = 0;
     // Same rule as the server: no time and nothing done means not started
     if (t.status === 'Processing' && (parseFloat(t.progress) || 0) <= 0) t.status = 'Not yet started';
-    SoundFX.filterReset();
     renderTasksTableRows();
     refreshDetailSummaryCards();
     syncHeaderTimerPill();
@@ -4591,7 +4720,6 @@ window.deleteTaskRow = async function(taskId) {
     if (!p.tasks.includes(removed)) return;
 
     p.tasks = p.tasks.filter(x => x.id !== taskId);
-    SoundFX.deleteTrash();
     renderTasksTableRows();
     refreshDetailSummaryCards();
     syncHeaderTimerPill();
@@ -4673,7 +4801,6 @@ window.handleUpdateTask = function(e) {
     const name = document.getElementById('edit-task-name').value.trim();
     if (!name) {
         AxisDrawer.showErrors('drawer-task-edit', { name: ['Give the task a name.'] });
-        SoundFX.sodAlert();
         return;
     }
     const progressRaw = document.getElementById('edit-task-progress').value;
@@ -4700,7 +4827,6 @@ window.handleUpdateTask = function(e) {
         closeModal('drawer-task-edit');
         renderTasksTableRows();
         refreshDetailSummaryCards();
-        if (updated.status === 'Finished') SoundFX.taskComplete(); else SoundFX.createSuccess();
         showToast(`Saved ${t.name}`);
     });
 };
@@ -4743,7 +4869,6 @@ window.handleCreateTask = function(e) {
             if (el) el.value = '';
         });
         closeModal('modal-create-task');
-        SoundFX.createSuccess();
         if (p.id !== activeProjectId || activePageId !== 'task-detail') {
             openProjectTaskList(p.id); // show the task in the module it was added to
         } else {
@@ -4784,7 +4909,6 @@ function startGlobalStopwatchLoop() {
             });
         });
         if (anyRunning) {
-            SoundFX.chronoTick(globalSec, false);
             refreshDetailSummaryCards();
             syncHeaderTimerPill();
         }
@@ -5259,7 +5383,6 @@ window.parseTelegramText = function() {
         statusEl.innerHTML = `<span class="text-emerald-400 font-semibold"><i class="fa-solid fa-check-circle mr-1"></i>Parsed ${reportBuilderSections.length} roles, ${totalItems} test items</span>`;
     }
 
-    if (window.SoundFX) SoundFX.playSuccess();
     showToast(`Parsed ${reportBuilderSections.length} roles and ${totalItems} test cases!`);
 };
 
@@ -5460,7 +5583,6 @@ window.handleSaveReport = function(e) {
         }
 
         closeModal('modal-report');
-        if (window.SoundFX) SoundFX.playSuccess();
         renderReportsPage();
         updateDynamicHeader(activePageId);
     });
@@ -5577,7 +5699,6 @@ window.copyReportTelegramById = function(id, e) {
     const text = report.summary || '';
     if (navigator.clipboard && navigator.clipboard.writeText) {
         navigator.clipboard.writeText(text).then(() => {
-            if (window.SoundFX) SoundFX.playSuccess();
             showToast('Copied Telegram report to clipboard!');
         }).catch(() => fallbackCopy(text));
     } else {
@@ -5592,7 +5713,6 @@ function fallbackCopy(text) {
     ta.select();
     try {
         document.execCommand('copy');
-        if (window.SoundFX) SoundFX.playSuccess();
         showToast('Copied Telegram report to clipboard!');
     } catch (e) {
         showToast('Failed to copy');
@@ -5608,7 +5728,6 @@ window.copyReportDrawerTelegram = function() {
     }
     if (navigator.clipboard && navigator.clipboard.writeText) {
         navigator.clipboard.writeText(summary).then(() => {
-            if (window.SoundFX) SoundFX.playSuccess();
             showToast('Copied Telegram report to clipboard!');
         }).catch(() => fallbackCopy(summary));
     } else {
@@ -5698,7 +5817,6 @@ window.deleteReportById = async function(id, e) {
         if (activeReportDetailId == id) {
             closeModal('modal-report-view');
         }
-        if (window.SoundFX) SoundFX.playDelete();
         renderReportsPage();
         updateDynamicHeader(activePageId);
         showToast('Report deleted');
@@ -5849,7 +5967,6 @@ window.handleUpdateTeamMember = function(e) {
         Object.assign(m, res.data);
         closeModal('drawer-team-member-edit');
         renderTeamTable();
-        SoundFX.createSuccess();
         showToast(`Saved ${m.name}`);
     });
 };
@@ -5860,7 +5977,6 @@ window.toggleEmployeeStatus = function(id) {
     if (!m) return;
     const previous = m.status;
     m.status = previous === 'inactive' ? 'active' : 'inactive';
-    SoundFX.toggleSwitch(m.status === 'active');
     renderTeamTable();
     showToast(`${m.name} is now ${m.status}`);
 
@@ -5874,11 +5990,6 @@ window.toggleMemberLoginStatus = function(id) {
     const m = teamMembers.find(x => x.id === id);
     if (m) {
         m.active = !m.active;
-        if (m.active) {
-            SoundFX.toggleSwitch(true);
-        } else {
-            SoundFX.sodAlert();
-        }
         renderTeamTable();
         showToast(`${m.name} ${m.active ? 'can sign in again' : 'can no longer sign in'}`);
 
@@ -5905,7 +6016,6 @@ window.handleSaveTeamMember = function(e) {
         if (!HANDLERS.includes(res.data.name)) HANDLERS.push(res.data.name);
         ['tm-name-input', 'tm-pos-input', 'tm-dept-input', 'tm-desc-input', 'tm-email-input'].forEach(id => { document.getElementById(id).value = ''; });
         closeModal('modal-team-member');
-        SoundFX.playSuccess();
         renderTeamTable();
         updateDynamicHeader(activePageId);
         showToast(`Added ${res.data.name} to the team`);
@@ -6170,7 +6280,6 @@ function showLoginError(message) {
     const errBox = document.getElementById('login-error-msg');
     errBox.textContent = message;
     errBox.classList.remove('hidden');
-    SoundFX.sodAlert();
 }
 
 window.quickSwitchSession = function(email) {
@@ -6225,7 +6334,6 @@ window.handleManualSignIn = async function(e, options = { withPassword: true }) 
     // A successful sign-in always opens the dashboard.
     switchPage('dashboard');
 
-    SoundFX.createSuccess();
     showToast(`You're now signed in as ${currentUser.name}`);
 };
 
@@ -6240,8 +6348,6 @@ window.openModal = function(id) {
     }
     el.classList.remove('hidden');
     el.classList.add('flex');
-    SoundFX.modalOpen();
-    if (id === 'modal-sound-lab') SoundFX.syncUI();
     if (id === 'login-modal') prepareLoginModal();
     el.querySelector('[data-autofocus]')?.focus();
 };
@@ -6256,38 +6362,6 @@ window.closeModal = function(id) {
     if (el.classList.contains('hidden')) return;
     el.classList.add('hidden');
     el.classList.remove('flex');
-    SoundFX.modalClose();
-};
-
-/** Sound Lab card: play its sound and briefly mark the card so you can see what you just heard. */
-window.auditionSound = function(card, play) {
-    play();
-    if (SoundFX.isMuted()) return;
-    card.classList.remove('is-playing');
-    void card.offsetWidth;
-    card.classList.add('is-playing');
-    clearTimeout(card._playingTimer);
-    card._playingTimer = setTimeout(() => card.classList.remove('is-playing'), 450);
-};
-
-window.toggleAudioPopover = function(e) {
-    if (e) e.stopPropagation();
-    const pop = document.getElementById('audio-popover');
-    const btn = document.getElementById('audio-menu-btn');
-    if (!pop) return;
-    const isOpening = pop.classList.contains('hidden');
-    pop.classList.toggle('hidden', !isOpening);
-    if (btn) btn.setAttribute('aria-expanded', isOpening ? 'true' : 'false');
-    if (isOpening) SoundFX.syncUI();
-    SoundFX.toggleSwitch(isOpening);
-};
-
-window.closeAudioPopover = function() {
-    const pop = document.getElementById('audio-popover');
-    if (pop && !pop.classList.contains('hidden')) {
-        pop.classList.add('hidden');
-        document.getElementById('audio-menu-btn')?.setAttribute('aria-expanded', 'false');
-    }
 };
 
 window.showToast = function(msg) {
@@ -6327,7 +6401,6 @@ window.exportProjectsCSV = function() {
     a.download = 'Axis_Suite_Projects_Export.csv';
     a.click();
     URL.revokeObjectURL(url);
-    SoundFX.createSuccess();
     showToast('Downloaded the project list');
 };
 
@@ -6807,6 +6880,7 @@ window.addEventListener('DOMContentLoaded', () => {
     populateModuleDropdowns();
     initDashboardScrollButtons();
     renderProjectsTable();
+    initModuleDragAndDrop();
     renderTaskDetailPage();
     renderReportsPage();
     renderTeamTable();
@@ -6815,34 +6889,10 @@ window.addEventListener('DOMContentLoaded', () => {
     syncHeaderTimerPill();
     startGlobalStopwatchLoop();
 
-    // Subtle typing tick for every text field: searches, descriptions and form inputs.
-    const typedFieldTypes = new Set(['text', 'search', 'email', 'url', 'tel', 'password']);
-
-    document.addEventListener('input', (event) => {
-        if (!window.SoundFX || SoundFX.isMuted()) return;
-
-        const target = event.target;
-        const isTextArea = target instanceof HTMLTextAreaElement;
-        const isTextField = target instanceof HTMLInputElement && typedFieldTypes.has(target.type);
-        if (!isTextArea && !isTextField) return;
-
-        SoundFX.keyTick();
-    });
-
-    // Close the Audio Control popover when clicking anywhere outside it
-    document.addEventListener('click', (e) => {
-        const wrap = document.getElementById('audio-control-wrapper');
-        if (wrap && !wrap.contains(e.target)) {
-            closeAudioPopover();
-        }
-    });
-
     // Close the Slide-Over Issue Drawer on Escape key
     document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape') {
             closeDevIssueDrawer();
-            closeAudioPopover();
-            closeModal('modal-sound-lab');
             closeModal('login-modal');
             toggleSidebar(false);
         }

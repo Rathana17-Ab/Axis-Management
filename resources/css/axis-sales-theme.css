@@ -2,7 +2,7 @@
 | AXIS — Axis Sales theme
 | Visual tokens and surface styling matched to the Axis Sales static prototype
 | ("P37. Document Template Basic Studio"): royal-blue gradient canvas, translucent
-| white glass surfaces, product-green actions, cyan "signal" accents.
+| white glass surfaces, blue actions, cyan "signal" accents.
 |
 | Loaded unlayered (after axis.css) so it also restyles surfaces that carry Tailwind
 | colour utilities. It deliberately never sets `display`, so Tailwind's `hidden`
@@ -65,7 +65,6 @@ body {
 /* Overlays sit above content, so they get the glass tint on a solid base for legibility */
 .axis-drawer__panel,
 .axis-palette__panel,
-#audio-popover,
 #sb-profile-popover {
     background: var(--sales-surface), var(--sales-bg2);
     border-color: var(--sales-border);
@@ -113,7 +112,7 @@ label.axis-topbar-pill:hover,
     color: var(--sales-text);
 }
 .axis-topbar-pill--status { border-color: rgba(16, 185, 129, 0.28); background: rgba(16, 185, 129, 0.08); }
-.axis-topbar-pill--timer { border-color: var(--sales-product-border); background: var(--sales-product-soft); }
+.axis-topbar-pill--timer { border-color: rgba(47, 111, 214, 0.4); background: rgba(47, 111, 214, 0.16); }
 
 /* Buttons */
 .btn-glass {
@@ -128,15 +127,15 @@ label.axis-topbar-pill:hover,
     color: var(--sales-text);
 }
 .btn-primary-glass {
-    background: linear-gradient(135deg, var(--sales-product-action), var(--sales-product-hover));
-    border: 1px solid var(--sales-product-border);
+    background: linear-gradient(135deg, var(--sales-primary), var(--sales-signal));
+    border: 1px solid rgba(47, 111, 214, 0.45);
     border-radius: 14px;
     color: #FFFFFF;
-    box-shadow: 0 12px 28px var(--sales-product-glow);
+    box-shadow: 0 12px 28px rgba(47, 111, 214, 0.22);
 }
 .btn-primary-glass:hover {
-    background: linear-gradient(135deg, var(--sales-product-hover), var(--sales-product-action));
-    border-color: var(--sales-product-border);
+    background: linear-gradient(135deg, #4A8CEB, var(--sales-primary));
+    border-color: rgba(46, 198, 232, 0.5);
 }
 .axis-drawer__btn { border-radius: 14px !important; }
 .axis-btn-danger {
@@ -420,7 +419,7 @@ select.axis-input option { background-color: var(--sales-bg2); color: var(--sale
     font-size: 12px;
 }
 .axis-view-switch__btn:hover { color: var(--sales-text); }
-.axis-view-switch__btn.is-active { background: var(--sales-product-soft); color: var(--sales-product); }
+.axis-view-switch__btn.is-active { background: rgba(47, 111, 214, 0.16); color: var(--sales-primary); }
 .axis-filter-strip { margin-top: -6px; }
 .axis-filter-chip {
     display: inline-flex;
@@ -428,15 +427,15 @@ select.axis-input option { background-color: var(--sales-bg2); color: var(--sale
     gap: 5px;
     height: 30px;
     padding: 0 10px;
-    border: 1px solid var(--sales-product-border);
+    border: 1px solid rgba(47, 111, 214, 0.34);
     border-radius: 999px;
-    background: var(--sales-product-soft);
+    background: rgba(47, 111, 214, 0.14);
     color: var(--sales-text);
     font-size: 11px;
     font-weight: 600;
 }
-.axis-filter-chip i { color: var(--sales-product); font-size: 10px; }
-.axis-filter-chip:hover { border-color: var(--sales-product); }
+.axis-filter-chip i { color: var(--sales-primary); font-size: 10px; }
+.axis-filter-chip:hover { border-color: var(--sales-primary); }
 .axis-filter-count { color: var(--sales-muted); font-size: 11px; margin-left: 4px; }
 .axis-filter-clear { color: var(--sales-signal); font-size: 11px; font-weight: 600; }
 .axis-filter-clear:hover { color: var(--sales-text); }
@@ -479,6 +478,27 @@ select.axis-input option { background-color: var(--sales-bg2); color: var(--sale
 [aria-sort="ascending"] .axis-sort-btn i,
 [aria-sort="descending"] .axis-sort-btn i { color: var(--sales-signal); }
 
+/* Modules list drag handles and drop indicators */
+.axis-module-drag {
+    width: 20px;
+    height: 28px;
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 6px;
+    color: var(--sales-faint);
+    cursor: grab;
+}
+.axis-module-drag:hover { color: var(--sales-signal); background: rgba(255, 255, 255, 0.06); }
+.axis-module-drag:active { cursor: grabbing; }
+.axis-module-drag:focus-visible { outline: 2px solid var(--sales-signal); outline-offset: 1px; }
+[data-module-id].is-dragging { opacity: 0.45; }
+.axis-wide-table [data-module-id].is-drop-before td { box-shadow: inset 0 2px 0 var(--sales-signal); }
+.axis-wide-table [data-module-id].is-drop-after td { box-shadow: inset 0 -2px 0 var(--sales-signal); }
+.axis-list-card[data-module-id].is-drop-before { box-shadow: 0 -2px 0 var(--sales-signal); }
+.axis-list-card[data-module-id].is-drop-after { box-shadow: 0 2px 0 var(--sales-signal); }
+
 .axis-row-actions {
     display: inline-flex;
     align-items: center;
@@ -506,15 +526,15 @@ select.axis-input option { background-color: var(--sales-bg2); color: var(--sale
     width: auto;
     height: 34px;
     padding: 0 12px;
-    border: 1px solid var(--sales-product-border);
+    border: 1px solid rgba(47, 111, 214, 0.34);
     border-radius: 11px;
-    background: var(--sales-product-soft);
+    background: rgba(47, 111, 214, 0.14);
     color: var(--sales-text);
     font-size: 12px;
     font-weight: 600;
 }
-.axis-row-btn--label i { color: var(--sales-product); }
-.axis-row-btn--label:hover { background: rgba(22, 163, 74, 0.22); color: var(--sales-text); }
+.axis-row-btn--label i { color: var(--sales-primary); }
+.axis-row-btn--label:hover { background: rgba(47, 111, 214, 0.22); color: var(--sales-text); }
 
 /* List views — Cards and Board (projects, modules). Flat inner surfaces: they sit inside the list card. */
 .axis-list-card {
@@ -585,16 +605,6 @@ select.axis-input option { background-color: var(--sales-bg2); color: var(--sale
 }
 .axis-topbar-profile { padding-left: 7px; padding-right: 10px; }
 #header-module-select { height: 44px; border-radius: 13px; }
-#audio-menu-btn[data-muted="true"] { color: var(--sales-muted); }
-#audio-menu-btn[data-muted="true"] .sfx-eq-bar { background-color: var(--sales-faint); }
-
-/* Sound level meter: a calm staggered shape at rest; SoundFX animates it while a sound plays */
-#sound-eq .sfx-eq-bar { opacity: .7; }
-#sound-eq .sfx-eq-bar:nth-child(1), #sound-eq .sfx-eq-bar:nth-child(5) { transform: scaleY(.35); }
-#sound-eq .sfx-eq-bar:nth-child(2), #sound-eq .sfx-eq-bar:nth-child(4) { transform: scaleY(.6); }
-#sound-eq .sfx-eq-bar:nth-child(3) { transform: scaleY(.85); }
-#sound-eq.sfx-playing .sfx-eq-bar { opacity: 1; }
-
 @container topbar (min-width: 760px) { .axis-topbar .tb-search-icon { display: none; } }
 @container topbar (max-width: 759px) { .axis-topbar .tb-search-full { display: none; } }
 @container topbar (max-width: 1439px) { .axis-topbar .tb-show-3xl { display: none; } }
@@ -609,82 +619,16 @@ select.axis-input option { background-color: var(--sales-bg2); color: var(--sale
 }
 @container topbar (max-width: 419px) { .axis-topbar .tb-show-xs { display: none; } }
 
-/* Sound settings — header icon state, popover, switch and segmented control */
-#audio-menu-btn #sfx-icon-wrap { color: var(--sales-signal); }
-#audio-menu-btn .sfx-icon-off,
-#audio-menu-btn[data-muted="true"] .sfx-icon-on { display: none; }
-#audio-menu-btn[data-muted="true"] .sfx-icon-off { display: block; }
-#audio-menu-btn[data-muted="true"] #sfx-icon-wrap { color: var(--sales-muted); }
-
-.axis-sound-popover {
-    padding: 16px;
-    border: 1px solid var(--sales-border);
-    border-radius: 16px;
-    background: var(--sales-surface), var(--sales-bg2);
-    box-shadow: var(--sales-shadow);
-    font-size: 12px;
-}
-.axis-sound-popover__body { margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--sales-divider); transition: opacity .15s; }
-.axis-sound-popover__body.is-disabled { opacity: .45; pointer-events: none; }
-
-.axis-switch {
-    position: relative;
-    width: 38px;
-    height: 22px;
-    flex-shrink: 0;
-    border-radius: 999px;
-    background: rgba(255, 255, 255, 0.14);
-    border: 1px solid var(--sales-border);
-    transition: background-color .15s, border-color .15s;
-}
-.axis-switch__thumb {
-    position: absolute;
-    top: 2px;
-    left: 2px;
-    width: 16px;
-    height: 16px;
-    border-radius: 999px;
-    background: #FFFFFF;
-    transition: transform .15s;
-}
-.axis-switch[aria-checked="true"] { background: var(--sales-product); border-color: var(--sales-product); }
-.axis-switch[aria-checked="true"] .axis-switch__thumb { transform: translateX(16px); }
-.axis-switch:focus-visible { outline: 2px solid var(--sales-signal); outline-offset: 2px; }
-
-.axis-segmented {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 2px;
-    padding: 3px;
-    border: 1px solid var(--sales-border);
-    border-radius: 12px;
-    background: var(--sales-glass2);
-}
-.axis-segmented__btn {
-    height: 30px;
-    border-radius: 9px;
-    font-size: 12px;
-    font-weight: 600;
-    color: var(--sales-muted);
-    transition: background-color .15s, color .15s;
-}
-.axis-segmented__btn:hover { color: var(--sales-text); }
-.axis-segmented__btn.is-active { background: var(--sales-product-soft); color: var(--sales-text); box-shadow: inset 0 0 0 1px var(--sales-product-border); }
-.axis-segmented__btn:focus-visible { outline: 2px solid var(--sales-signal); outline-offset: 1px; }
-@media (prefers-reduced-motion: reduce) {
-    .axis-switch, .axis-switch__thumb, .axis-segmented__btn { transition: none; }
-}
-
-/* Sound Lab dialog */
-.axis-sound-lab-overlay { background: rgba(4, 12, 30, 0.62); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
-.axis-sound-lab {
+/* Centered dialogs */
+.axis-modal-overlay { background: rgba(4, 12, 30, 0.62); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
+.axis-modal {
     padding: 20px;
     border: 1px solid var(--sales-border);
     border-radius: 18px;
     background: var(--sales-surface), var(--sales-bg2);
     box-shadow: var(--sales-shadow);
 }
-.axis-sound-lab__icon {
+.axis-modal__icon {
     width: 40px;
     height: 40px;
     flex-shrink: 0;
@@ -695,23 +639,6 @@ select.axis-input option { background-color: var(--sales-bg2); color: var(--sale
     background: var(--sales-glass2);
     color: var(--sales-signal);
 }
-.axis-sound-card {
-    padding: 12px;
-    text-align: left;
-    border: 1px solid var(--sales-border);
-    border-radius: 12px;
-    background: rgba(255, 255, 255, 0.04);
-    transition: border-color .15s, background-color .15s;
-}
-.axis-sound-card:hover { border-color: rgba(46, 198, 232, 0.35); background: rgba(46, 198, 232, 0.07); }
-.axis-sound-card:focus-visible { outline: 2px solid var(--sales-signal); outline-offset: 2px; }
-.axis-sound-card__icon { font-size: 11px; color: var(--sales-muted); }
-.axis-sound-card:hover .axis-sound-card__icon { color: var(--sales-signal); }
-.axis-sound-card--success .axis-sound-card__icon { color: var(--sales-success); }
-.axis-sound-card--warning .axis-sound-card__icon { color: var(--sales-warning); }
-.axis-sound-card--danger .axis-sound-card__icon { color: var(--sales-danger); }
-.axis-sound-card.is-playing { border-color: var(--sales-product); background: var(--sales-product-soft); }
-@media (prefers-reduced-motion: reduce) { .axis-sound-card { transition: none; } }
 
 /* Switch user dialog — quick switch cards */
 .axis-switch-card {
@@ -746,13 +673,13 @@ select.axis-input option { background-color: var(--sales-bg2); color: var(--sale
     flex-shrink: 0;
     padding: 2px 8px;
     border-radius: 999px;
-    border: 1px solid var(--sales-product-border);
-    background: var(--sales-product-soft);
+    border: 1px solid rgba(47, 111, 214, 0.34);
+    background: rgba(47, 111, 214, 0.14);
     color: var(--sales-text);
     font-size: 11px;
     font-weight: 600;
 }
-.axis-switch-card.is-current { border-color: var(--sales-product-border); }
+.axis-switch-card.is-current { border-color: rgba(47, 111, 214, 0.34); }
 .axis-switch-card.is-current .axis-switch-card__you { display: inline-block; }
 
 /* ===== Left sidebar: one menu item per page ===== */
@@ -777,15 +704,12 @@ select.axis-input option { background-color: var(--sales-bg2); color: var(--sale
     border-bottom: 1px solid var(--sales-divider);
 }
 .axis-sidebar__logo {
-    width: 44px;
-    height: 44px;
+    width: 36px;
+    height: 36px;
     flex-shrink: 0;
     display: grid;
     place-items: center;
-    border-radius: 14px;
     color: #FFFFFF;
-    background: linear-gradient(145deg, var(--sales-product-action), var(--sales-product));
-    box-shadow: 0 12px 28px var(--sales-product-glow);
 }
 .axis-sidebar__close { display: none; }
 .axis-sidebar__nav { flex: 1; min-height: 0; overflow-y: auto; display: grid; align-content: start; gap: 4px; }
@@ -851,7 +775,7 @@ select.axis-input option { background-color: var(--sales-bg2); color: var(--sale
     transition: color .15s, border-color .15s, background-color .15s;
 }
 .axis-sidebar__pin:hover { color: #FFFFFF; border-color: rgba(46, 198, 232, 0.35); }
-.axis-sidebar__pin[aria-pressed="true"] { color: var(--sales-product); border-color: var(--sales-product-border); background: var(--sales-product-soft); }
+.axis-sidebar__pin[aria-pressed="true"] { color: var(--sales-primary); border-color: rgba(47, 111, 214, 0.34); background: rgba(47, 111, 214, 0.14); }
 .axis-sidebar__pin:focus-visible { outline: 2px solid var(--sales-signal); outline-offset: 2px; }
 .axis-sidebar-toggle { display: none; }
 .axis-side-backdrop { display: none; }

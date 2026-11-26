@@ -89,8 +89,8 @@
                             @endforeach
                         </select>
                         <select id="flt-sort" onchange="setModuleSortFromSelect(this.value)" class="ent-input axis-select-control" aria-label="Sort by">
-                            <option value="" hidden>Custom order</option>
-                            <option value="name:asc" selected>Name (A–Z)</option>
+                            <option value="custom:asc" selected>Custom order</option>
+                            <option value="name:asc">Name (A–Z)</option>
                             <option value="status:asc">Status</option>
                             <option value="progress:desc">Progress (highest)</option>
                             <option value="progress:asc">Progress (lowest)</option>
@@ -123,7 +123,7 @@
                                 </div>
                                 <div>
                                     <h2 class="text-sm font-bold text-white">Module list</h2>
-                                    <p class="text-xs text-slate-400">Click a module to see its tasks.</p>
+                                    <p class="text-xs text-slate-400">Drag to reorder · click a module to see its tasks.</p>
                                 </div>
                             </div>
                             <div class="flex items-center gap-2">

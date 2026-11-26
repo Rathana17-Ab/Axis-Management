@@ -40,6 +40,31 @@ abstract class Controller
     }
 
     /**
+     * Whether the member may change the custom module order.
+     *
+     * Reordering is a view-level arrangement, so anyone who can see modules may
+     * arrange the list they see. Guests never get this ability.
+     */
+    public static function canReorderModules(?User $user = null): bool
+    {
+        $user = $user ?? static::currentWorkspaceUser();
+
+        if ($user === null) {
+            return false;
+        }
+
+        if (! $user->hasWorkspaceRole()) {
+            return true;
+        }
+
+        return collect([
+            WorkspacePermission::RecordsManageAll,
+            WorkspacePermission::RecordsViewAll,
+            WorkspacePermission::RecordsViewShared,
+        ])->contains(fn (WorkspacePermission $permission): bool => $user->hasWorkspacePermission($permission));
+    }
+
+    /**
      * Apply a workspace record gate only to members who have an assigned role.
      * Role-less members keep the original open-console behavior.
      */

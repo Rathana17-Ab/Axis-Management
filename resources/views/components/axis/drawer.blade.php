@@ -81,7 +81,7 @@
             </div>
             <div class="flex items-center gap-1.5 shrink-0">
                 {{ $headerActions ?? '' }}
-                <button type="button" data-drawer-close data-no-click-sfx="true" class="axis-drawer__close" aria-label="Close">
+                <button type="button" data-drawer-close class="axis-drawer__close" aria-label="Close">
                     <i class="fa-solid fa-xmark"></i>
                 </button>
             </div>
@@ -100,13 +100,12 @@
             @isset($footer)
                 {{ $footer }}
             @else
-                <button type="button" data-drawer-close data-no-click-sfx="true" class="btn-glass axis-drawer__btn">{{ $cancelLabel }}</button>
+                <button type="button" data-drawer-close class="btn-glass axis-drawer__btn">{{ $cancelLabel }}</button>
                 @if ($hasPrimary)
                     <button type="{{ $submit !== null ? 'submit' : 'button' }}"
                             @if ($primaryAction) onclick="{{ $primaryAction }}" @endif
                             data-drawer-submit
                             data-busy-label="{{ $busyLabel }}"
-                            data-no-click-sfx="true"
                             @class(['axis-drawer__btn', 'axis-btn-danger' => $mode === 'delete', 'btn-primary-glass' => $mode !== 'delete'])>
                         <span class="hidden" data-drawer-spinner aria-hidden="true"><i class="fa-solid fa-circle-notch animate-spin"></i></span>
                         <span data-drawer-submit-label>{{ $submitLabel }}</span>

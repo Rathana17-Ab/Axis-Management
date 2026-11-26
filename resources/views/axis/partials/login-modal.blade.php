@@ -1,10 +1,10 @@
     {{-- Switch user: quick switch to a teammate, or sign in with email + password (handleManualSignIn). --}}
-    <div id="login-modal" class="axis-sound-lab-overlay fixed inset-0 z-[250] hidden items-center justify-center p-4"
+    <div id="login-modal" class="axis-modal-overlay fixed inset-0 z-[250] hidden items-center justify-center p-4"
          role="dialog" aria-modal="true" aria-labelledby="login-modal-title" onclick="if (event.target === this) closeModal('login-modal')">
-        <div class="axis-sound-lab w-full max-w-md">
+        <div class="axis-modal w-full max-w-md">
             <div class="flex items-start justify-between gap-3 pb-4 border-b border-white/[0.08]">
                 <div class="flex items-center gap-3 min-w-0">
-                    <span class="axis-sound-lab__icon" aria-hidden="true"><i class="fa-solid fa-user-group text-sm"></i></span>
+                    <span class="axis-modal__icon" aria-hidden="true"><i class="fa-solid fa-user-group text-sm"></i></span>
                     <div class="min-w-0">
                         <h2 id="login-modal-title" class="text-sm font-bold text-white">Switch user</h2>
                         <p class="text-xs text-slate-400 mt-0.5">Pick a teammate, or sign in with an email.</p>

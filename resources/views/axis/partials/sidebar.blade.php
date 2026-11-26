@@ -15,11 +15,10 @@
                onmouseenter="hoverSidebar(true)" onmouseleave="hoverSidebar(false)">
             <div class="axis-sidebar__brand">
                 <button type="button" onclick="switchPage('dashboard')" class="axis-sidebar__logo" aria-label="Axis Management — dashboard">
-                    {{-- Axis symbol, same asset as the Axis Sales prototypes (assets/brand/axis/axis-symbol-white.png) --}}
-                    <img src="{{ asset('images/brand/axis-symbol-white.png') }}" alt="" aria-hidden="true" width="25" height="25" class="block w-[25px] h-[25px] object-contain">
+                    <img src="{{ asset('images/brand/axis-symbol-white.png') }}" alt="" aria-hidden="true" width="34" height="34" class="block w-[34px] h-[34px] object-contain">
                 </button>
                 <div class="axis-sidebar__text min-w-0 flex-1">
-                    <div class="text-[15px] font-semibold text-white leading-tight truncate">Axis Management</div>
+                    <div class="text-[16px] font-semibold text-white leading-tight whitespace-nowrap">Axis Management</div>
                     <div class="text-xs text-slate-400 mt-0.5 truncate">Project hub</div>
                 </div>
                 <button type="button" id="sb-pin-btn" onclick="setSidebarPinned(!isSidebarPinned())" class="axis-sidebar__pin axis-sidebar__text"
@@ -44,11 +43,6 @@
             </nav>
 
             <div class="axis-sidebar__footer">
-                <button type="button" onclick="openModal('modal-sound-lab')" class="axis-sidebar__item" aria-label="Settings">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
-                    <span class="axis-sidebar__text">Settings</span>
-                </button>
-
                 <button type="button" onclick="openModal('login-modal')" class="axis-sidebar__profile" aria-label="Switch user — signed in as {{ $currentUser?->name }}">
                     <span class="relative shrink-0">
                         <span id="sb-avatar" class="axis-sidebar__avatar">{{ $currentUser?->initials }}</span>

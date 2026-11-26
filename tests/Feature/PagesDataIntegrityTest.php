@@ -62,7 +62,13 @@ it('verifies Modules page loads with the module list and no customer column', fu
         ->assertDontSee('id="flt-customer"', false)
         ->assertDontSee('data-mod-sort="customer"', false)
         ->assertDontSee('value="customer:asc"', false)
-        ->assertSee('id="projects-tbody"', false);
+        ->assertSee('id="projects-tbody"', false)
+        ->assertSee('value="custom:asc" selected', false)
+        ->assertSee('rel="icon" type="image/x-icon"', false)
+        ->assertSee('favicon.ico', false)
+        ->assertSee('images/brand/axis-symbol-white.png', false)
+        ->assertSee('class="text-[16px] font-semibold text-white leading-tight whitespace-nowrap">Axis Management</div>', false)
+        ->assertSee('>Project hub</div>', false);
 });
 
 it('verifies Task Detail page loads with project tasks, live timers, and issue notes', function () {
@@ -142,4 +148,12 @@ it('verifies Team Management page loads with all 11 team members', function () {
         ->assertSee('id="drawer-team-member-password"', false)
         ->assertSee('Login username')
         ->assertDontSee('>Login</th>', false);
+});
+
+it('ships a non-empty Axis icon for the browser URL bar', function () {
+    $favicon = public_path('favicon.ico');
+
+    expect(file_exists($favicon))->toBeTrue()
+        ->and(filesize($favicon))->toBeGreaterThan(0)
+        ->and(substr(file_get_contents($favicon), 0, 4))->toBe("\x00\x00\x01\x00");
 });

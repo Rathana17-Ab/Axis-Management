@@ -132,7 +132,7 @@
               "branch": "ui/header-singleline",
               "status": "Resolved",
               "encountered": "Top page header wrapped onto 2 lines when both the long project-task-list URL breadcrumb and live running stopwatch pill were visible.",
-              "resolution": "Consolidated header controls into a strict single-line h-8 layout with truncated URL pill and unified Audio Control popover.",
+              "resolution": "Consolidated header controls into a strict single-line h-8 layout with truncated URL pill.",
               "author": "Kong Rathana",
               "timestamp": "Nov 10, 2026 21:30"
             }

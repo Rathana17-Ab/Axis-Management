@@ -92,7 +92,6 @@ window.AxisDrawer = (function () {
             d.hidden = false;
             void d.offsetWidth; // let the browser paint the closed state so the slide-in animates
             d.classList.add('is-open');
-            if (window.SoundFX && options.sound !== false) SoundFX.modalOpen();
         }
         syncScrollLock();
         setTimeout(() => focusFirst(d), 60);
@@ -107,7 +106,6 @@ window.AxisDrawer = (function () {
         d._hideTimer = setTimeout(() => { if (!stack.includes(d)) d.hidden = true; }, TRANSITION_MS);
         syncScrollLock();
 
-        if (window.SoundFX && options.sound !== false) SoundFX.modalClose();
         if (d.contains(document.activeElement)) document.activeElement.blur();
         if (d._returnFocus && d._returnFocus !== document.body && document.contains(d._returnFocus)) {
             d._returnFocus.focus({ preventScroll: true });
@@ -229,7 +227,6 @@ window.AxisDrawer = (function () {
         if (!d || d.dataset.busy === 'true') return false;
         clearErrors(d);
         if (options.validate !== false && !validate(d)) {
-            if (window.SoundFX) SoundFX.sodAlert();
             return false;
         }
         setBusy(d, true);
@@ -243,7 +240,6 @@ window.AxisDrawer = (function () {
                 showAlert(d, (err && err.message) ? `Couldn't save: ${err.message}` : "Couldn't save. Please try again.");
                 console.error('[AxisDrawer]', err);
             }
-            if (window.SoundFX) SoundFX.sodAlert();
             return false;
         } finally {
             setBusy(d, false);
@@ -276,8 +272,7 @@ window.AxisDrawer = (function () {
             d._confirmResolve = resolvePromise;
             // Destructive confirmations start on Cancel, so Enter never deletes by accident
             d.querySelector('.axis-drawer__footer [data-drawer-close]')?.toggleAttribute('data-drawer-autofocus', mode === 'delete');
-            open(d, { sound: false });
-            if (window.SoundFX) (mode === 'delete' ? SoundFX.sodAlert() : SoundFX.modalOpen());
+            open(d);
         });
     }
 
@@ -287,7 +282,7 @@ window.AxisDrawer = (function () {
         if (!d || !d._confirmResolve) return;
         const resolveConfirm = d._confirmResolve;
         d._confirmResolve = null;
-        close(d, { sound: false });
+        close(d);
         resolveConfirm(true);
     }
 

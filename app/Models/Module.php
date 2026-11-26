@@ -2,8 +2,10 @@
 
 namespace App\Models;
 
+use App\Enums\WorkspacePermission;
 use App\Enums\WorkStatus;
 use Database\Factories\ModuleFactory;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -80,6 +82,51 @@ class Module extends Model
         return $days >= 0
             ? $days.' days remaining'
             : abs($days).' days overdue';
+    }
+
+    /**
+     * Shared record ids grouped by morph class for this member.
+     *
+     * @return array<string, list<int>>
+     */
+    public static function sharedIdsByTypeFor(?User $user): array
+    {
+        if ($user === null) {
+            return [];
+        }
+
+        return RecordShare::query()
+            ->where('user_id', $user->id)
+            ->get(['shareable_type', 'shareable_id'])
+            ->groupBy('shareable_type')
+            ->map(fn ($shares): array => $shares->pluck('shareable_id')
+                ->map(fn (mixed $id): int => (int) $id)
+                ->all())
+            ->all();
+    }
+
+    /**
+     * Restrict modules to those the member can see in the workspace list.
+     *
+     * @param  array<string, list<int>>|null  $sharedIdsByType
+     */
+    public function scopeVisibleTo(Builder $query, ?User $user, ?array $sharedIdsByType = null): Builder
+    {
+        if ($user === null || ! $user->hasWorkspaceRole() || $user->hasWorkspacePermission(WorkspacePermission::RecordsViewAll)) {
+            return $query;
+        }
+
+        $sharedIdsByType ??= self::sharedIdsByTypeFor($user);
+        $moduleIds = $sharedIdsByType[(new self)->getMorphClass()] ?? [];
+        $projectIds = $sharedIdsByType[(new Project)->getMorphClass()] ?? [];
+        $taskIds = $sharedIdsByType[(new ProjectTask)->getMorphClass()] ?? [];
+
+        return $query->where(function (Builder $query) use ($moduleIds, $projectIds, $taskIds, $user): void {
+            $query->whereIn('modules.id', $moduleIds)
+                ->orWhereIn('modules.project_id', $projectIds)
+                ->orWhereHas('tasks', fn (Builder $taskQuery): Builder => $taskQuery->whereIn('project_tasks.id', $taskIds))
+                ->orWhereJsonContains('modules.team_members', $user->name);
+        });
     }
 
     /**

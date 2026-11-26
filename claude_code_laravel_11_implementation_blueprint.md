@@ -9,14 +9,14 @@
 ```text
 Act as a Principal Laravel 11 Full-Stack Architect. I have a complete, production-ready interactive HTML prototype located at `prototype/axis_pm_prototype.html` for "EOT CoreSystem — Axis Project Management (Axis Suite v4.5)".
 
-Your mission is to convert this prototype into a real, database-backed Laravel 11 application while preserving 100% of its visual identity, Midnight Cerulean Navy theme (#081121 / #15294B), Forest-Sage action buttons (#3E6B48), border-only KPI card themes, 16-profile Web Audio API SoundFX synthesizer (`window.SoundFX`), button lifecycle engine (`window.runButtonLifecycle`), and semantic icon choreography (`window.triggerIconLifecycle`).
+Your mission is to convert this prototype into a real, database-backed Laravel 11 application while preserving 100% of its visual identity, Midnight Cerulean Navy theme (#081121 / #15294B), Forest-Sage action buttons (#3E6B48), border-only KPI card themes, button lifecycle engine (`window.runButtonLifecycle`), and semantic icon choreography (`window.triggerIconLifecycle`).
 
 Execute the build in the following strict phases:
 1. Create all 8 database migrations with proper foreign keys, indexes, and JSON/enum columns.
 2. Create all Eloquent Models with relationships, casts, and helper methods (`computeCompletion()`, `formattedActTime()`).
 3. Create a comprehensive `AxisSystemSeeder` that seeds the exact 9 Axis Modules, all initial Tasks, Task Issue Notes, 5 Milestone Steps, 4 Business Models, 4 CTO Reports, 8 Engineering Team Members, and all 35 Hotel PMS Segregation of Duties (SoD) Roles from the prototype.
 4. Create RESTful/AJAX Controllers and routes matching the prototype's URL structure (`/admin/dashboard`, `/admin/project`, `/admin/project-task-list/{project}`, `/admin/project-milestone-steps`, `/admin/business-models`, `/admin/cto-reports`, `/admin/user-management`, `/admin/role-sod-matrix`).
-5. Build the Blade layout (`resources/views/layouts/axis.blade.php`) and page views/partials so that every inline edit (task status, progress %, est hours, live stopwatch timer start/pause/sync, and the slide-over Developer Issue & Fix Drawer) persists to MySQL/PostgreSQL via `fetch()` with CSRF protection while keeping instant optimistic UI updates and acoustic sound effects.
+5. Build the Blade layout (`resources/views/layouts/axis.blade.php`) and page views/partials so that every inline edit (task status, progress %, est hours, live stopwatch timer start/pause/sync, and the slide-over Developer Issue & Fix Drawer) persists to MySQL/PostgreSQL via `fetch()` with CSRF protection while keeping instant optimistic UI updates.
 6. Run `php artisan migrate:fresh --seed` and verify all routes and API endpoints pass feature tests.
 ```
 
@@ -288,4 +288,4 @@ window.AxisAPI = {
 - [ ] **Visual & Theme Parity**: `#081121` obsidian background, `#15294B` floating rounded sidebar with Pin/Rail button, `#3E6B48` forest-sage primary pill buttons, and border-only colored KPI cards (`.axis-kpi-cyan`, `.axis-kpi-emerald`, `.axis-kpi-violet`, `.axis-kpi-amber`).
 - [ ] **Sticky Command Bars**: Both `#sticky-filter-bar` (Projects) and `#sticky-task-filter-bar` (Task List Detail) remain docked on scroll and flash the results card on filter change.
 - [ ] **Slide-Over Drawers**: Clicking any `ISSUES / DEV NOTES` badge opens `#dev-issue-drawer` and persists new notes/status cycles to `task_issue_notes`; clicking any row in the 35-Role Matrix opens `#modal-sod-drawer`.
-- [ ] **Acoustic & Micro-Interaction Engines**: `window.SoundFX` (16 Web Audio API profiles), `window.runButtonLifecycle`, and `window.triggerIconLifecycle` remain intact in `public/js/axis-ui-engine.js`.
+- [ ] **Micro-Interaction Engines**: `window.runButtonLifecycle` and `window.triggerIconLifecycle` remain intact in `public/js/axis-ui-engine.js`.

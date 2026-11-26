@@ -77,7 +77,7 @@ class AxisWorkspaceController extends Controller
      */
     private const API_ROUTES = [
         'projects.store', 'projects.update', 'projects.destroy',
-        'modules.store', 'modules.update',
+        'modules.store', 'modules.update', 'modules.reorder',
         'tasks.store', 'tasks.update', 'tasks.timer.toggle', 'tasks.timer.reset', 'tasks.destroy',
         'issues.store', 'issues.update', 'issues.cycle', 'issues.destroy',
         'reports.store', 'reports.show', 'reports.update', 'reports.destroy',
@@ -125,30 +125,17 @@ class AxisWorkspaceController extends Controller
         // `$projects` / bootstrap `projects` hold the *modules* (Axis Core System, Axis Sales, …) —
         // the name predates the Project → Module split and is used throughout the views and JS.
         // Top-level projects (e.g. "EOT Axis") are exposed separately as `axisProjects`.
-        // Code order (newest module first) mirrors the prototype's list, where new modules are unshifted.
-        $sharedIdsByType = collect();
-        if ($restrictRecords) {
-            $sharedIdsByType = RecordShare::query()
-                ->where('user_id', $currentUser->id)
-                ->get(['shareable_type', 'shareable_id'])
-                ->groupBy('shareable_type')
-                ->map(fn ($shares) => $shares->pluck('shareable_id')->all());
-        }
-        $sharedProjectIds = $sharedIdsByType->get((new Project)->getMorphClass(), []);
-        $sharedModuleIds = $sharedIdsByType->get((new Module)->getMorphClass(), []);
-        $sharedTaskIds = $sharedIdsByType->get((new ProjectTask)->getMorphClass(), []);
-        $sharedReportIds = $sharedIdsByType->get((new CtoReport)->getMorphClass(), []);
+        // Custom order starts alphabetically (see the sort-order backfill migration) and is updated by drag-and-drop.
+        $sharedIdsByType = $restrictRecords ? Module::sharedIdsByTypeFor($currentUser) : [];
+        $sharedProjectIds = $sharedIdsByType[(new Project)->getMorphClass()] ?? [];
+        $sharedTaskIds = $sharedIdsByType[(new ProjectTask)->getMorphClass()] ?? [];
+        $sharedReportIds = $sharedIdsByType[(new CtoReport)->getMorphClass()] ?? [];
 
         $moduleQuery = Module::query()
+            ->visibleTo($currentUser, $restrictRecords ? $sharedIdsByType : null)
             ->with(['project', 'tasks.issueNotes', 'tasks.employee', 'tasks.assignedBy']);
         if ($restrictRecords) {
             $moduleQuery
-                ->where(function ($query) use ($sharedModuleIds, $sharedProjectIds, $sharedTaskIds, $currentUser): void {
-                    $query->whereIn('modules.id', $sharedModuleIds)
-                        ->orWhereIn('modules.project_id', $sharedProjectIds)
-                        ->orWhereHas('tasks', fn ($taskQuery) => $taskQuery->whereIn('project_tasks.id', $sharedTaskIds))
-                        ->orWhereJsonContains('modules.team_members', $currentUser->name);
-                })
                 ->with(['tasks' => function ($query) use ($sharedTaskIds, $currentUser): void {
                     $query->where(function ($taskQuery) use ($sharedTaskIds, $currentUser): void {
                         $taskQuery->whereIn('project_tasks.id', $sharedTaskIds)
@@ -156,7 +143,7 @@ class AxisWorkspaceController extends Controller
                     });
                 }]);
         }
-        $projects = $moduleQuery->orderByDesc('code')->get();
+        $projects = $moduleQuery->orderBy('sort_order')->orderBy('name')->get();
 
         $projectQuery = Project::query()->withCount('modules');
         if ($restrictRecords) {
@@ -263,6 +250,7 @@ class AxisWorkspaceController extends Controller
                 'canManageWorkQueues' => $canManageWorkQueues,
                 'canManageP18' => $canManageP18,
                 'canManageRecords' => $canManageRecords,
+                'canReorderModules' => static::canReorderModules($currentUser),
                 'handlers' => $handlers,
                 'routes' => collect(self::API_ROUTES)
                     ->mapWithKeys(fn (string $name): array => [$name => $this->routeTemplate('admin.api.'.$name)]),

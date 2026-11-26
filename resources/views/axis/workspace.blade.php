@@ -62,7 +62,6 @@
     {{-- Dialogs that are not CRUD drawers --}}
     @include('axis.modals.department-create')
     @include('axis.modals.position-create')
-    @include('axis.modals.sound-lab')
 @endsection
 
 @push('scripts')

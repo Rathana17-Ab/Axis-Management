@@ -70,9 +70,9 @@
     <div id="did-notes-list" class="space-y-3.5 mt-5"></div>
 
     <x-slot:footer>
-        <button type="button" id="did-footer-close" data-drawer-close data-no-click-sfx="true" class="btn-glass axis-drawer__btn">Close</button>
+        <button type="button" id="did-footer-close" data-drawer-close class="btn-glass axis-drawer__btn">Close</button>
         <button type="button" id="did-footer-cancel" onclick="setIssueComposerOpen(false)" class="btn-glass axis-drawer__btn hidden">Cancel</button>
-        <button type="submit" id="did-footer-save" data-drawer-submit data-busy-label="Saving…" data-no-click-sfx="true" class="axis-drawer__btn btn-primary-glass hidden">
+        <button type="submit" id="did-footer-save" data-drawer-submit data-busy-label="Saving…" class="axis-drawer__btn btn-primary-glass hidden">
             <span class="hidden" data-drawer-spinner aria-hidden="true"><i class="fa-solid fa-circle-notch animate-spin"></i></span>
             <span data-drawer-submit-label>Save note</span>
         </button>

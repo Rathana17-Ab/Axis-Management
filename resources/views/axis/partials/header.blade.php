@@ -3,7 +3,7 @@
             <!-- Items collapse by the bar's own width (container queries, .tb-* in     -->
             <!-- axis-sales-theme.css), so the pinned sidebar never makes them overlap. -->
             <!-- Element ids are driven by updateDynamicHeader(), the timer loop,      -->
-            <!-- SoundFX and the live save-status listener.                            -->
+            <!-- and the live save-status listener.                                    -->
             <!-- ===================================================================== -->
             <div class="axis-topbar-wrap shrink-0 z-40 relative select-none">
                 <header class="axis-topbar">
@@ -28,21 +28,21 @@
 
                     <span class="axis-topbar__divider tb-show-lg" aria-hidden="true"></span>
 
-                    <!-- Search · running timer · save status · sound -->
+                    <!-- Search · running timer · save status -->
                     <div class="axis-topbar__middle flex items-center gap-2">
-                        <button type="button" id="header-global-search" onclick="openCommandPalette()" data-no-click-sfx="true"
+                        <button type="button" id="header-global-search" onclick="openCommandPalette()"
                             class="axis-topbar-pill axis-topbar-pill--search tb-search-full"
                             aria-haspopup="dialog" aria-controls="axis-command-palette" aria-keyshortcuts="Meta+K Control+K">
                             <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
                             <span class="flex-1 text-left text-slate-400 truncate">Search anything…</span>
                             <kbd id="header-search-shortcut" class="text-xs font-mono text-sky-300/80 bg-white/[0.06] border border-sky-400/20 px-1.5 py-0.5 rounded shrink-0">⌘K</kbd>
                         </button>
-                        <button type="button" onclick="openCommandPalette()" data-no-click-sfx="true" class="axis-topbar-icon-btn tb-search-icon" aria-label="Search" aria-haspopup="dialog" aria-controls="axis-command-palette">
+                        <button type="button" onclick="openCommandPalette()" class="axis-topbar-icon-btn tb-search-icon" aria-label="Search" aria-haspopup="dialog" aria-controls="axis-command-palette">
                             <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
                         </button>
 
                         <div id="header-timer-pill" class="hidden axis-topbar-pill axis-topbar-pill--timer tb-show-xs cursor-pointer shrink-0" onclick="openProjectTaskList(activeProjectId)" title="Jump to the running task">
-                            <span class="w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_0_3px_rgba(52,211,153,0.2)] shrink-0" aria-hidden="true"></span>
+                            <span class="w-2 h-2 rounded-full bg-sky-400 shadow-[0_0_0_3px_rgba(56,189,248,0.2)] shrink-0" aria-hidden="true"></span>
                             <span id="header-timer-label" class="font-mono font-semibold truncate max-w-[110px]">Timer</span>
                         </div>
 
@@ -51,89 +51,6 @@
                             <span id="header-sync-label" class="tb-show-xl">Up to date</span>
                         </span>
 
-                        <div class="relative shrink-0 tb-show-md" id="audio-control-wrapper">
-                            <button type="button" id="audio-menu-btn" onclick="toggleAudioPopover(event)" data-no-click-sfx="true" data-muted="false"
-                                class="axis-topbar-pill" aria-haspopup="dialog" aria-expanded="false" aria-controls="audio-popover" title="Sound settings">
-                                <span id="sfx-icon-wrap" class="flex items-center justify-center shrink-0" aria-hidden="true">
-                                    <svg class="sfx-icon-on w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                        <path stroke-linecap="round" stroke-linejoin="round" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
-                                    </svg>
-                                    <svg class="sfx-icon-off w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                        <path stroke-linecap="round" stroke-linejoin="round" d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
-                                        <path stroke-linecap="round" stroke-linejoin="round" d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2" />
-                                    </svg>
-                                </span>
-                                <span id="sound-eq" class="tb-show-lg flex items-end gap-0.5 h-3 px-0.5 shrink-0" aria-hidden="true">
-                                    <span class="sfx-eq-bar"></span>
-                                    <span class="sfx-eq-bar"></span>
-                                    <span class="sfx-eq-bar"></span>
-                                    <span class="sfx-eq-bar"></span>
-                                    <span class="sfx-eq-bar"></span>
-                                </span>
-                                <span id="sfx-status-text" class="tb-show-2xl">Sound on</span>
-                                <svg id="audio-popover-chevron" class="axis-topbar-pill__chevron w-3 h-3 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
-                                </svg>
-                            </button>
-
-                            <!-- Sound settings popover (state is synced by SoundFX.syncUI and saved per browser) -->
-                            <div id="audio-popover" onclick="event.stopPropagation()" role="dialog" aria-label="Sound settings"
-                                 class="hidden absolute right-0 top-full mt-2 w-72 axis-sound-popover z-50 select-none">
-                                <div class="flex items-center justify-between gap-3">
-                                    <div>
-                                        <div class="text-sm font-semibold text-white">Sound effects</div>
-                                        <div id="popover-preset-subtitle" class="text-xs text-slate-400">Crystal</div>
-                                    </div>
-                                    <button type="button" id="popover-mute-switch" role="switch" aria-checked="true" aria-label="Sound effects"
-                                            onclick="SoundFX.toggleMute()" data-no-click-sfx="true" class="axis-switch">
-                                        <span class="axis-switch__thumb"></span>
-                                    </button>
-                                </div>
-
-                                <div class="axis-sound-popover__body space-y-3.5">
-                                    <div>
-                                        <label for="sfx-preset-select" class="block text-xs font-semibold text-slate-400 mb-1.5">Sound style</label>
-                                        <select id="sfx-preset-select" onchange="SoundFX.setPreset(this.value)" data-no-click-sfx="true" class="axis-input w-full h-10 px-3 text-sm cursor-pointer">
-                                            <option value="crystal">Crystal</option>
-                                            <option value="mechanical">Clicky</option>
-                                            <option value="minimal">Soft</option>
-                                        </select>
-                                    </div>
-
-                                    <div>
-                                        <div class="flex items-center justify-between mb-1.5">
-                                            <span id="sfx-vol-label" class="text-xs font-semibold text-slate-400">Volume</span>
-                                            <span id="sfx-vol-display" class="text-xs font-mono text-slate-300">60%</span>
-                                        </div>
-                                        <div class="axis-segmented" role="group" aria-labelledby="sfx-vol-label">
-                                            @foreach ([['0.3', 'Low'], ['0.6', 'Medium'], ['1', 'High']] as [$level, $levelLabel])
-                                                <button type="button" onclick="SoundFX.setVolume({{ $level }})" data-vol-btn="{{ $level }}" data-no-click-sfx="true"
-                                                        class="vol-seg-btn axis-segmented__btn" aria-pressed="false">{{ $levelLabel }}</button>
-                                            @endforeach
-                                        </div>
-                                    </div>
-
-                                    <div class="flex items-center justify-between gap-3">
-                                        <div>
-                                            <div id="sfx-tick-title" class="text-xs font-medium text-slate-200">Timer ticking</div>
-                                            <div class="text-xs text-slate-500">A soft tick each second while a timer runs</div>
-                                        </div>
-                                        <button type="button" id="sfx-tick-btn" role="switch" aria-checked="false" aria-labelledby="sfx-tick-title"
-                                                onclick="SoundFX.toggleClockTick()" data-no-click-sfx="true" class="axis-switch shrink-0">
-                                            <span class="axis-switch__thumb"></span>
-                                        </button>
-                                    </div>
-                                </div>
-
-                                <button type="button" onclick="closeAudioPopover(); openModal('modal-sound-lab');" data-no-click-sfx="true"
-                                        class="btn-glass w-full h-10 mt-4 text-xs font-semibold flex items-center justify-center gap-2">
-                                    <svg class="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
-                                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
-                                    </svg>
-                                    <span>Try all the sounds</span>
-                                </button>
-                            </div>
-                        </div>
                     </div>
 
                     <!-- Actions -->

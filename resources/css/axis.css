@@ -1,6 +1,6 @@
 /*
 | EOT CoreSystem — Axis Suite v4.5 visual identity (ported verbatim from the HTML prototype):
-| Midnight Cerulean Navy (#081121 / #15294B), Forest-Sage actions (#3E6B48) and border-only KPI cards.
+| Midnight Cerulean Navy (#081121 / #15294B), blue actions (#2F6FD6) and border-only KPI cards.
 */
 :root {
     --bg-obsidian: #081121;
@@ -10,9 +10,9 @@
     --axis-navy-card-inner: rgba(11, 24, 46, 0.95);
     --axis-border-blue: rgba(56, 189, 248, 0.24);
     --axis-border-subtle: rgba(148, 163, 184, 0.22);
-    --axis-green-btn: #3E6B48;
-    --axis-green-btn-hover: #4A7D56;
-    --axis-green-border: rgba(110, 231, 183, 0.36);
+    --axis-blue-btn: #2F6FD6;
+    --axis-blue-btn-hover: #4A8CEB;
+    --axis-blue-border: rgba(46, 198, 232, 0.36);
     --glass-surface: rgba(18, 36, 66, 0.95);
     --glass-input: rgba(10, 22, 42, 0.97);
     --border-specular: rgba(56, 189, 248, 0.24);
@@ -37,18 +37,6 @@ body {
 ::-webkit-scrollbar-track { background: rgba(9, 19, 38, 0.6); }
 ::-webkit-scrollbar-thumb { background: rgba(56, 189, 248, 0.25); border-radius: 9999px; }
 ::-webkit-scrollbar-thumb:hover { background: rgba(56, 189, 248, 0.45); }
-
-/* Sound Equalizer Bars */
-.sfx-eq-bar {
-    display: inline-block;
-    width: 2.5px;
-    height: 11px;
-    background-color: #38bdf8;
-    border-radius: 9999px;
-    transform: scaleY(0.32);
-    transform-origin: bottom;
-    transition: transform 0.14s ease, background-color 0.2s ease;
-}
 
 /* Axis Sales Midnight Cerulean Cards */
 .ent-card {
@@ -406,18 +394,18 @@ body {
     transform: translateY(-1px);
 }
 
-/* Signature Axis Sales Forest-Sage Primary Action Button */
+/* Signature AXIS blue primary action button */
 .btn-primary-glass {
-    background: linear-gradient(180deg, #43744E 0%, #355E3E 100%);
-    border: 1px solid rgba(134, 239, 172, 0.32);
+    background: linear-gradient(180deg, var(--axis-blue-btn-hover) 0%, var(--axis-blue-btn) 100%);
+    border: 1px solid var(--axis-blue-border);
     color: #ffffff;
     border-radius: 9999px;
-    box-shadow: 0 4px 14px -2px rgba(20, 45, 28, 0.65), inset 0 1px 0 0 rgba(255, 255, 255, 0.14);
+    box-shadow: 0 4px 14px -2px rgba(15, 45, 94, 0.65), inset 0 1px 0 0 rgba(255, 255, 255, 0.14);
     transition: all 0.22s var(--ease-spring);
 }
 .btn-primary-glass:hover {
-    background: linear-gradient(180deg, #4E855B 0%, #3E6B48 100%);
-    border-color: rgba(134, 239, 172, 0.5);
+    background: linear-gradient(180deg, #6FA2F2 0%, var(--axis-blue-btn) 100%);
+    border-color: rgba(46, 198, 232, 0.5);
     transform: translateY(-1px);
 }
 
@@ -461,12 +449,12 @@ button:active:not(:disabled) {
 
 /* Stage 3: Success / Confirmed State */
 @keyframes btnSuccessGlow {
-    0% { box-shadow: 0 0 0 0 rgba(52, 211, 153, 0.65); }
-    70% { box-shadow: 0 0 0 7px rgba(52, 211, 153, 0); }
-    100% { box-shadow: 0 0 0 0 rgba(52, 211, 153, 0); }
+    0% { box-shadow: 0 0 0 0 rgba(46, 198, 232, 0.65); }
+    70% { box-shadow: 0 0 0 7px rgba(46, 198, 232, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(46, 198, 232, 0); }
 }
 .btn-state-done {
-    border-color: rgba(52, 211, 153, 0.75) !important;
+    border-color: rgba(46, 198, 232, 0.75) !important;
     animation: btnSuccessGlow 0.55s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
@@ -481,7 +469,7 @@ button:active:not(:disabled) {
     left: 0;
     bottom: 0;
     height: 2px;
-    background: linear-gradient(90deg, #38bdf8, #34d399);
+    background: linear-gradient(90deg, #2EC6E8, #2F6FD6);
     pointer-events: none;
     animation: btnProgressBarSweep 0.48s ease-out forwards;
     z-index: 5;
@@ -515,7 +503,7 @@ button:hover i.fa-regular,
 button:hover .fa-plus,
 button:hover .fa-circle-plus {
     transform: rotate(90deg) scale(1.2) !important;
-    filter: drop-shadow(0 0 8px rgba(134, 239, 172, 0.7));
+    filter: drop-shadow(0 0 8px rgba(46, 198, 232, 0.7));
 }
 
 /* 3. Settings Gear & Table Config Icons: Smooth 120deg Mechanical Spin */
@@ -578,7 +566,7 @@ button:hover .fa-trash-can {
 /* 8. Play / Pause Stopwatch Icons: Forward Launch & Pulse */
 button:hover .fa-play {
     transform: translateX(1.5px) scale(1.24) !important;
-    filter: drop-shadow(0 0 8px rgba(52, 211, 153, 0.75));
+    filter: drop-shadow(0 0 8px rgba(46, 198, 232, 0.75));
 }
 button:hover .fa-pause {
     transform: scale(1.2) !important;
@@ -619,7 +607,7 @@ button:hover .fa-pause {
 }
 @keyframes iconClickLaunch {
     0%   { transform: scale(0.8) translateY(2px); }
-    50%  { transform: scale(1.3) translateY(-3px) translateX(2px); filter: drop-shadow(0 0 10px rgba(52, 211, 153, 0.85)); }
+    50%  { transform: scale(1.3) translateY(-3px) translateX(2px); filter: drop-shadow(0 0 10px rgba(46, 198, 232, 0.85)); }
     100% { transform: scale(1) translateY(0) translateX(0); }
 }
 .icon-lifecycle-pop {
@@ -1176,11 +1164,9 @@ html.axis-drawer-open main { overflow: hidden; }
 .axis-topbar__subtitle { font-size: 12px; color: #94A3B8; margin-top: 2px; }
 .axis-topbar-pill--search { cursor: text; }
 .axis-topbar-pill--search:focus-within { border-color: rgba(56, 189, 248, 0.55); box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.15); }
-.axis-topbar-pill--timer { border-color: rgba(52, 211, 153, 0.4); background: rgba(6, 78, 59, 0.3); color: #A7F3D0; }
-.axis-topbar-pill--timer:hover { background: rgba(6, 78, 59, 0.45); }
+.axis-topbar-pill--timer { border-color: rgba(47, 111, 214, 0.4); background: rgba(47, 111, 214, 0.16); color: #BFDBFE; }
+.axis-topbar-pill--timer:hover { background: rgba(47, 111, 214, 0.26); }
 #header-timer-pill.hidden { display: none; }
-#audio-menu-btn[aria-expanded="true"] .axis-topbar-pill__chevron,
-#audio-popover:not(.hidden) ~ * .axis-topbar-pill__chevron { transform: rotate(180deg); }
 
 .axis-topbar-pill {
     height: 40px;

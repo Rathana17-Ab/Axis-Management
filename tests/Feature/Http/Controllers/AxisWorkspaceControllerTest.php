@@ -1,10 +1,13 @@
 <?php
 
+use App\Enums\WorkspaceRole;
 use App\Enums\WorkStatus;
 use App\Models\Module;
 use App\Models\Project;
 use App\Models\ProjectTask;
+use App\Models\Role;
 use App\Models\User;
+use Database\Seeders\SalesAccessSeeder;
 
 it('opens the workspace on the page matching each admin route', function (string $routeName, string $page) {
     User::factory()->create();
@@ -102,7 +105,10 @@ it('renders only the module, project, task and team lists on the dashboard', fun
         ->assertSee('Click a card to open the Tasks page.')
         ->assertSee('id="dash-team-body"', false)
         ->assertSee('Team workload')
-        ->assertSee('SoundFX.keyTick()', false)
+        ->assertDontSee('SoundFX', false)
+        ->assertDontSee('id="audio-control-wrapper"', false)
+        ->assertDontSee('id="modal-sound-lab"', false)
+        ->assertDontSee('Sound effects', false)
         ->assertSee('aria-label="Scroll projects right"', false)
         ->assertSee('aria-label="Scroll tasks right"', false)
         ->assertDontSee('aria-label="Scroll modules right"', false)
@@ -148,6 +154,17 @@ it('shows the signed-in team member as the acting user', function () {
         ->get(route('admin.projects.index'))
         ->assertViewHas('bootstrap', fn (array $bootstrap): bool => $bootstrap['currentUserId'] === $member->id)
         ->assertSee('Switched Member');
+});
+
+it('offers module reordering to a signed-in Sales Person', function () {
+    $this->seed(SalesAccessSeeder::class);
+    $sales = User::factory()->create();
+    $sales->roles()->attach(Role::query()->where('slug', WorkspaceRole::SalesPerson->value)->firstOrFail());
+
+    $this->actingAs($sales)
+        ->get(route('admin.modules.index'))
+        ->assertOk()
+        ->assertViewHas('bootstrap', fn (array $bootstrap): bool => $bootstrap['canReorderModules'] === true);
 });
 
 it('renders the top header bar with page title, live save status and reload', function () {
