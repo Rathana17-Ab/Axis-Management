@@ -15,7 +15,7 @@
                onmouseenter="hoverSidebar(true)" onmouseleave="hoverSidebar(false)">
             <div class="axis-sidebar__brand">
                 <button type="button" onclick="switchPage('dashboard')" class="axis-sidebar__logo" aria-label="Axis Management — dashboard">
-                    <img src="{{ asset('images/brand/axis-symbol-white.png') }}" alt="" aria-hidden="true" width="34" height="34" class="block w-[34px] h-[34px] object-contain">
+                    <img src="{{ asset('images/brand/axis-symbol-white.png') }}?v={{ filemtime(public_path('images/brand/axis-symbol-white.png')) }}" alt="" aria-hidden="true" width="34" height="34" class="block w-[34px] h-[34px] object-contain">
                 </button>
                 <div class="axis-sidebar__text min-w-0 flex-1">
                     <div class="text-[16px] font-semibold text-white leading-tight whitespace-nowrap">Axis Management</div>
