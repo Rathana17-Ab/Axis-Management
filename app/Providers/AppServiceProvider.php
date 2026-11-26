@@ -21,6 +21,10 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         Schema::defaultStringLength(191);
-        Schema::useNativeSchemaOperationsIfPossible();
+
+        // This helper is not available on every installed Laravel version.
+        if (method_exists(Schema::getFacadeRoot(), 'useNativeSchemaOperationsIfPossible')) {
+            Schema::useNativeSchemaOperationsIfPossible();
+        }
     }
 }

@@ -3,6 +3,9 @@
 use Illuminate\Support\Str;
 use Pdo\Mysql;
 
+// PHP 8.4+ exposes driver-specific PDO constants; PHP 8.3 still uses the PDO class constant.
+$mysqlSslCaConstant = class_exists(Mysql::class) ? Mysql::ATTR_SSL_CA : PDO::MYSQL_ATTR_SSL_CA;
+
 return [
 
     /*
@@ -60,7 +63,7 @@ return [
             'strict' => true,
             'engine' => null,
             'options' => extension_loaded('pdo_mysql') ? array_filter([
-                PDO::MYSQL_ATTR_SSL_CA => env('MYSQL_ATTR_SSL_CA'),
+                $mysqlSslCaConstant => env('MYSQL_ATTR_SSL_CA'),
             ]) : [],
         ],
 

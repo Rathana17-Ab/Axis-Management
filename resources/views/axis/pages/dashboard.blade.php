@@ -71,7 +71,7 @@
                         </section>
                     </div>
 
-                    <!-- 2. Project list, horizontally scrollable cards -->
+                    <!-- 2. Project list, responsive 1/2/3 cards -->
                     <div class="space-y-2" data-dashboard-row="project">
                         <div id="dash-project-toolbar" class="ent-card flex w-full flex-wrap items-center gap-2 px-3 py-2.5" aria-labelledby="dash-project-title">
                             <input type="search" id="dash-project-search" oninput="setDashboardProjectSearch(this.value)"
@@ -113,7 +113,7 @@
                                         </p>
                                     </div>
                                 </div>
-                                <div class="flex items-center gap-1" data-dashboard-scroll>
+                                <div class="hidden items-center gap-1" data-dashboard-scroll>
                                     <button type="button" data-scroll-dir="-1" onclick="scrollDashboardCards('dash-project-cards', -1)" class="axis-row-btn disabled:opacity-40 disabled:cursor-not-allowed" aria-label="Scroll projects left">
                                         <i class="fa-solid fa-chevron-left text-[10px]" aria-hidden="true"></i>
                                     </button>
@@ -122,11 +122,11 @@
                                     </button>
                                 </div>
                             </div>
-                            <div id="dash-project-cards" class="flex gap-3 p-4 overflow-x-auto axis-hscroll"></div>
+                            <div id="dash-project-cards" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 p-5"></div>
                         </section>
                     </div>
 
-                    <!-- 3. Task list, horizontally scrollable cards -->
+                    <!-- 3. Task list, responsive 1/2/3 cards -->
                     <div class="space-y-2" data-dashboard-row="task">
                         <div id="dash-task-toolbar" class="ent-card flex w-full flex-wrap items-center gap-2 px-3 py-2.5" aria-labelledby="dash-task-title">
                             <input type="search" id="dash-task-search" oninput="setDashboardTaskSearch(this.value)"
@@ -177,7 +177,7 @@
                                         </p>
                                     </div>
                                 </div>
-                                <div class="flex items-center gap-1" data-dashboard-scroll>
+                                <div class="hidden items-center gap-1" data-dashboard-scroll>
                                     <button type="button" data-scroll-dir="-1" onclick="scrollDashboardCards('dash-task-cards', -1)" class="axis-row-btn disabled:opacity-40 disabled:cursor-not-allowed" aria-label="Scroll tasks left">
                                         <i class="fa-solid fa-chevron-left text-[10px]" aria-hidden="true"></i>
                                     </button>
@@ -186,7 +186,7 @@
                                     </button>
                                 </div>
                             </div>
-                            <div id="dash-task-cards" class="flex gap-3 p-4 overflow-x-auto axis-hscroll"></div>
+                            <div id="dash-task-cards" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 p-5"></div>
                         </section>
                     </div>
 

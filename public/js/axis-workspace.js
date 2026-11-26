@@ -1046,7 +1046,7 @@ function renderDashboardProjectCards() {
         const due = deadlineInfo(ap);
         const name = escapeHtml(ap.name);
         return `
-            <article class="axis-list-card w-[85%] sm:w-[calc((100%_-_0.75rem)/2)] lg:w-[calc((100%_-_1.5rem)/3)] shrink-0" role="button" tabindex="0"
+            <article class="axis-list-card min-w-0" role="button" tabindex="0"
                      onclick="${open}" onkeydown="if (event.key === 'Enter' && event.target === this) ${open}"
                      aria-label="Open the Projects page">
                 <div class="flex items-start justify-between gap-3">
@@ -1263,7 +1263,7 @@ function renderDashboardTaskCards() {
         const moduleName = escapeHtml(m.name);
         const open = `openProjectTaskList(${m.id})`;
         return `
-            <article class="axis-list-card w-[85%] sm:w-[calc((100%_-_0.75rem)/2)] lg:w-[calc((100%_-_1.5rem)/3)] shrink-0" role="button" tabindex="0"
+            <article class="axis-list-card min-w-0" role="button" tabindex="0"
                      onclick="${open}" onkeydown="if (event.key === 'Enter' && event.target === this) ${open}"
                      aria-label="Open the task page for ${moduleName}">
                 <div class="flex items-center gap-2.5 min-w-0">
