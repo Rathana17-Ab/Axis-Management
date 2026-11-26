@@ -195,6 +195,18 @@ describe('reorder', function () {
             ->and($modules[1]->fresh()->sort_order)->toBe(3);
     });
 
+    it('lets the legacy open console reorder through the fallback member', function () {
+        User::factory()->create(['can_login' => true]);
+        $modules = collect([1, 2])->map(fn (int $order): Module => Module::factory()->create(['sort_order' => $order]));
+
+        $this->postJson(route('admin.api.modules.reorder'), ['ordered_ids' => [$modules[1]->id, $modules[0]->id]])
+            ->assertOk()
+            ->assertJsonPath('data.0.id', $modules[1]->id);
+
+        expect($modules[1]->fresh()->sort_order)->toBe(1)
+            ->and($modules[0]->fresh()->sort_order)->toBe(2);
+    });
+
     it('rejects an incomplete order without changing the saved order', function () {
         $modules = collect([1, 2])->map(fn (int $order): Module => Module::factory()->create(['sort_order' => $order]));
 

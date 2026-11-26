@@ -8,6 +8,7 @@ use App\Enums\WorkspaceRole;
 use App\Models\FeatureUpgrade;
 use App\Models\Module;
 use App\Models\Project;
+use App\Models\ProjectTask;
 use App\Models\RecordShare;
 use App\Models\Role;
 use App\Models\Team;
@@ -260,6 +261,26 @@ it('grants view access to a module through a shared parent project', function ()
         ->get(route('admin.projects.tasks', $module))
         ->assertOk()
         ->assertViewHas('bootstrap', fn (array $bootstrap): bool => collect($bootstrap['projects'])->contains('id', $module->id));
+});
+
+it('grants the same module visibility through a shared child task', function () {
+    $sales = workspaceMemberWithRole(WorkspaceRole::SalesPerson);
+    $module = Module::factory()->create(['name' => 'Task-shared module', 'team_members' => []]);
+    $task = ProjectTask::factory()->for($module)->create();
+
+    RecordShare::factory()->create([
+        'shareable_type' => $task->getMorphClass(),
+        'shareable_id' => $task->id,
+        'user_id' => $sales->id,
+        'ability' => RecordShareAbility::View->value,
+    ]);
+
+    expect(Gate::forUser($sales)->allows('view-record', $module))->toBeTrue()
+        ->and(Module::query()->visibleTo($sales)->pluck('id'))->toContain($module->id);
+
+    $this->actingAs($sales)
+        ->get(route('admin.projects.tasks', $module))
+        ->assertOk();
 });
 
 it('denies access to an unshared module and blocks updates without the update ability', function () {

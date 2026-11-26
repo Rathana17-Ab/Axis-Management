@@ -38,10 +38,10 @@ window.runButtonLifecycle = function(btn, options = {}, callback) {
         btn.classList.remove('btn-state-working');
         btn.classList.add('btn-state-done');
         btn.innerHTML = `
-            <svg class="w-3.5 h-3.5 text-sky-300 shrink-0 scale-110 transition-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <svg class="w-3.5 h-3.5 text-emerald-300 shrink-0 scale-110 transition-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                 <polyline points="20 6 9 17 4 12"></polyline>
             </svg>
-            <span class="whitespace-nowrap text-sky-200 font-semibold">${doneText}</span>
+            <span class="whitespace-nowrap text-emerald-200 font-semibold">${doneText}</span>
         `;
 
         // Stage 3: Smoothly settle back to live updated state

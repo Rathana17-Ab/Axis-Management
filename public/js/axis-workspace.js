@@ -745,9 +745,6 @@ window.switchPage = function(pageId, history = true) {
         if (typeof showToast === 'function') showToast('Create a project and a module first, then add tasks to it.');
         pageId = 'projects';
     }
-    const pageOrder = ['dashboard', 'projects', 'modules', 'task-detail', 'reports', 'team', 'roles', 'work-queues', 'sharing', 'p18'];
-    const navIdx = Math.max(0, pageOrder.indexOf(pageId));
-
     const allPages = document.querySelectorAll('.app-page');
     allPages.forEach(p => p.classList.remove('active-page'));
 
@@ -1397,7 +1394,7 @@ function syncSortSelect(selectId, sort) {
     select.value = [...select.options].some(o => o.value === value) ? value : '';
 }
 
-const STATUS_SELECT_BASE = 'border text-xs font-medium pl-2.5 pr-6 py-1 rounded-full cursor-pointer focus:outline-none';
+const STATUS_SELECT_BASE = 'axis-status-select border text-xs font-medium pl-2.5 pr-6 py-1 rounded-full cursor-pointer focus:outline-none';
 const statusSelectClass = status => `${PROJECT_STATUS_STYLES[status] || PROJECT_STATUS_STYLES['Processing']} ${STATUS_SELECT_BASE}`;
 
 function statusSelectHtml(onchange, status, label, id = '') {
@@ -1730,7 +1727,7 @@ window.renderAxisProjectsTable = function() {
             <td class="py-3 px-3" onclick="event.stopPropagation()">
                 <div class="flex items-center gap-1.5">
                     <select onchange="updateAxisProjectStatus(${ap.id}, this.value)" aria-label="Status of ${name}"
-                        class="${statusCls} border text-xs font-medium pl-2.5 pr-6 py-1 rounded-full cursor-pointer focus:outline-none">
+                        class="axis-status-select ${statusCls} border text-xs font-medium pl-2.5 pr-6 py-1 rounded-full cursor-pointer focus:outline-none">
                         ${workStatusOptions(ap.status)}
                     </select>
                     ${statusMismatchHtml(statusMismatchText(ap.status, pct, st.mods.length, 'module'))}
@@ -2400,7 +2397,6 @@ function deadlineInfo(p) {
 
 let moduleSort = { key: 'custom', dir: 'asc' };
 let moduleDragId = null;
-let moduleDropPoint = null;
 
 window.setModuleSortFromSelect = function(value) {
     const [key, dir] = value.split(':');
@@ -2414,11 +2410,12 @@ window.sortModules = function(key) {
     renderProjectsTable();
 };
 
-/** Drag handle shown on module rows/cards for users who can manage records. */
+/** Drag handle shown on module rows/cards for users who can reorder the list. */
 function moduleDragHandle(name, compact = false) {
     if (!canReorderModules) return '';
-    return `<button type="button" data-module-drag-handle onclick="event.stopPropagation()"
-        class="axis-module-drag ${compact ? '-mt-0.5' : ''}" title="Drag the row to reorder" aria-label="Drag ${name} to reorder">
+    return `<button type="button" data-module-drag-handle onclick="event.stopPropagation()" onkeydown="handleModuleDragKeydown(event)"
+        class="axis-module-drag ${compact ? '-mt-0.5' : ''}" title="Drag to reorder · Arrow Up/Down when focused"
+        aria-label="Drag ${name} to reorder; press Arrow Up or Arrow Down to move it" aria-keyshortcuts="ArrowUp ArrowDown">
         <i class="fa-solid fa-grip-vertical text-[11px]" aria-hidden="true"></i>
     </button>`;
 }
@@ -2427,9 +2424,38 @@ function moduleItemsContainer(zone) {
     return zone.id === 'mod-view-table' ? document.getElementById('projects-tbody') : zone;
 }
 
+/** Keyboard equivalent of dragging: move the focused module one place in its view. */
+window.handleModuleDragKeydown = function(event) {
+    if (event.key !== 'ArrowUp' && event.key !== 'ArrowDown') return;
+
+    const handle = event.target.closest?.('[data-module-drag-handle]');
+    const item = handle?.closest('[data-module-id]');
+    const zone = item?.closest('[id^="mod-view-"]');
+    if (!handle || !item || !zone) return;
+
+    const scope = zone.id === 'mod-view-board' ? item.closest('.axis-board-col') : zone;
+    const container = scope ? moduleItemsContainer(scope) : null;
+    if (!container) return;
+
+    const items = [...container.querySelectorAll('[data-module-id]')];
+    const index = items.indexOf(item);
+    const neighbour = items[index + (event.key === 'ArrowUp' ? -1 : 1)];
+    if (!neighbour) return;
+
+    event.preventDefault();
+    event.stopPropagation();
+    const movedId = item.dataset.moduleId;
+    const focusMovedHandle = () => zone.querySelector(`[data-module-id="${movedId}"] [data-module-drag-handle]`)?.focus({ preventScroll: true });
+    saveModuleOrder(container, Number(movedId), {
+        element: neighbour,
+        after: event.key === 'ArrowDown',
+    }, focusMovedHandle);
+    focusMovedHandle();
+};
+
 function moduleDragScope(event, zone) {
     if (zone.id === 'mod-view-board') {
-        return event.target.closest?.('.axis-board-col') || zone.querySelector('.axis-board-col');
+        return event.target.closest?.('.axis-board-col') || null;
     }
 
     return zone;
@@ -2466,8 +2492,9 @@ function moduleDropPosition(event, zone) {
     return { element, after };
 }
 
-function moduleDropAllowed(event, zone, point) {
-    if (zone.id !== 'mod-view-board' || !point) return true;
+function moduleDropAllowed(zone, point) {
+    if (!point) return false;
+    if (zone.id !== 'mod-view-board') return true;
 
     const dragged = zone.querySelector(`[data-module-id="${moduleDragId}"]`);
     const draggedColumn = dragged?.closest('.axis-board-col');
@@ -2479,7 +2506,6 @@ function moduleDropAllowed(event, zone, point) {
 function clearModuleDropMarkers() {
     document.querySelectorAll('[data-module-id].is-drop-before, [data-module-id].is-drop-after')
         .forEach(el => el.classList.remove('is-drop-before', 'is-drop-after'));
-    moduleDropPoint = null;
 }
 
 function scrollModuleDropEdges(event) {
@@ -2502,10 +2528,14 @@ window.handleModuleDragStart = function(event) {
         return;
     }
 
-    moduleDragId = Number(item.dataset.moduleId);
+    const draggedId = Number(item.dataset.moduleId);
+    moduleDragId = draggedId;
     event.dataTransfer.effectAllowed = 'move';
-    event.dataTransfer.setData('text/plain', String(moduleDragId));
-    requestAnimationFrame(() => item.classList.add('is-dragging'));
+    event.dataTransfer.setData('text/plain', String(draggedId));
+    // Defer the fade until after the browser has snapshotted the drag image.
+    setTimeout(() => {
+        if (moduleDragId === draggedId) item.classList.add('is-dragging');
+    }, 0);
 };
 
 window.handleModuleDragOver = function(event) {
@@ -2513,32 +2543,40 @@ window.handleModuleDragOver = function(event) {
 
     const zone = event.currentTarget;
     const point = moduleDropPosition(event, zone);
-    if (!moduleDropAllowed(event, zone, point)) return;
+    if (!moduleDropAllowed(zone, point)) {
+        clearModuleDropMarkers();
+        event.dataTransfer.dropEffect = 'none';
+        return;
+    }
 
     event.preventDefault();
-    event.dataTransfer.dropEffect = 'move';
+    const isSelf = Number(point.element.dataset.moduleId) === moduleDragId;
+    event.dataTransfer.dropEffect = isSelf ? 'none' : 'move';
     clearModuleDropMarkers();
     scrollModuleDropEdges(event);
 
-    if (!point || Number(point.element.dataset.moduleId) === moduleDragId) return;
-
-    point.element.classList.add(point.after ? 'is-drop-after' : 'is-drop-before');
-    moduleDropPoint = point;
+    if (!isSelf) {
+        point.element.classList.add(point.after ? 'is-drop-after' : 'is-drop-before');
+    }
 };
 
 window.handleModuleDrop = function(event) {
     if (moduleDragId === null) return;
 
     const zone = event.currentTarget;
-    const point = moduleDropPoint || moduleDropPosition(event, zone);
-    if (!moduleDropAllowed(event, zone, point)) return;
+    const point = moduleDropPosition(event, zone);
+    if (!moduleDropAllowed(zone, point)) {
+        clearModuleDropMarkers();
+        event.dataTransfer.dropEffect = 'none';
+        return;
+    }
 
     event.preventDefault();
     const movedId = moduleDragId;
     const itemContainer = moduleItemsContainer(zone);
     handleModuleDragEnd();
 
-    if (!point || Number(point.element.dataset.moduleId) === movedId || !itemContainer) return;
+    if (Number(point.element.dataset.moduleId) === movedId || !itemContainer) return;
     saveModuleOrder(itemContainer, movedId, point);
 };
 
@@ -2550,7 +2588,7 @@ window.handleModuleDragEnd = function() {
 };
 
 /** Reorder only the modules the member can see, keeping hidden modules in their relative positions. */
-function saveModuleOrder(container, movedId, point) {
+function saveModuleOrder(container, movedId, point, onFailedReorder = null) {
     const targetId = Number(point.element.dataset.moduleId);
     const isVisible = id => Boolean(container.querySelector(`[data-module-id="${id}"]`));
     if (!isVisible(movedId) || !isVisible(targetId) || targetId === movedId) return;
@@ -2575,6 +2613,7 @@ function saveModuleOrder(container, movedId, point) {
             projects = previousProjects;
             moduleSort = previousSort;
             renderProjectsTable();
+            onFailedReorder?.();
         }));
 }
 
@@ -2621,7 +2660,7 @@ function renderModuleCard(p, compact = false, showProject = false) {
             </div>
         </div>`;
     return `
-    <article class="axis-list-card" data-module-id="${p.id}" draggable="${canReorderModules ? 'true' : 'false'}" role="button" tabindex="0" onclick="openProjectTaskList(${p.id})" onkeydown="if(event.key==='Enter'&&event.target===this)openProjectTaskList(${p.id})">
+    <article class="axis-list-card" data-module-id="${p.id}" draggable="${canReorderModules ? 'true' : 'false'}" onclick="openProjectTaskList(${p.id})">
         <div class="flex items-start justify-between gap-3">
             <div class="flex items-center gap-2.5 min-w-0">
                 ${moduleDragHandle(name, compact)}
@@ -2702,7 +2741,7 @@ function renderProjectRow(p, showProject = false) {
             <td class="py-3 px-3" onclick="event.stopPropagation()">
                 <div class="flex items-center gap-1.5">
                     <select onchange="updateProjectStatus(${p.id}, this.value); renderProjectsTable();" aria-label="Status of ${name}"
-                        class="${statusCls} border text-xs font-medium pl-2.5 pr-6 py-1 rounded-full cursor-pointer focus:outline-none">
+                        class="axis-status-select ${statusCls} border text-xs font-medium pl-2.5 pr-6 py-1 rounded-full cursor-pointer focus:outline-none">
                         ${workStatusOptions(p.status)}
                     </select>
                     ${statusMismatchHtml(statusMismatchText(p.status, pct, (p.tasks || []).length, 'task'))}

@@ -19,17 +19,13 @@
     --sales-muted: rgba(255, 255, 255, 0.80);
     --sales-faint: rgba(255, 255, 255, 0.66);
     --sales-primary: #2F6FD6;
+    --sales-primary-strong: #255BB0;
+    --sales-primary-deep: #1E4FA0;
     --sales-signal: #2EC6E8;
     --sales-success: #10B981;
     --sales-warning: #F59E0B;
     --sales-danger: #EF4444;
     --sales-shadow: 0 24px 70px rgba(0, 0, 0, 0.30);
-    --sales-product: #16A34A;
-    --sales-product-action: #16A34A;
-    --sales-product-hover: #15803D;
-    --sales-product-soft: rgba(22, 163, 74, 0.14);
-    --sales-product-border: rgba(22, 163, 74, 0.34);
-    --sales-product-glow: rgba(22, 163, 74, 0.22);
     --sales-surface: linear-gradient(145deg, var(--sales-glass), rgba(255, 255, 255, 0.06));
 }
 
@@ -112,7 +108,8 @@ label.axis-topbar-pill:hover,
     color: var(--sales-text);
 }
 .axis-topbar-pill--status { border-color: rgba(16, 185, 129, 0.28); background: rgba(16, 185, 129, 0.08); }
-.axis-topbar-pill--timer { border-color: rgba(47, 111, 214, 0.4); background: rgba(47, 111, 214, 0.16); }
+.axis-topbar-pill--timer { border-color: rgba(47, 111, 214, 0.4); background: rgba(47, 111, 214, 0.16); color: #BFDBFE; }
+.axis-topbar-pill--timer:hover { background: rgba(47, 111, 214, 0.26); border-color: rgba(47, 111, 214, 0.55); }
 
 /* Buttons */
 .btn-glass {
@@ -127,14 +124,14 @@ label.axis-topbar-pill:hover,
     color: var(--sales-text);
 }
 .btn-primary-glass {
-    background: linear-gradient(135deg, var(--sales-primary), var(--sales-signal));
+    background: linear-gradient(135deg, var(--sales-primary-strong), var(--sales-primary-deep));
     border: 1px solid rgba(47, 111, 214, 0.45);
     border-radius: 14px;
     color: #FFFFFF;
     box-shadow: 0 12px 28px rgba(47, 111, 214, 0.22);
 }
 .btn-primary-glass:hover {
-    background: linear-gradient(135deg, #4A8CEB, var(--sales-primary));
+    background: linear-gradient(135deg, var(--sales-primary), var(--sales-primary-strong));
     border-color: rgba(46, 198, 232, 0.5);
 }
 .axis-drawer__btn { border-radius: 14px !important; }
@@ -165,6 +162,16 @@ label.axis-topbar-pill:hover,
 .ent-input option,
 .axis-input option,
 select.axis-input option { background-color: var(--sales-bg2); color: var(--sales-text); }
+
+/* Native dropdown menus ignore author colours on some macOS browsers, so opt the
+   controls into dark UI chrome as well as explicit option colours. */
+select.axis-input,
+select.ent-input,
+select.axis-status-select { color-scheme: dark; }
+select.axis-status-select option { background-color: var(--sales-bg2); color: var(--sales-text); }
+select.axis-status-select option:checked,
+select.axis-input option:checked,
+select.ent-input option:checked { background-color: var(--sales-primary-strong); color: #FFFFFF; }
 
 /* Chips & pills */
 .axis-meta-pill {
@@ -663,7 +670,7 @@ select.axis-input option { background-color: var(--sales-bg2); color: var(--sale
     align-items: center;
     justify-content: center;
     border-radius: 10px;
-    background: linear-gradient(135deg, var(--sales-primary), var(--sales-signal));
+    background: linear-gradient(135deg, var(--sales-primary-strong), var(--sales-primary-deep));
     color: #FFFFFF;
     font-size: 11px;
     font-weight: 700;
@@ -756,7 +763,7 @@ select.axis-input option { background-color: var(--sales-bg2); color: var(--sale
     display: grid;
     place-items: center;
     border-radius: 12px;
-    background: linear-gradient(135deg, var(--sales-primary), var(--sales-signal));
+    background: linear-gradient(135deg, var(--sales-primary-strong), var(--sales-primary-deep));
     color: #FFFFFF;
     font-size: 13px;
     font-weight: 700;
@@ -835,11 +842,11 @@ select.axis-input option { background-color: var(--sales-bg2); color: var(--sale
     #eot-sidebar.axis-sidebar, .axis-sidebar__item { transition: none; }
 }
 
-/* Task list — a row whose timer is running gets a steady green tint and a green edge (cells are opaque) */
+/* Task list — a row whose timer is running gets a steady blue tint and a blue edge (cells are opaque) */
 .axis-task-table tr.timer-running-row { animation: none; box-shadow: none; }
 .axis-task-table tr.timer-running-row td { background-color: #123B57; }
 .axis-task-table tr.timer-running-row:hover td { background-color: #154262; }
-.axis-task-table tr.timer-running-row td.axis-sticky-left { box-shadow: inset 3px 0 0 var(--sales-product), 1px 0 0 var(--sales-divider); }
+.axis-task-table tr.timer-running-row td.axis-sticky-left { box-shadow: inset 3px 0 0 var(--sales-primary), 1px 0 0 var(--sales-divider); }
 .axis-task-table td { vertical-align: middle; }
 
 /* Task progress slider — drag or click the bar; the handle shows on hover, focus and drag */

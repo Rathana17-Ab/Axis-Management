@@ -9,7 +9,7 @@
 ```text
 Act as a Principal Laravel 11 Full-Stack Architect. I have a complete, production-ready interactive HTML prototype located at `prototype/axis_pm_prototype.html` for "EOT CoreSystem — Axis Project Management (Axis Suite v4.5)".
 
-Your mission is to convert this prototype into a real, database-backed Laravel 11 application while preserving 100% of its visual identity, Midnight Cerulean Navy theme (#081121 / #15294B), Forest-Sage action buttons (#3E6B48), border-only KPI card themes, button lifecycle engine (`window.runButtonLifecycle`), and semantic icon choreography (`window.triggerIconLifecycle`).
+Your mission is to convert this prototype into a real, database-backed Laravel 11 application while preserving 100% of its visual identity, Midnight Cerulean Navy theme (#081121 / #15294B), AXIS blue action buttons (#255BB0 → #1E4FA0, hover #2F6FD6 → #255BB0), border-only KPI card themes, button lifecycle engine (`window.runButtonLifecycle`), and semantic icon choreography (`window.triggerIconLifecycle`).
 
 Execute the build in the following strict phases:
 1. Create all 8 database migrations with proper foreign keys, indexes, and JSON/enum columns.
@@ -285,7 +285,7 @@ window.AxisAPI = {
 
 ## 6. Verification Checklist for Claude Code
 
-- [ ] **Visual & Theme Parity**: `#081121` obsidian background, `#15294B` floating rounded sidebar with Pin/Rail button, `#3E6B48` forest-sage primary pill buttons, and border-only colored KPI cards (`.axis-kpi-cyan`, `.axis-kpi-emerald`, `.axis-kpi-violet`, `.axis-kpi-amber`).
+- [ ] **Visual & Theme Parity**: `#081121` obsidian background, `#15294B` floating rounded sidebar with Pin/Rail button, dark-blue AXIS primary pill buttons (`#255BB0 → #1E4FA0`, hover `#2F6FD6 → #255BB0`), and border-only colored KPI cards (`.axis-kpi-cyan`, `.axis-kpi-emerald`, `.axis-kpi-violet`, `.axis-kpi-amber`).
 - [ ] **Sticky Command Bars**: Both `#sticky-filter-bar` (Projects) and `#sticky-task-filter-bar` (Task List Detail) remain docked on scroll and flash the results card on filter change.
 - [ ] **Slide-Over Drawers**: Clicking any `ISSUES / DEV NOTES` badge opens `#dev-issue-drawer` and persists new notes/status cycles to `task_issue_notes`; clicking any row in the 35-Role Matrix opens `#modal-sod-drawer`.
 - [ ] **Micro-Interaction Engines**: `window.runButtonLifecycle` and `window.triggerIconLifecycle` remain intact in `public/js/axis-ui-engine.js`.

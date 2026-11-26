@@ -85,24 +85,16 @@ class Module extends Model
     }
 
     /**
-     * Shared record ids grouped by morph class for this member.
+     * Whether this module appears in the member's workspace list.
      *
-     * @return array<string, list<int>>
+     * @param  array<string, list<int>>|null  $sharedIdsByType
      */
-    public static function sharedIdsByTypeFor(?User $user): array
+    public static function isVisibleTo(?User $user, self $module, ?array $sharedIdsByType = null): bool
     {
-        if ($user === null) {
-            return [];
-        }
-
-        return RecordShare::query()
-            ->where('user_id', $user->id)
-            ->get(['shareable_type', 'shareable_id'])
-            ->groupBy('shareable_type')
-            ->map(fn ($shares): array => $shares->pluck('shareable_id')
-                ->map(fn (mixed $id): int => (int) $id)
-                ->all())
-            ->all();
+        return self::query()
+            ->whereKey($module->id)
+            ->visibleTo($user, $sharedIdsByType)
+            ->exists();
     }
 
     /**
@@ -116,7 +108,7 @@ class Module extends Model
             return $query;
         }
 
-        $sharedIdsByType ??= self::sharedIdsByTypeFor($user);
+        $sharedIdsByType ??= RecordShare::idsByTypeFor($user);
         $moduleIds = $sharedIdsByType[(new self)->getMorphClass()] ?? [];
         $projectIds = $sharedIdsByType[(new Project)->getMorphClass()] ?? [];
         $taskIds = $sharedIdsByType[(new ProjectTask)->getMorphClass()] ?? [];

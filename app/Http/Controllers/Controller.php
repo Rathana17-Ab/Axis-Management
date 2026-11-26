@@ -43,7 +43,8 @@ abstract class Controller
      * Whether the member may change the custom module order.
      *
      * Reordering is a view-level arrangement, so anyone who can see modules may
-     * arrange the list they see. Guests never get this ability.
+     * arrange the list they see. In the legacy open console the first login-enabled
+     * member acts as the operator, so an unauthenticated request inherits that ability.
      */
     public static function canReorderModules(?User $user = null): bool
     {

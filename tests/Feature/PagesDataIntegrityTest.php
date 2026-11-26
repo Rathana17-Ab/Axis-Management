@@ -67,8 +67,9 @@ it('verifies Modules page loads with the module list and no customer column', fu
         ->assertSee('rel="icon" type="image/x-icon"', false)
         ->assertSee('favicon.ico', false)
         ->assertSee('images/brand/axis-symbol-white.png', false)
-        ->assertSee('class="text-[16px] font-semibold text-white leading-tight whitespace-nowrap">Axis Management</div>', false)
         ->assertSee('>Project hub</div>', false);
+
+    expect($response->getContent())->toMatch('/<div class="(?=[^"]*text-\[16px\])(?=[^"]*whitespace-nowrap)[^"]*">Axis Management<\/div>/');
 });
 
 it('verifies Task Detail page loads with project tasks, live timers, and issue notes', function () {

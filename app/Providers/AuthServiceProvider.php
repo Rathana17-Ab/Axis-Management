@@ -130,8 +130,7 @@ class AuthServiceProvider extends ServiceProvider
         }
 
         if ($record instanceof Module) {
-            return in_array($user->name, $record->team_members ?? [], true)
-                || ($record->project !== null && $this->hasShare($user, $record->project));
+            return Module::isVisibleTo($user, $record);
         }
 
         if ($record instanceof ProjectTask) {

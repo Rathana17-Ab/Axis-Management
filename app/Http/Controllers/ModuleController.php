@@ -118,16 +118,19 @@ class ModuleController extends Controller
             ->map(fn (mixed $id): int => (int) $id)
             ->values()
             ->all();
-        $currentOrder = Module::query()
-            ->orderBy('sort_order')
-            ->orderBy('id')
-            ->pluck('id')
-            ->map(fn (mixed $id): int => (int) $id)
-            ->all();
-        $fullOrder = $this->mergeVisibleModuleOrder($currentOrder, $visibleIds);
+        $fullOrder = DB::transaction(function () use ($visibleIds): array {
+            $currentOrder = Module::query()
+                ->orderBy('sort_order')
+                ->orderBy('id')
+                ->lockForUpdate()
+                ->pluck('id')
+                ->map(fn (mixed $id): int => (int) $id)
+                ->all();
+            $fullOrder = $this->mergeVisibleModuleOrder($currentOrder, $visibleIds);
 
-        DB::transaction(function () use ($fullOrder): void {
             collect($fullOrder)->each(fn (int $id, int $index) => Module::whereKey($id)->update(['sort_order' => $index + 1]));
+
+            return $fullOrder;
         });
 
         $sortOrders = array_flip($fullOrder);

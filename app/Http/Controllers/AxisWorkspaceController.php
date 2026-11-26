@@ -126,7 +126,7 @@ class AxisWorkspaceController extends Controller
         // the name predates the Project → Module split and is used throughout the views and JS.
         // Top-level projects (e.g. "EOT Axis") are exposed separately as `axisProjects`.
         // Custom order starts alphabetically (see the sort-order backfill migration) and is updated by drag-and-drop.
-        $sharedIdsByType = $restrictRecords ? Module::sharedIdsByTypeFor($currentUser) : [];
+        $sharedIdsByType = $restrictRecords ? RecordShare::idsByTypeFor($currentUser) : [];
         $sharedProjectIds = $sharedIdsByType[(new Project)->getMorphClass()] ?? [];
         $sharedTaskIds = $sharedIdsByType[(new ProjectTask)->getMorphClass()] ?? [];
         $sharedReportIds = $sharedIdsByType[(new CtoReport)->getMorphClass()] ?? [];
