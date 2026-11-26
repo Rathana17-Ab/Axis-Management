@@ -4,6 +4,7 @@
         $labSounds = [
             ['Hover', 'Moving over something', 'SoundFX.hoverTick(-0.35)', 'fa-feather-pointed', null],
             ['Click', 'Pressing a button', 'SoundFX.buttonTap(0)', 'fa-hand-pointer', null],
+            ['Typing', 'Searching or writing in a field', 'SoundFX.keyTick()', 'fa-keyboard', null],
             ['Change page', 'Moving between pages', 'SoundFX.navSwitch(2)', 'fa-compass', null],
             ['Pick an option', 'Choosing from a dropdown', 'SoundFX.dropdownSelect()', 'fa-list-check', null],
             ['Toggle', 'Turning something on or off', 'SoundFX.toggleSwitch(true)', 'fa-toggle-on', null],

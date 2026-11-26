@@ -29,7 +29,9 @@ class UpdateTeamMemberRequest extends FormRequest
     {
         return [
             'department' => ['sometimes', 'nullable', 'string', 'max:255'],
-            'position' => ['sometimes', Rule::enum(EmployeePosition::class)],
+            'department_id' => ['sometimes', 'nullable', 'integer', 'exists:departments,id'],
+            'position' => ['sometimes', 'nullable', Rule::enum(EmployeePosition::class)],
+            'position_id' => ['sometimes', 'nullable', 'integer', 'exists:positions,id'],
             'description' => ['sometimes', 'nullable', 'string', 'max:5000'],
             'status' => ['sometimes', Rule::enum(EmployeeStatus::class)],
         ];

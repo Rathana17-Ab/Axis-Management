@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\WorkspacePermission;
 use App\Http\Requests\StoreProjectRequest;
 use App\Http\Requests\UpdateProjectRequest;
 use App\Http\Resources\ProjectResource;
@@ -18,6 +19,8 @@ class ProjectController extends Controller
      */
     public function store(StoreProjectRequest $request): JsonResponse
     {
+        $this->authorizeWorkspacePermission(WorkspacePermission::RecordsManageAll);
+
         $project = Project::create($request->validated());
 
         return ProjectResource::make($project->loadCount('modules'))
@@ -31,6 +34,8 @@ class ProjectController extends Controller
      */
     public function destroy(Project $project): JsonResponse
     {
+        $this->authorizeWorkspaceRecord('update-record', $project);
+
         if ($project->modules()->exists()) {
             return response()->json([
                 'message' => 'This project still has modules. Move or remove them before deleting it.',
@@ -47,6 +52,8 @@ class ProjectController extends Controller
      */
     public function update(UpdateProjectRequest $request, Project $project): ProjectResource
     {
+        $this->authorizeWorkspaceRecord('update-record', $project);
+
         $project->update($request->validated());
 
         return ProjectResource::make($project->loadCount('modules'));

@@ -17,6 +17,8 @@ class TaskIssueNoteController extends Controller
      */
     public function store(StoreTaskIssueNoteRequest $request, ProjectTask $task): JsonResponse
     {
+        $this->authorizeWorkspaceRecord('update-record', $task);
+
         $validated = $request->validated();
 
         $note = $task->issueNotes()->create([
@@ -34,6 +36,8 @@ class TaskIssueNoteController extends Controller
      */
     public function update(UpdateTaskIssueNoteRequest $request, TaskIssueNote $issue): TaskIssueNoteResource
     {
+        $this->authorizeWorkspaceRecord('update-record', $issue->task);
+
         $resolution = $request->validated('resolution');
         $issue->update(['resolution' => filled($resolution) ? $resolution : null]);
 
@@ -45,6 +49,8 @@ class TaskIssueNoteController extends Controller
      */
     public function cycleStatus(TaskIssueNote $issue): TaskIssueNoteResource
     {
+        $this->authorizeWorkspaceRecord('update-record', $issue->task);
+
         $issue->update(['status' => $issue->status->next()]);
 
         return TaskIssueNoteResource::make($issue);
@@ -55,6 +61,8 @@ class TaskIssueNoteController extends Controller
      */
     public function destroy(TaskIssueNote $issue): Response
     {
+        $this->authorizeWorkspaceRecord('update-record', $issue->task);
+
         $issue->delete();
 
         return response()->noContent();

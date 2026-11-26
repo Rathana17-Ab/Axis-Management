@@ -30,8 +30,10 @@ class StoreTeamMemberRequest extends FormRequest
         return [
             'name' => ['required', 'string', 'max:255'],
             'job_title' => ['required', 'string', 'max:255'],
-            'department' => ['nullable', 'string', 'max:255'],
-            'position' => ['required', Rule::enum(EmployeePosition::class)],
+            'department' => ['sometimes', 'nullable', 'string', 'max:255'],
+            'department_id' => ['sometimes', 'nullable', 'integer', 'exists:departments,id'],
+            'position' => [Rule::requiredIf(fn (): bool => blank($this->input('position_id'))), 'nullable', Rule::enum(EmployeePosition::class)],
+            'position_id' => ['sometimes', 'nullable', 'integer', 'exists:positions,id'],
             'description' => ['nullable', 'string', 'max:5000'],
             'status' => ['sometimes', Rule::enum(EmployeeStatus::class)],
             'email' => ['required', 'email', 'max:255', 'unique:users,email'],

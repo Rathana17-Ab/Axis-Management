@@ -2,14 +2,22 @@
 
 use App\Http\Controllers\AxisWorkspaceController;
 use App\Http\Controllers\CtoReportController;
+use App\Http\Controllers\DepartmentController;
+use App\Http\Controllers\FeatureUpgradeController;
 use App\Http\Controllers\ModuleController;
+use App\Http\Controllers\PositionController;
 use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\ProjectTaskController;
+use App\Http\Controllers\RecordShareController;
+use App\Http\Controllers\RoleController;
 use App\Http\Controllers\TaskIssueNoteController;
 use App\Http\Controllers\TeamAccessController;
+use App\Http\Controllers\TeamController;
+use App\Http\Controllers\UserRoleController;
+use App\Http\Controllers\WorkQueueController;
 use Illuminate\Support\Facades\Route;
 
-Route::redirect('/', '/admin/project');
+Route::redirect('/', '/admin/dashboard');
 
 Route::prefix('admin')->name('admin.')->group(function () {
     // Workspace shell: each URL hydrates the full state and opens the matching page.
@@ -18,7 +26,17 @@ Route::prefix('admin')->name('admin.')->group(function () {
     Route::get('/modules', [AxisWorkspaceController::class, 'index'])->name('modules.index');
     Route::get('/project-task-list/{module}', [AxisWorkspaceController::class, 'showTaskList'])->name('projects.tasks');
     Route::get('/cto-reports', [AxisWorkspaceController::class, 'index'])->name('reports.index');
+
+    // Team remains open as in the original workspace; only the new administration pages are permission-gated.
     Route::get('/user-management', [AxisWorkspaceController::class, 'index'])->name('team.index');
+    Route::get('/roles-teams', [AxisWorkspaceController::class, 'index'])
+        ->middleware(['workspace.session', 'workspace.can:administration.access'])->name('roles.index');
+    Route::get('/work-queues', [AxisWorkspaceController::class, 'index'])
+        ->middleware(['workspace.session', 'workspace.can:queues.view_all,queues.view_shared'])->name('work-queues.index');
+    Route::get('/record-sharing', [AxisWorkspaceController::class, 'index'])
+        ->middleware(['workspace.session', 'workspace.can:records.view_all,records.view_shared'])->name('sharing.index');
+    Route::get('/p18', [AxisWorkspaceController::class, 'index'])
+        ->middleware(['workspace.session', 'workspace.can:p18.view'])->name('p18.index');
 
     // JSON endpoints for real-time inline editing & persistence (CSRF-protected via the web group).
     Route::prefix('api')->name('api.')->group(function () {
@@ -44,9 +62,62 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::get('/cto-reports/{report}', [CtoReportController::class, 'show'])->name('reports.show');
         Route::patch('/cto-reports/{report}', [CtoReportController::class, 'update'])->name('reports.update');
         Route::delete('/cto-reports/{report}', [CtoReportController::class, 'destroy'])->name('reports.destroy');
+
         Route::post('/team-members', [TeamAccessController::class, 'store'])->name('team.store');
         Route::patch('/team-members/{user}', [TeamAccessController::class, 'update'])->name('team.update');
         Route::patch('/team-members/{user}/toggle-login', [TeamAccessController::class, 'toggleLogin'])->name('team.toggle-login');
+        Route::patch('/team-members/{user}/password', [TeamAccessController::class, 'resetPassword'])->name('team.password');
+        Route::delete('/team-members/{user}', [TeamAccessController::class, 'destroy'])->name('team.destroy');
+
+        Route::get('/departments', [DepartmentController::class, 'index'])->name('departments.index');
+        Route::post('/departments', [DepartmentController::class, 'store'])->name('departments.store');
+        Route::patch('/departments/{department}', [DepartmentController::class, 'update'])->name('departments.update');
+        Route::delete('/departments/{department}', [DepartmentController::class, 'destroy'])->name('departments.destroy');
+
+        Route::get('/positions', [PositionController::class, 'index'])->name('positions.index');
+        Route::post('/positions', [PositionController::class, 'store'])->name('positions.store');
+        Route::patch('/positions/{position}', [PositionController::class, 'update'])->name('positions.update');
+        Route::delete('/positions/{position}', [PositionController::class, 'destroy'])->name('positions.destroy');
+        Route::patch('/team-members/{user}/roles', [UserRoleController::class, 'update'])
+            ->middleware(['workspace.session', 'workspace.can:users.manage'])->name('user-roles.update');
+
+        Route::get('/roles', [RoleController::class, 'index'])
+            ->middleware(['workspace.session', 'workspace.can:roles.manage'])->name('roles.index');
+
+        Route::get('/teams', [TeamController::class, 'index'])
+            ->middleware(['workspace.session', 'workspace.can:teams.manage'])->name('teams.index');
+        Route::post('/teams', [TeamController::class, 'store'])
+            ->middleware(['workspace.session', 'workspace.can:teams.manage'])->name('teams.store');
+        Route::patch('/teams/{team}', [TeamController::class, 'update'])
+            ->middleware(['workspace.session', 'workspace.can:teams.manage'])->name('teams.update');
+        Route::patch('/teams/{team}/members', [TeamController::class, 'syncMembers'])
+            ->middleware(['workspace.session', 'workspace.can:teams.manage'])->name('teams.members');
+        Route::delete('/teams/{team}', [TeamController::class, 'destroy'])
+            ->middleware(['workspace.session', 'workspace.can:teams.manage'])->name('teams.destroy');
+
+        Route::get('/work-queues', [WorkQueueController::class, 'index'])
+            ->middleware(['workspace.session', 'workspace.can:queues.view_all,queues.view_shared'])->name('work-queues.index');
+        Route::post('/work-queues', [WorkQueueController::class, 'store'])
+            ->middleware(['workspace.session', 'workspace.can:work_queues.manage'])->name('work-queues.store');
+        Route::patch('/work-queues/{workQueue}', [WorkQueueController::class, 'update'])
+            ->middleware(['workspace.session', 'workspace.can:work_queues.manage'])->name('work-queues.update');
+        Route::patch('/work-queues/{workQueue}/members', [WorkQueueController::class, 'syncMembers'])
+            ->middleware(['workspace.session', 'workspace.can:work_queues.manage'])->name('work-queues.members');
+        Route::delete('/work-queues/{workQueue}', [WorkQueueController::class, 'destroy'])
+            ->middleware(['workspace.session', 'workspace.can:work_queues.manage'])->name('work-queues.destroy');
+
+        Route::get('/record-shares', [RecordShareController::class, 'index'])
+            ->middleware(['workspace.session', 'workspace.can:records.view_all,records.view_shared'])->name('record-shares.index');
+        Route::post('/record-shares', [RecordShareController::class, 'store'])
+            ->middleware(['workspace.session', 'workspace.can:records.manage_all'])->name('record-shares.store');
+        Route::delete('/record-shares/{recordShare}', [RecordShareController::class, 'destroy'])
+            ->middleware(['workspace.session', 'workspace.can:records.manage_all'])->name('record-shares.destroy');
+
+        Route::get('/feature-upgrades', [FeatureUpgradeController::class, 'index'])
+            ->middleware(['workspace.session', 'workspace.can:p18.view'])->name('feature-upgrades.index');
+        Route::patch('/feature-upgrades/{featureUpgrade}', [FeatureUpgradeController::class, 'update'])
+            ->middleware(['workspace.session', 'workspace.can:p18.manage'])->name('feature-upgrades.update');
+
         Route::post('/session/switch', [TeamAccessController::class, 'switchSession'])->name('session.switch');
     });
 });

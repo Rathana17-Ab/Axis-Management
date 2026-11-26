@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\WorkspacePermission;
 use App\Http\Requests\StoreCtoReportRequest;
 use App\Http\Requests\UpdateCtoReportRequest;
 use App\Http\Resources\CtoReportResource;
@@ -23,6 +24,8 @@ class CtoReportController extends Controller
      */
     public function store(StoreCtoReportRequest $request): JsonResponse
     {
+        $this->authorizeWorkspacePermission(WorkspacePermission::RecordsManageAll);
+
         $validated = $request->validated();
 
         $report = CtoReport::create(
@@ -37,6 +40,8 @@ class CtoReportController extends Controller
      */
     public function show(CtoReport $report): JsonResponse
     {
+        $this->authorizeWorkspaceRecord('view-record', $report);
+
         return CtoReportResource::make($report)->response();
     }
 
@@ -45,6 +50,8 @@ class CtoReportController extends Controller
      */
     public function update(UpdateCtoReportRequest $request, CtoReport $report): JsonResponse
     {
+        $this->authorizeWorkspaceRecord('update-record', $report);
+
         $report->update(
             $this->normalizeReportFields($request->validated(), false, $this->actingMember()?->name)
         );
@@ -57,6 +64,8 @@ class CtoReportController extends Controller
      */
     public function destroy(CtoReport $report): JsonResponse
     {
+        $this->authorizeWorkspaceRecord('update-record', $report);
+
         $report->delete();
 
         return response()->json([

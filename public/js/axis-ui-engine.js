@@ -151,6 +151,7 @@ window.SoundFX = (function() {
 
         const c = getContext();
         if (!c) return;
+        pulseEqualizer('Typing');
         const mod = PRESET_MOD[preset];
         const dest = createStereoOut(c, 0.05);
         const now = c.currentTime;

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Enums\TaskPriority;
+use App\Enums\WorkspacePermission;
 use App\Enums\WorkStatus;
 use App\Http\Requests\StoreModuleRequest;
 use App\Http\Requests\UpdateModuleRequest;
@@ -28,6 +29,8 @@ class ModuleController extends Controller
      */
     public function store(StoreModuleRequest $request): JsonResponse
     {
+        $this->authorizeWorkspacePermission(WorkspacePermission::RecordsManageAll);
+
         $validated = $request->validated();
         $deadline = Carbon::parse($validated['deadline']);
         $actingMember = $this->actingMember();
@@ -83,6 +86,8 @@ class ModuleController extends Controller
      */
     public function update(UpdateModuleRequest $request, Module $module): ModuleResource
     {
+        $this->authorizeWorkspaceRecord('update-record', $module);
+
         $module->fill($request->validated());
 
         // The list avatars are the first letter of the name / customer

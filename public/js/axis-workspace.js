@@ -11,8 +11,30 @@ const HANDLERS = AXIS_BOOT.handlers || [];
 let projects = AXIS_BOOT.projects || [];
 let ctoReports = AXIS_BOOT.ctoReports || [];
 let teamMembers = AXIS_BOOT.teamMembers || [];
+let departments = AXIS_BOOT.departments || [];
+let positions = AXIS_BOOT.positions || [];
 // CTO model: Project (e.g. EOT Axis) → Module (`projects` above) → Task, assigned to an employee by a leader.
 let axisProjects = AXIS_BOOT.axisProjects || [];
+
+// Sales workspace access state, hydrated by AxisWorkspaceController.
+let workspaceRoles = AXIS_BOOT.roles || [];
+let workspaceTeams = AXIS_BOOT.teams || [];
+let workQueues = AXIS_BOOT.workQueues || [];
+let recordShares = AXIS_BOOT.recordShares || [];
+let featureUpgrades = AXIS_BOOT.featureUpgrades || [];
+const workspacePermissionKeys = AXIS_BOOT.permissions || [];
+const workspaceIsSignedIn = AXIS_BOOT.isSignedIn === true;
+const hasAssignedWorkspaceRole = (AXIS_BOOT.roleKeys || []).length > 0;
+// Role-less members keep the legacy open console only while signed in; guests get no admin abilities.
+const workspaceCan = permission => workspaceIsSignedIn && (!hasAssignedWorkspaceRole || workspacePermissionKeys.includes(permission));
+const canViewQueues = () => workspaceCan('queues.view_all') || workspaceCan('queues.view_shared');
+const canViewSharing = () => workspaceCan('records.view_all') || workspaceCan('records.view_shared');
+const canViewP18 = () => workspaceCan('p18.view');
+const canManageQueues = () => workspaceCan('work_queues.manage');
+const canManageRecords = () => workspaceCan('records.manage_all');
+const canManageP18 = () => workspaceCan('p18.manage');
+const canManageAdministration = () => workspaceCan('administration.access');
+
 // Only active employees can be given work; `keepIds` keeps a currently assigned (now inactive) person selectable.
 const employees = (keepIds = []) => teamMembers
     .filter(m => m.status !== 'inactive' || keepIds.includes(m.id))
@@ -253,6 +275,34 @@ window.updateDynamicHeader = function(pageId) {
             searchPlaceholder: 'Search people…',
             createLabel: 'Add person',
             createModal: 'modal-team-member'
+        },
+        'roles': {
+            section: 'Administration',
+            route: 'admin/roles-teams',
+            title: 'Administration',
+            badge: `${workspaceRoles.length} roles`,
+            searchPlaceholder: 'Search roles or teams…'
+        },
+        'work-queues': {
+            section: 'Sales operations',
+            route: 'admin/work-queues',
+            title: 'Work queues',
+            badge: `${workQueues.length} queues`,
+            searchPlaceholder: 'Search queues…'
+        },
+        'sharing': {
+            section: 'Sales operations',
+            route: 'admin/record-sharing',
+            title: 'Record sharing',
+            badge: `${recordShares.length} shares`,
+            searchPlaceholder: 'Search shared records…'
+        },
+        'p18': {
+            section: 'Sales operations',
+            route: 'admin/p18',
+            title: 'Access & upgrades',
+            badge: `${featureUpgrades.length} features`,
+            searchPlaceholder: 'Search features…'
         }
     };
 
@@ -269,7 +319,11 @@ window.updateDynamicHeader = function(pageId) {
     if (badgeEl) badgeEl.textContent = cfg.badge;
     if (createLbl) createLbl.textContent = cfg.createLabel;
     const createBtn = document.getElementById('header-create-btn');
-    if (createBtn) { createBtn.title = cfg.createLabel; createBtn.setAttribute('aria-label', cfg.createLabel); }
+    if (createBtn) {
+        createBtn.title = cfg.createLabel;
+        createBtn.setAttribute('aria-label', cfg.createLabel);
+        createBtn.classList.toggle('hidden', !['dashboard', 'projects', 'modules', 'task-detail', 'reports', 'team'].includes(activePageId));
+    }
 
     if (hdrModSelect) {
         hdrModSelect.value = activePageId === 'task-detail' ? String(activeProj.id) : '';
@@ -320,6 +374,10 @@ const AxisSearch = (() => {
             ['modules', 'Modules', 'All modules and their progress'],
             ['reports', 'Reports', 'Daily & weekly reports'],
             ['team', 'Team', 'People and sign-in access'],
+            ...(canManageAdministration() ? [['roles', 'Administration', 'Workspace roles, teams and user access']] : []),
+            ...(canViewQueues() ? [['work-queues', 'Work queues', 'Queues shared with sales']] : []),
+            ...(canViewSharing() ? [['sharing', 'Record sharing', 'Records shared with people']] : []),
+            ...(canViewP18() ? [['p18', 'Access & upgrades', 'P18 access and upgrade states']] : []),
         ];
         pages.forEach(([id, title, subtitle]) => items.push({
             type: 'page', key: id, title, subtitle, haystack: `${title} ${subtitle}`,
@@ -653,12 +711,24 @@ window.openHeaderSection = function() {
 };
 
 window.switchPage = function(pageId, history = true) {
+    // Server-rendered flags decide which pages this session may open.
+    const guardedPages = {
+        roles: canManageAdministration,
+        'work-queues': canViewQueues,
+        sharing: canViewSharing,
+        p18: canViewP18,
+    };
+    if (guardedPages[pageId] && !guardedPages[pageId]()) {
+        if (typeof showToast === 'function') showToast('You do not have permission to open that section.');
+        pageId = 'dashboard';
+    }
+
     // The task list belongs to a module; with none yet, guide the user to create one first
     if (pageId === 'task-detail' && projects.length === 0) {
         if (typeof showToast === 'function') showToast('Create a project and a module first, then add tasks to it.');
         pageId = 'projects';
     }
-    const pageOrder = ['dashboard', 'projects', 'modules', 'task-detail', 'reports', 'team'];
+    const pageOrder = ['dashboard', 'projects', 'modules', 'task-detail', 'reports', 'team', 'roles', 'work-queues', 'sharing', 'p18'];
     const navIdx = Math.max(0, pageOrder.indexOf(pageId));
     SoundFX.navSwitch(navIdx);
 
@@ -698,6 +768,10 @@ window.switchPage = function(pageId, history = true) {
     }
     if (pageId === 'reports') renderReportsPage();
     if (pageId === 'team') renderTeamTable();
+    if (pageId === 'roles') renderRolesPage();
+    if (pageId === 'work-queues') renderWorkQueuesPage();
+    if (pageId === 'sharing') renderRecordSharesPage();
+    if (pageId === 'p18') renderFeatureUpgradesPage();
 
     toggleSidebar(false);
 
@@ -952,7 +1026,7 @@ function renderDashboardProjectCards() {
         const due = deadlineInfo(ap);
         const name = escapeHtml(ap.name);
         return `
-            <article class="axis-list-card w-[280px] shrink-0" role="button" tabindex="0"
+            <article class="axis-list-card w-[85%] sm:w-[calc((100%_-_0.75rem)/2)] lg:w-[calc((100%_-_1.5rem)/3)] shrink-0" role="button" tabindex="0"
                      onclick="${open}" onkeydown="if (event.key === 'Enter' && event.target === this) ${open}"
                      aria-label="Open the Projects page">
                 <div class="flex items-start justify-between gap-3">
@@ -1169,7 +1243,7 @@ function renderDashboardTaskCards() {
         const moduleName = escapeHtml(m.name);
         const open = `openProjectTaskList(${m.id})`;
         return `
-            <article class="axis-list-card w-[280px] shrink-0" role="button" tabindex="0"
+            <article class="axis-list-card w-[85%] sm:w-[calc((100%_-_0.75rem)/2)] lg:w-[calc((100%_-_1.5rem)/3)] shrink-0" role="button" tabindex="0"
                      onclick="${open}" onkeydown="if (event.key === 'Enter' && event.target === this) ${open}"
                      aria-label="Open the task page for ${moduleName}">
                 <div class="flex items-center gap-2.5 min-w-0">
@@ -5616,7 +5690,75 @@ window.deleteReportById = async function(id, e) {
 // =====================================================================
 // PAGE 6: TEAM & LOGIN MANAGEMENT
 // =====================================================================
+function directoryOptions(items, selectedId, includeNone = false) {
+    const none = includeNone
+        ? `<option value=""${selectedId == null ? ' selected' : ''}>No department</option>`
+        : '';
+    const selected = Number(selectedId);
+
+    return none + items.map(item => {
+        const isSelected = Number(item.id) === selected;
+        const disabled = item.isActive === false && !isSelected ? ' disabled' : '';
+
+        return `<option value="${item.id}"${isSelected ? ' selected' : ''}${disabled}>${escapeHtml(item.name)}</option>`;
+    }).join('');
+}
+
+function renderTeamDirectory() {
+    const departmentsBody = document.getElementById('departments-tbody');
+    if (departmentsBody) {
+        departmentsBody.innerHTML = departments.length
+            ? departments.map(department => `
+                <tr>
+                    <td class="py-3 px-3">
+                        <div class="text-sm font-semibold text-white">${escapeHtml(department.name)}${department.isActive === false ? '<span class="ml-2 text-xs font-normal text-slate-500">Inactive</span>' : ''}</div>
+                        ${department.description ? `<div class="text-xs text-slate-500">${escapeHtml(department.description)}</div>` : ''}
+                    </td>
+                    <td class="py-3 px-3 text-center text-xs text-slate-300">${department.memberCount ?? 0}</td>
+                    <td class="py-3 px-3 text-right whitespace-nowrap space-x-2">
+                        <button type="button" onclick="openDepartmentEdit(${department.id})" class="text-xs font-semibold text-sky-300 hover:text-sky-200">Edit</button>
+                        <button type="button" onclick="deleteDepartment(${department.id})" class="text-xs font-semibold text-rose-300 hover:text-rose-200">Remove</button>
+                    </td>
+                </tr>
+            `).join('')
+            : workspaceRow(3, 'No departments have been added yet.');
+    }
+
+    const positionsBody = document.getElementById('positions-tbody');
+    if (positionsBody) {
+        positionsBody.innerHTML = positions.length
+            ? positions.map(position => `
+                <tr>
+                    <td class="py-3 px-3">
+                        <div class="text-sm font-semibold text-white">${escapeHtml(position.name)}${position.isActive === false ? '<span class="ml-2 text-xs font-normal text-slate-500">Inactive</span>' : ''}</div>
+                        ${position.description ? `<div class="text-xs text-slate-500">${escapeHtml(position.description)}</div>` : ''}
+                    </td>
+                    <td class="py-3 px-3 text-center text-xs text-slate-300">${position.memberCount ?? 0}</td>
+                    <td class="py-3 px-3 text-right whitespace-nowrap space-x-2">
+                        <button type="button" onclick="openPositionEdit(${position.id})" class="text-xs font-semibold text-sky-300 hover:text-sky-200">Edit</button>
+                        <button type="button" onclick="deletePosition(${position.id})" class="text-xs font-semibold text-rose-300 hover:text-rose-200">Remove</button>
+                    </td>
+                </tr>
+            `).join('')
+            : workspaceRow(3, 'No positions have been added yet.');
+    }
+
+    const createDepartmentSelect = document.getElementById('tm-dept-input');
+    if (createDepartmentSelect) createDepartmentSelect.innerHTML = directoryOptions(departments, null, true);
+
+    const editDepartmentSelect = document.getElementById('tm-edit-dept');
+    if (editDepartmentSelect) editDepartmentSelect.innerHTML = directoryOptions(departments, null, true);
+
+    const createPositionSelect = document.getElementById('tm-position-input');
+    if (createPositionSelect) createPositionSelect.innerHTML = directoryOptions(positions, null);
+
+    const editPositionSelect = document.getElementById('tm-edit-position');
+    if (editPositionSelect) editPositionSelect.innerHTML = directoryOptions(positions, null);
+}
+
 window.renderTeamTable = function() {
+    renderTeamDirectory();
+
     const tbody = document.getElementById('team-tbody');
     if (!tbody) return;
 
@@ -5627,9 +5769,9 @@ window.renderTeamTable = function() {
                 <div class="font-medium text-white whitespace-nowrap">${escapeHtml(m.name)}</div>
                 ${m.title ? `<div class="text-xs text-slate-500 mt-0.5">${escapeHtml(m.title)}</div>` : ''}
             </td>
-            <td class="py-3.5 px-3 text-slate-300">${m.department ? escapeHtml(m.department) : '<span class="text-slate-500">—</span>'}</td>
+            <td class="py-3.5 px-3 text-slate-300">${m.departmentName || m.department ? escapeHtml(m.departmentName || m.department) : '<span class="text-slate-500">—</span>'}</td>
             <td class="py-3.5 px-3">
-                <span class="px-2.5 py-0.5 rounded-full text-xs font-semibold border ${m.position === 'leader' ? 'bg-sky-500/15 text-sky-200 border-sky-400/30' : 'bg-white/5 text-slate-300 border-white/10'}">${m.position === 'leader' ? 'Leader' : 'Developer'}</span>
+                <span class="px-2.5 py-0.5 rounded-full text-xs font-semibold border ${m.position === 'leader' ? 'bg-sky-500/15 text-sky-200 border-sky-400/30' : 'bg-white/5 text-slate-300 border-white/10'}">${escapeHtml(m.positionName || (m.position === 'leader' ? 'Leader' : 'Developer'))}</span>
             </td>
             <td class="py-3.5 px-3 text-xs text-slate-400">
                 <div class="max-w-[220px] truncate" title="${escapeHtml(m.description || '')}">${m.description ? escapeHtml(m.description) : '<span class="text-slate-500">—</span>'}</div>
@@ -5648,13 +5790,16 @@ window.renderTeamTable = function() {
             </td>
             <td class="py-3.5 px-3 text-center whitespace-nowrap space-x-1.5">
                 <button type="button" onclick="openTeamMemberEdit(${m.id})" class="btn-glass px-2.5 py-1 text-xs" aria-label="Edit ${escapeHtml(m.name)}">Edit</button>
-                ${m.hasAccount === false ? '<span class="text-xs text-slate-500">Task assignee only</span>' : `
+                ${m.hasAccount === false ? `
+                <button type="button" onclick="openTeamMemberPasswordReset(${m.id}, true)" class="btn-glass px-2.5 py-1 text-xs">Set up login</button>` : `
+                <button type="button" onclick="openTeamMemberPasswordReset(${m.id})" class="btn-glass px-2.5 py-1 text-xs">Password</button>
                 <button type="button" onclick="toggleMemberLoginStatus(${m.id})" class="btn-glass px-2.5 py-1 text-xs">
                     ${m.active ? 'Lock' : 'Unlock'}
                 </button>
                 <button type="button" onclick="quickSwitchSession(${jsArg(m.email)})" class="btn-primary-glass px-2.5 py-1 text-xs">
                     Switch User
                 </button>`}
+                ${currentUser?.id !== m.id ? `<button type="button" onclick="deleteTeamMember(${m.id})" class="text-xs font-semibold text-rose-300 hover:text-rose-200">Remove</button>` : ''}
             </td>
         </tr>
     `).join('');
@@ -5667,8 +5812,8 @@ window.openTeamMemberEdit = function(id) {
     const m = teamMembers.find(x => x.id === id);
     if (!m) return;
     editingTeamMemberId = id;
-    document.getElementById('tm-edit-dept').value = m.department || '';
-    document.getElementById('tm-edit-position').value = m.position || 'developer';
+    document.getElementById('tm-edit-dept').value = m.departmentId ?? '';
+    document.getElementById('tm-edit-position').value = m.positionId ?? '';
     document.getElementById('tm-edit-status').value = m.status || 'active';
     document.getElementById('tm-edit-desc').value = m.description || '';
     AxisDrawer.open('drawer-team-member-edit', { title: `Edit ${m.name}` });
@@ -5681,8 +5826,8 @@ window.handleUpdateTeamMember = function(e) {
     AxisDrawer.submit('drawer-team-member-edit', async () => {
         const id = await AxisAPI.idOf(m);
         const res = await AxisAPI.request(AxisAPI.url('team.update', id), 'PATCH', {
-            department: document.getElementById('tm-edit-dept').value.trim() || null,
-            position: document.getElementById('tm-edit-position').value,
+            department_id: Number(document.getElementById('tm-edit-dept').value) || null,
+            position_id: Number(document.getElementById('tm-edit-position').value) || null,
             status: document.getElementById('tm-edit-status').value,
             description: document.getElementById('tm-edit-desc').value.trim() || null
         });
@@ -5735,8 +5880,8 @@ window.handleSaveTeamMember = function(e) {
         const res = await AxisAPI.request(AxisAPI.url('team.store'), 'POST', {
             name: document.getElementById('tm-name-input').value.trim(),
             job_title: document.getElementById('tm-pos-input').value.trim(),
-            department: document.getElementById('tm-dept-input').value.trim() || null,
-            position: document.getElementById('tm-position-input').value,
+            department_id: Number(document.getElementById('tm-dept-input').value) || null,
+            position_id: Number(document.getElementById('tm-position-input').value) || null,
             status: document.getElementById('tm-status-input').value,
             description: document.getElementById('tm-desc-input').value.trim() || null,
             email: document.getElementById('tm-email-input').value.trim()
@@ -5749,6 +5894,228 @@ window.handleSaveTeamMember = function(e) {
         renderTeamTable();
         updateDynamicHeader(activePageId);
         showToast(`Added ${res.data.name} to the team`);
+    });
+};
+
+// ---------------------------------------------------------------------
+// Department and position directory CRUD
+// ---------------------------------------------------------------------
+let editingDepartmentId = null;
+let editingPositionId = null;
+
+window.createDepartment = async function(e) {
+    e.preventDefault();
+    const form = document.getElementById('form-department-create');
+    const name = form.querySelector('[name="name"]').value.trim();
+
+    try {
+        const res = await AxisAPI.request(AxisAPI.url('departments.store'), 'POST', {
+            name,
+            description: form.querySelector('[name="description"]').value.trim() || null
+        });
+        departments.push(res.data);
+        departments.sort((a, b) => a.name.localeCompare(b.name));
+        form.reset();
+        renderTeamTable();
+        showToast(`Added ${res.data.name}`);
+    } catch (error) {
+        AxisAPI.fail(error, 'Could not add the department.');
+    }
+};
+
+window.openDepartmentEdit = function(id) {
+    const department = departments.find(item => item.id === id);
+    if (!department) return;
+
+    editingDepartmentId = id;
+    document.getElementById('dept-edit-name').value = department.name || '';
+    document.getElementById('dept-edit-description').value = department.description || '';
+    document.getElementById('dept-edit-active').checked = department.isActive !== false;
+    AxisDrawer.open('drawer-department-edit', { title: `Edit ${department.name}` });
+};
+
+window.handleUpdateDepartment = function(e) {
+    e.preventDefault();
+    const index = departments.findIndex(item => item.id === editingDepartmentId);
+    if (index === -1) return;
+
+    AxisDrawer.submit('drawer-department-edit', async () => {
+        const res = await AxisAPI.request(AxisAPI.url('departments.update', editingDepartmentId), 'PATCH', {
+            name: document.getElementById('dept-edit-name').value.trim(),
+            description: document.getElementById('dept-edit-description').value.trim() || null,
+            is_active: document.getElementById('dept-edit-active').checked
+        });
+        departments[index] = res.data;
+        departments.sort((a, b) => a.name.localeCompare(b.name));
+        closeModal('drawer-department-edit');
+        renderTeamTable();
+        showToast(`Saved ${res.data.name}`);
+    });
+};
+
+window.deleteDepartment = async function(id) {
+    const department = departments.find(item => item.id === id);
+    if (!department) return;
+
+    if (department.memberCount > 0) {
+        showToast('Move or unlink this department\'s team members before deleting it.');
+        return;
+    }
+
+    if (!window.confirm(`Delete ${department.name}?`)) return;
+
+    try {
+        await AxisAPI.request(AxisAPI.url('departments.destroy', id), 'DELETE');
+        departments = departments.filter(item => item.id !== id);
+        renderTeamTable();
+        showToast(`Deleted ${department.name}`);
+    } catch (error) {
+        AxisAPI.fail(error, 'Could not delete the department.');
+    }
+};
+
+window.createPosition = async function(e) {
+    e.preventDefault();
+    const form = document.getElementById('form-position-create');
+
+    try {
+        const res = await AxisAPI.request(AxisAPI.url('positions.store'), 'POST', {
+            name: form.querySelector('[name="name"]').value.trim(),
+            description: form.querySelector('[name="description"]').value.trim() || null,
+            is_leader: form.querySelector('[name="is_leader"]').checked
+        });
+        positions.push(res.data);
+        form.reset();
+        renderTeamTable();
+        showToast(`Added ${res.data.name}`);
+    } catch (error) {
+        AxisAPI.fail(error, 'Could not add the position.');
+    }
+};
+
+window.openPositionEdit = function(id) {
+    const position = positions.find(item => item.id === id);
+    if (!position) return;
+
+    editingPositionId = id;
+    document.getElementById('position-edit-name').value = position.name || '';
+    document.getElementById('position-edit-description').value = position.description || '';
+    document.getElementById('position-edit-leader').checked = position.isLeader === true;
+    document.getElementById('position-edit-active').checked = position.isActive !== false;
+    AxisDrawer.open('drawer-position-edit', { title: `Edit ${position.name}` });
+};
+
+window.handleUpdatePosition = function(e) {
+    e.preventDefault();
+    const index = positions.findIndex(item => item.id === editingPositionId);
+    if (index === -1) return;
+
+    AxisDrawer.submit('drawer-position-edit', async () => {
+        const res = await AxisAPI.request(AxisAPI.url('positions.update', editingPositionId), 'PATCH', {
+            name: document.getElementById('position-edit-name').value.trim(),
+            description: document.getElementById('position-edit-description').value.trim() || null,
+            is_leader: document.getElementById('position-edit-leader').checked,
+            is_active: document.getElementById('position-edit-active').checked
+        });
+        positions[index] = res.data;
+        closeModal('drawer-position-edit');
+        renderTeamTable();
+        showToast(`Saved ${res.data.name}`);
+    });
+};
+
+window.deletePosition = async function(id) {
+    const position = positions.find(item => item.id === id);
+    if (!position) return;
+
+    if (position.memberCount > 0) {
+        showToast('Move or unlink this position\'s team members before deleting it.');
+        return;
+    }
+
+    if (!window.confirm(`Delete ${position.name}?`)) return;
+
+    try {
+        await AxisAPI.request(AxisAPI.url('positions.destroy', id), 'DELETE');
+        positions = positions.filter(item => item.id !== id);
+        renderTeamTable();
+        showToast(`Deleted ${position.name}`);
+    } catch (error) {
+        AxisAPI.fail(error, 'Could not delete the position.');
+    }
+};
+
+// ---------------------------------------------------------------------
+// Remove a member and keep directory counts in sync
+// ---------------------------------------------------------------------
+function adjustDirectoryCount(items, id, delta) {
+    const item = items.find(entry => entry.id === id);
+    if (item) item.memberCount = Math.max(0, (item.memberCount ?? 0) + delta);
+}
+
+window.deleteTeamMember = async function(id) {
+    const member = teamMembers.find(item => item.id === id);
+    if (!member) return;
+
+    if (!window.confirm(`Remove ${member.name} from the team?`)) return;
+
+    try {
+        const res = await AxisAPI.request(AxisAPI.url('team.destroy', id), 'DELETE');
+        adjustDirectoryCount(departments, res.data.departmentId, -1);
+        adjustDirectoryCount(positions, res.data.positionId, -1);
+        teamMembers = teamMembers.filter(item => item.id !== id);
+        const handlerIndex = HANDLERS.indexOf(member.name);
+        if (handlerIndex !== -1) HANDLERS.splice(handlerIndex, 1);
+        renderTeamTable();
+        showToast(res.data.message);
+    } catch (error) {
+        AxisAPI.fail(error);
+    }
+};
+
+// ---------------------------------------------------------------------
+// Secure password setup / reset — the password is never returned or shown
+// ---------------------------------------------------------------------
+let passwordMemberId = null;
+
+window.openTeamMemberPasswordReset = function(id, needsEmail = false) {
+    const member = teamMembers.find(item => item.id === id);
+    if (!member) return;
+
+    passwordMemberId = id;
+    document.getElementById('tm-login-email-field').classList.toggle('hidden', !needsEmail);
+    document.getElementById('tm-login-email').value = member.email || '';
+    document.getElementById('tm-login-password').value = '';
+    document.getElementById('tm-login-password-confirmation').value = '';
+    AxisDrawer.open('drawer-team-member-password', {
+        title: needsEmail ? `Set up ${member.name}'s login` : `Reset ${member.name}'s password`
+    });
+};
+
+window.handleResetTeamMemberPassword = function(e) {
+    e.preventDefault();
+    const member = teamMembers.find(item => item.id === passwordMemberId);
+    if (!member) return;
+
+    AxisDrawer.submit('drawer-team-member-password', async () => {
+        const payload = {
+            password: document.getElementById('tm-login-password').value,
+            password_confirmation: document.getElementById('tm-login-password-confirmation').value
+        };
+        const emailField = document.getElementById('tm-login-email-field');
+
+        if (!emailField.classList.contains('hidden')) {
+            payload.email = document.getElementById('tm-login-email').value.trim();
+        }
+
+        const res = await AxisAPI.request(AxisAPI.url('team.password', member.id), 'PATCH', payload);
+        member.email = res.data.username;
+        member.username = res.data.username;
+        member.hasAccount = true;
+        member.active = res.data.active;
+        closeModal('drawer-team-member-password');
+        renderTeamTable();
+        showToast(res.data.message);
     });
 };
 
@@ -5838,6 +6205,9 @@ window.handleManualSignIn = async function(e, options = { withPassword: true }) 
     document.getElementById('top-username').textContent = currentUser.name;
     document.getElementById('sb-role').textContent = currentUser.title || '';
     markCurrentSwitchCard();
+
+    // A successful sign-in always opens the dashboard.
+    switchPage('dashboard');
 
     SoundFX.createSuccess();
     showToast(`You're now signed in as ${currentUser.name}`);
@@ -5946,6 +6316,475 @@ window.exportProjectsCSV = function() {
 };
 
 // =====================================================================
+// SALES WORKSPACE ACCESS PAGES — roles, queues, sharing and P18
+// =====================================================================
+let recordShareRecords = null;
+let recordShareUsers = null;
+
+function workspaceRow(colspan, message, loading = false) {
+    return `<tr><td colspan="${colspan}" class="px-3 py-8 text-center text-xs ${loading ? 'text-slate-400' : 'text-slate-500'}">${escapeHtml(message)}</td></tr>`;
+}
+
+function workspacePermissionLabel(key) {
+    return AXIS_BOOT.permissionLabels?.[key] || key;
+}
+
+function workspaceReadableState(state) {
+    return AXIS_BOOT.upgradeStateLabels?.[state] || state;
+}
+
+function workspaceSelectedValues(select) {
+    return Array.from(select?.selectedOptions || []).map(option => Number(option.value)).filter(Number.isInteger);
+}
+
+function handleWorkspaceActionError(error, fallback) {
+    const message = error?.status === 403
+        ? 'You do not have permission to make that change.'
+        : (error?.message || fallback);
+    showToast(message);
+}
+
+window.toggleWorkspaceForm = function(formId) {
+    const form = document.getElementById(formId);
+    if (form) form.classList.toggle('hidden');
+};
+
+function renderRolesPage() {
+    const rolesBody = document.getElementById('roles-tbody');
+    if (rolesBody) {
+        rolesBody.innerHTML = workspaceRoles.length
+            ? workspaceRoles.map(role => {
+                const permissions = (role.permissions || []).map(permission =>
+                    `<span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] border border-sky-400/20 bg-sky-400/10 text-sky-200">${escapeHtml(workspacePermissionLabel(permission))}</span>`
+                ).join('');
+
+                return `<tr>
+                    <td class="py-3 px-3 align-top">
+                        <div class="text-sm font-semibold text-white">${escapeHtml(role.label)}</div>
+                        <div class="text-xs text-slate-500">${escapeHtml(role.description || '')}</div>
+                    </td>
+                    <td class="py-3 px-3">${permissions || '<span class="text-xs text-slate-500">No permissions</span>'}</td>
+                </tr>`;
+            }).join('')
+            : workspaceRow(2, 'No workspace roles have been configured.');
+    }
+
+    const teamsBody = document.getElementById('teams-tbody');
+    if (teamsBody) {
+        teamsBody.innerHTML = workspaceTeams.length
+            ? workspaceTeams.map(team => {
+                const members = (team.members || []).map(member => escapeHtml(member.name)).join(', ') || '—';
+                const actions = canManageAdministration()
+                    ? `<button type="button" onclick="deleteWorkspaceTeam(${team.id})" class="text-xs font-semibold text-rose-300 hover:text-rose-200">Remove</button>`
+                    : '—';
+
+                return `<tr>
+                    <td class="py-3 px-3 align-top">
+                        <div class="text-sm font-semibold text-white">${escapeHtml(team.name)}</div>
+                        <div class="text-xs text-slate-500">${escapeHtml(team.description || '')}</div>
+                    </td>
+                    <td class="py-3 px-3 text-xs text-slate-300">${members}</td>
+                    <td class="py-3 px-3 text-right">${actions}</td>
+                </tr>`;
+            }).join('')
+            : workspaceRow(3, 'No teams have been created yet.');
+    }
+
+    const userRolesBody = document.getElementById('user-roles-tbody');
+    if (userRolesBody) {
+        userRolesBody.innerHTML = teamMembers.length
+            ? teamMembers.map(member => {
+                const roleOptions = workspaceRoles.map(role => {
+                    const selected = (member.roles || []).includes(role.slug) ? ' selected' : '';
+                    return `<option value="${escapeHtml(role.slug)}"${selected}>${escapeHtml(role.label)}</option>`;
+                }).join('');
+                const names = (member.teams || []).map(team => escapeHtml(team)).join(', ') || '—';
+
+                return `<tr>
+                    <td class="py-3 px-3">
+                        <div class="text-sm font-semibold text-white">${escapeHtml(member.name)}</div>
+                        <div class="text-xs text-slate-500">${escapeHtml(member.email || '')}</div>
+                    </td>
+                    <td class="py-3 px-3 text-xs text-slate-300">${names}</td>
+                    <td class="py-3 px-3">
+                        <select multiple size="2" aria-label="Workspace roles for ${escapeHtml(member.name)}"
+                                onchange="saveWorkspaceUserRoles(${member.id}, this)" ${canManageAdministration() ? '' : 'disabled'}
+                                class="axis-input w-full px-2 py-1.5 text-xs">${roleOptions || '<option value="">No roles</option>'}</select>
+                    </td>
+                </tr>`;
+            }).join('')
+            : workspaceRow(3, 'No team members have been added yet.');
+    }
+
+    const teamSelect = document.getElementById('team-members-team');
+    if (teamSelect) {
+        teamSelect.innerHTML = workspaceTeams.map(team => `<option value="${team.id}">${escapeHtml(team.name)}</option>`).join('')
+            || '<option value="">No teams</option>';
+        teamSelect.onchange = syncWorkspaceTeamMemberSelection;
+    }
+
+    const memberSelect = document.getElementById('team-members-list');
+    if (memberSelect) {
+        memberSelect.innerHTML = teamMembers.map(member => `<option value="${member.id}">${escapeHtml(member.name)}</option>`).join('');
+        syncWorkspaceTeamMemberSelection();
+    }
+
+    document.querySelectorAll('#page-roles [data-admin-only]').forEach(element => {
+        element.classList.toggle('hidden', !canManageAdministration());
+    });
+}
+
+function syncWorkspaceTeamMemberSelection() {
+    const teamSelect = document.getElementById('team-members-team');
+    const memberSelect = document.getElementById('team-members-list');
+    if (!teamSelect || !memberSelect) return;
+
+    const team = workspaceTeams.find(item => item.id === Number(teamSelect.value));
+    const memberIds = new Set((team?.members || []).map(member => member.id));
+    Array.from(memberSelect.options).forEach(option => {
+        option.selected = memberIds.has(Number(option.value));
+    });
+}
+
+function renderWorkQueuesPage() {
+    const queueBody = document.getElementById('work-queues-tbody');
+    if (queueBody) {
+        queueBody.innerHTML = workQueues.length
+            ? workQueues.map(queue => {
+                const members = (queue.members || []).map(member => `${member.name} (${member.access})`).join(', ') || '—';
+                const access = queue.access === 'editor' ? 'Editor' : queue.access === 'viewer' ? 'Viewer' : '—';
+                const actions = canManageQueues()
+                    ? `<button type="button" onclick="deleteWorkspaceQueue(${queue.id})" class="text-xs font-semibold text-rose-300 hover:text-rose-200">Remove</button>`
+                    : '—';
+
+                return `<tr>
+                    <td class="py-3 px-3 align-top">
+                        <div class="text-sm font-semibold text-white">${escapeHtml(queue.name)}</div>
+                        <div class="text-xs text-slate-500">${escapeHtml(queue.description || '')}</div>
+                    </td>
+                    <td class="py-3 px-3 text-xs text-slate-300">${escapeHtml(queue.teamName || '—')}</td>
+                    <td class="py-3 px-3 text-xs text-slate-300">${escapeHtml(queue.assignmentRule || '—')}</td>
+                    <td class="py-3 px-3 text-xs text-slate-300">${escapeHtml(members)}</td>
+                    <td class="py-3 px-3 text-center text-xs text-slate-200">${escapeHtml(access)}</td>
+                    <td class="py-3 px-3 text-center text-xs ${queue.isActive ? 'text-emerald-300' : 'text-slate-500'}">${queue.isActive ? 'Active' : 'Paused'}</td>
+                    <td class="py-3 px-3 text-right">${actions}</td>
+                </tr>`;
+            }).join('')
+            : workspaceRow(7, 'No work queues are available to you.');
+    }
+
+    const createTeamSelect = document.getElementById('queue-team-select');
+    if (createTeamSelect) {
+        createTeamSelect.innerHTML = '<option value="">No team</option>' + workspaceTeams.map(team =>
+            `<option value="${team.id}">${escapeHtml(team.name)}</option>`
+        ).join('');
+    }
+
+    const shareQueueSelect = document.getElementById('queue-share-queue');
+    if (shareQueueSelect) {
+        shareQueueSelect.innerHTML = workQueues.map(queue => `<option value="${queue.id}">${escapeHtml(queue.name)}</option>`).join('')
+            || '<option value="">No queues</option>';
+    }
+
+    const shareMemberSelect = document.getElementById('queue-share-members');
+    if (shareMemberSelect) {
+        shareMemberSelect.innerHTML = teamMembers.map(member => `<option value="${member.id}">${escapeHtml(member.name)}</option>`).join('');
+    }
+
+    document.querySelectorAll('#page-work-queues [data-queue-admin-only]').forEach(element => {
+        element.classList.toggle('hidden', !canManageQueues());
+    });
+}
+
+async function loadWorkspaceRecordOptions() {
+    const recordSelect = document.getElementById('share-record-id');
+    if (!recordSelect || !canManageRecords()) return;
+
+    if (recordShareRecords === null || recordShareUsers === null) {
+        recordSelect.innerHTML = '<option value="">Loading records…</option>';
+        try {
+            const response = await AxisAPI.request(AxisAPI.url('record-shares.index'), 'GET');
+            recordShareRecords = response.records || {};
+            recordShareUsers = response.users || [];
+        } catch (error) {
+            recordSelect.innerHTML = '<option value="">Could not load records</option>';
+            handleWorkspaceActionError(error, 'Could not load record options.');
+            return;
+        }
+    }
+
+    const userSelect = document.getElementById('share-user-id');
+    if (userSelect) {
+        userSelect.innerHTML = (recordShareUsers || []).map(user =>
+            `<option value="${user.id}">${escapeHtml(user.name)}</option>`
+        ).join('') || '<option value="">No people</option>';
+    }
+    populateWorkspaceRecordOptions();
+}
+
+window.populateWorkspaceRecordOptions = function() {
+    const recordSelect = document.getElementById('share-record-id');
+    const typeSelect = document.getElementById('share-record-type');
+    if (!recordSelect || !typeSelect) return;
+
+    const records = (recordShareRecords || {})[typeSelect.value] || [];
+    recordSelect.innerHTML = records.map(record => `<option value="${record.id}">${escapeHtml(record.title)}</option>`).join('')
+        || '<option value="">No records available</option>';
+};
+
+function renderRecordSharesPage() {
+    const shareBody = document.getElementById('record-shares-tbody');
+    if (shareBody) {
+        shareBody.innerHTML = recordShares.length
+            ? recordShares.map(share => {
+                const actions = canManageRecords()
+                    ? `<button type="button" onclick="deleteWorkspaceRecordShare(${share.id})" class="text-xs font-semibold text-rose-300 hover:text-rose-200">Remove</button>`
+                    : '—';
+
+                return `<tr>
+                    <td class="py-3 px-3 text-sm font-semibold text-white">${escapeHtml(share.title || `${share.type} #${share.shareableId}`)}</td>
+                    <td class="py-3 px-3 text-xs text-slate-300">${escapeHtml(share.type)}</td>
+                    <td class="py-3 px-3 text-xs text-slate-300">${escapeHtml(share.userName || '')}</td>
+                    <td class="py-3 px-3 text-center text-xs text-slate-200">${share.ability === 'update' ? 'Update' : 'View'}</td>
+                    <td class="py-3 px-3 text-right">${actions}</td>
+                </tr>`;
+            }).join('')
+            : workspaceRow(5, 'No records have been shared with you.');
+    }
+
+    document.querySelectorAll('#page-sharing [data-record-admin-only]').forEach(element => {
+        element.classList.toggle('hidden', !canManageRecords());
+    });
+
+    loadWorkspaceRecordOptions();
+}
+
+function renderFeatureUpgradesPage() {
+    const upgradeBody = document.getElementById('feature-upgrades-tbody');
+    if (!upgradeBody) return;
+
+    upgradeBody.innerHTML = featureUpgrades.length
+        ? featureUpgrades.map(feature => {
+            const state = feature.state || 'locked';
+            const stateClass = state === 'upgraded' ? 'text-emerald-300' : state === 'available' ? 'text-amber-300' : 'text-slate-400';
+            const stateCell = canManageP18()
+                ? `<select onchange="updateWorkspaceFeatureUpgrade(${feature.id}, this.value)" aria-label="State of ${escapeHtml(feature.label)}"
+                         class="axis-input h-8 px-2 text-xs"><option value="locked"${state === 'locked' ? ' selected' : ''}>${escapeHtml(workspaceReadableState('locked'))}</option><option value="available"${state === 'available' ? ' selected' : ''}>${escapeHtml(workspaceReadableState('available'))}</option><option value="upgraded"${state === 'upgraded' ? ' selected' : ''}>${escapeHtml(workspaceReadableState('upgraded'))}</option></select>`
+                : `<span class="text-xs font-semibold ${stateClass}">${escapeHtml(feature.stateLabel || workspaceReadableState(state))}</span>`;
+
+            return `<tr>
+                <td class="py-3 px-3 text-sm font-semibold text-white">${escapeHtml(feature.label)}</td>
+                <td class="py-3 px-3 text-xs text-slate-400">${escapeHtml(feature.description || '')}</td>
+                <td class="py-3 px-3 text-center">${stateCell}</td>
+            </tr>`;
+        }).join('')
+        : workspaceRow(3, 'No P18 features have been configured.');
+}
+
+window.reloadWorkspaceSection = async function(section) {
+    const config = {
+        roles: { body: 'roles-tbody', columns: 2, route: 'roles.index', empty: 'No workspace roles have been configured.' },
+        queues: { body: 'work-queues-tbody', columns: 7, route: 'work-queues.index', empty: 'No work queues are available to you.' },
+        sharing: { body: 'record-shares-tbody', columns: 5, route: 'record-shares.index', empty: 'No records have been shared with you.' },
+        p18: { body: 'feature-upgrades-tbody', columns: 3, route: 'feature-upgrades.index', empty: 'No P18 features have been configured.' },
+    }[section];
+    if (!config) return;
+
+    const body = document.getElementById(config.body);
+    if (body) body.innerHTML = workspaceRow(config.columns, 'Loading…', true);
+
+    try {
+        const response = await AxisAPI.request(AxisAPI.url(config.route), 'GET');
+        if (section === 'roles') {
+            workspaceRoles = response.data || [];
+            renderRolesPage();
+        } else if (section === 'queues') {
+            workQueues = response.data || [];
+            renderWorkQueuesPage();
+        } else if (section === 'sharing') {
+            recordShares = response.data || [];
+            recordShareRecords = response.records || {};
+            recordShareUsers = response.users || [];
+            renderRecordSharesPage();
+        } else {
+            featureUpgrades = response.data || [];
+            renderFeatureUpgradesPage();
+        }
+    } catch (error) {
+        if (body) {
+            const message = error?.status === 403 ? 'You do not have permission to open this section.' : 'Could not load this section.';
+            body.innerHTML = workspaceRow(config.columns, message);
+        }
+        handleWorkspaceActionError(error, 'Could not refresh this section.');
+    }
+};
+
+window.createWorkspaceTeam = async function(event) {
+    event.preventDefault();
+    const form = event.currentTarget;
+    try {
+        const response = await AxisAPI.request(AxisAPI.url('teams.store'), 'POST', Object.fromEntries(new FormData(form).entries()));
+        workspaceTeams.push(response.data);
+        form.reset();
+        toggleWorkspaceForm('form-team-create');
+        renderRolesPage();
+        showToast('Team created.');
+    } catch (error) {
+        handleWorkspaceActionError(error, 'Could not create the team.');
+    }
+};
+
+window.saveWorkspaceTeamMembers = async function(event) {
+    event.preventDefault();
+    const teamId = Number(document.getElementById('team-members-team')?.value);
+    const memberSelect = document.getElementById('team-members-list');
+    if (!teamId || !memberSelect) return;
+
+    try {
+        const response = await AxisAPI.request(AxisAPI.url('teams.members', teamId), 'PATCH', {
+            members: workspaceSelectedValues(memberSelect),
+        });
+        const index = workspaceTeams.findIndex(team => team.id === teamId);
+        if (index !== -1) workspaceTeams[index] = response.data;
+        toggleWorkspaceForm('form-team-members');
+        renderRolesPage();
+        showToast('Team members updated.');
+    } catch (error) {
+        handleWorkspaceActionError(error, 'Could not update the team members.');
+    }
+};
+
+window.deleteWorkspaceTeam = async function(teamId) {
+    if (!window.confirm('Remove this team? Queue assignments will be cleared.')) return;
+
+    try {
+        await AxisAPI.request(AxisAPI.url('teams.destroy', teamId), 'DELETE');
+        workspaceTeams = workspaceTeams.filter(team => team.id !== teamId);
+        renderRolesPage();
+        showToast('Team removed.');
+    } catch (error) {
+        handleWorkspaceActionError(error, 'Could not remove the team.');
+    }
+};
+
+window.saveWorkspaceUserRoles = async function(userId, select) {
+    try {
+        const response = await AxisAPI.request(AxisAPI.url('user-roles.update', userId), 'PATCH', {
+            roles: Array.from(select.selectedOptions).map(option => option.value),
+        });
+        const index = teamMembers.findIndex(member => member.id === userId);
+        if (index !== -1) teamMembers[index] = { ...teamMembers[index], roles: response.data.roles || [], teams: response.data.teams || [] };
+        renderRolesPage();
+        showToast('User roles updated.');
+    } catch (error) {
+        handleWorkspaceActionError(error, 'Could not update the user roles.');
+    }
+};
+
+window.createWorkspaceQueue = async function(event) {
+    event.preventDefault();
+    const form = event.currentTarget;
+    const payload = Object.fromEntries(new FormData(form).entries());
+    payload.team_id = payload.team_id || null;
+    payload.is_active = true;
+
+    try {
+        const response = await AxisAPI.request(AxisAPI.url('work-queues.store'), 'POST', payload);
+        workQueues.push(response.data);
+        form.reset();
+        toggleWorkspaceForm('form-work-queue-create');
+        renderWorkQueuesPage();
+        showToast('Work queue created.');
+    } catch (error) {
+        handleWorkspaceActionError(error, 'Could not create the work queue.');
+    }
+};
+
+window.saveWorkspaceQueueMembers = async function(event) {
+    event.preventDefault();
+    const queueId = Number(document.getElementById('queue-share-queue')?.value);
+    const memberSelect = document.getElementById('queue-share-members');
+    const accessSelect = document.getElementById('queue-share-access');
+    if (!queueId || !memberSelect || !accessSelect) return;
+
+    try {
+        const response = await AxisAPI.request(AxisAPI.url('work-queues.members', queueId), 'PATCH', {
+            members: workspaceSelectedValues(memberSelect),
+            access: accessSelect.value,
+        });
+        const index = workQueues.findIndex(queue => queue.id === queueId);
+        if (index !== -1) workQueues[index] = response.data;
+        toggleWorkspaceForm('form-queue-share');
+        renderWorkQueuesPage();
+        showToast('Queue access updated.');
+    } catch (error) {
+        handleWorkspaceActionError(error, 'Could not update the queue access.');
+    }
+};
+
+window.deleteWorkspaceQueue = async function(queueId) {
+    if (!window.confirm('Remove this work queue?')) return;
+
+    try {
+        await AxisAPI.request(AxisAPI.url('work-queues.destroy', queueId), 'DELETE');
+        workQueues = workQueues.filter(queue => queue.id !== queueId);
+        renderWorkQueuesPage();
+        showToast('Work queue removed.');
+    } catch (error) {
+        handleWorkspaceActionError(error, 'Could not remove the work queue.');
+    }
+};
+
+window.createWorkspaceRecordShare = async function(event) {
+    event.preventDefault();
+    const payload = {
+        shareable_type: document.getElementById('share-record-type')?.value,
+        shareable_id: Number(document.getElementById('share-record-id')?.value),
+        user_id: Number(document.getElementById('share-user-id')?.value),
+        ability: document.getElementById('share-ability')?.value,
+    };
+    if (!payload.shareable_id || !payload.user_id) {
+        showToast('Choose a record and a person first.');
+        return;
+    }
+
+    try {
+        const response = await AxisAPI.request(AxisAPI.url('record-shares.store'), 'POST', payload);
+        recordShares.push(response.data);
+        toggleWorkspaceForm('form-record-share');
+        renderRecordSharesPage();
+        showToast('Record shared.');
+    } catch (error) {
+        handleWorkspaceActionError(error, 'Could not share the record.');
+    }
+};
+
+window.deleteWorkspaceRecordShare = async function(shareId) {
+    if (!window.confirm('Remove this record share?')) return;
+
+    try {
+        await AxisAPI.request(AxisAPI.url('record-shares.destroy', shareId), 'DELETE');
+        recordShares = recordShares.filter(share => share.id !== shareId);
+        renderRecordSharesPage();
+        showToast('Record share removed.');
+    } catch (error) {
+        handleWorkspaceActionError(error, 'Could not remove the record share.');
+    }
+};
+
+window.updateWorkspaceFeatureUpgrade = async function(featureId, state) {
+    try {
+        const response = await AxisAPI.request(AxisAPI.url('feature-upgrades.update', featureId), 'PATCH', { state });
+        const index = featureUpgrades.findIndex(feature => feature.id === featureId);
+        if (index !== -1) featureUpgrades[index] = response.data;
+        renderFeatureUpgradesPage();
+        showToast('Upgrade state updated.');
+    } catch (error) {
+        handleWorkspaceActionError(error, 'Could not update the upgrade state.');
+    }
+};
+
+// =====================================================================
 // INITIALIZE ON LOAD
 // =====================================================================
 window.addEventListener('DOMContentLoaded', () => {
@@ -5960,29 +6799,16 @@ window.addEventListener('DOMContentLoaded', () => {
     syncHeaderTimerPill();
     startGlobalStopwatchLoop();
 
-    // Subtle typing tick, scoped to the Project page and its drawers.
-    const projectTypingDrawers = new Set([
-        'drawer-project-create',
-        'drawer-axis-project-edit',
-        'modal-add-project',
-        'drawer-project-edit',
-        'drawer-project-view',
-    ]);
-    const projectTypedFieldTypes = new Set(['text', 'search', 'email', 'url', 'tel', 'password']);
+    // Subtle typing tick for every text field: searches, descriptions and form inputs.
+    const typedFieldTypes = new Set(['text', 'search', 'email', 'url', 'tel', 'password']);
 
     document.addEventListener('input', (event) => {
         if (!window.SoundFX || SoundFX.isMuted()) return;
 
         const target = event.target;
         const isTextArea = target instanceof HTMLTextAreaElement;
-        const isTextField = target instanceof HTMLInputElement && projectTypedFieldTypes.has(target.type);
+        const isTextField = target instanceof HTMLInputElement && typedFieldTypes.has(target.type);
         if (!isTextArea && !isTextField) return;
-
-        const activePage = document.querySelector('.app-page.active-page');
-        const onProjectPage = activePage?.id === 'page-projects' && Boolean(target.closest('#page-projects'));
-        const drawer = target.closest('[data-axis-drawer]');
-        const inProjectDrawer = Boolean(drawer && projectTypingDrawers.has(drawer.id));
-        if (!onProjectPage && !inProjectDrawer) return;
 
         SoundFX.keyTick();
     });

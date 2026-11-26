@@ -48,6 +48,7 @@ class AxisSystemSeeder extends Seeder
             $this->seedTeamMembers($data['teamMembers']);
             $this->seedModules($data['projects']);
             $this->seedCtoReports($data['ctoReports']);
+            $this->call(SalesAccessSeeder::class);
         });
     }
 

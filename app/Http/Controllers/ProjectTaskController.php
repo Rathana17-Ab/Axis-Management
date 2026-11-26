@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Enums\IssueSeverity;
 use App\Enums\IssueStatus;
 use App\Enums\TaskPriority;
+use App\Enums\WorkspacePermission;
 use App\Enums\WorkStatus;
 use App\Http\Requests\StoreProjectTaskRequest;
 use App\Http\Requests\UpdateProjectTaskRequest;
@@ -29,6 +30,8 @@ class ProjectTaskController extends Controller
      */
     public function store(StoreProjectTaskRequest $request, Module $module): JsonResponse
     {
+        $this->authorizeWorkspacePermission(WorkspacePermission::RecordsManageAll);
+
         $validated = $request->validated();
 
         $task = DB::transaction(function () use ($validated, $module): ProjectTask {
@@ -80,6 +83,8 @@ class ProjectTaskController extends Controller
      */
     public function update(UpdateProjectTaskRequest $request, ProjectTask $task): ProjectTaskResource
     {
+        $this->authorizeWorkspaceRecord('update-record', $task);
+
         $validated = $request->validated();
 
         $task->fill(collect($validated)->except(['status', 'progress'])->all());
@@ -102,6 +107,8 @@ class ProjectTaskController extends Controller
      */
     public function toggleTimer(ProjectTask $task): ProjectTaskResource
     {
+        $this->authorizeWorkspaceRecord('update-record', $task);
+
         $task = DB::transaction(function () use ($task): ProjectTask {
             $locked = ProjectTask::query()->lockForUpdate()->findOrFail($task->id);
 
@@ -119,6 +126,8 @@ class ProjectTaskController extends Controller
      */
     public function resetTimer(ProjectTask $task): ProjectTaskResource
     {
+        $this->authorizeWorkspaceRecord('update-record', $task);
+
         $task->resetTimer();
         $task->save();
 
@@ -130,6 +139,8 @@ class ProjectTaskController extends Controller
      */
     public function destroy(ProjectTask $task): Response
     {
+        $this->authorizeWorkspaceRecord('update-record', $task);
+
         $task->delete();
 
         return response()->noContent();

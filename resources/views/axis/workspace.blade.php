@@ -27,6 +27,10 @@
                 @include('axis.pages.task-detail')
                 @include('axis.pages.reports')
                 @include('axis.pages.team')
+                @include('axis.pages.roles')
+                @include('axis.pages.work-queues')
+                @include('axis.pages.sharing')
+                @include('axis.pages.p18')
 
             </main>
         </div>
@@ -50,6 +54,9 @@
     @include('axis.drawers.report-view')
     @include('axis.drawers.team-member')
     @include('axis.drawers.team-member-edit')
+    @include('axis.drawers.team-member-password')
+    @include('axis.drawers.department-edit')
+    @include('axis.drawers.position-edit')
     @include('axis.drawers.confirm')
 
     {{-- Dialogs that are not CRUD drawers --}}

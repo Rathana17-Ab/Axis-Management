@@ -125,10 +125,18 @@ it('verifies Team Management page loads with all 11 team members', function () {
     $bootstrap = $response->viewData('bootstrap');
     $members = collect($bootstrap['teamMembers']);
 
-    expect($members->count())->toBe(11);
+    expect($members->count())->toBe(11)
+        ->and($bootstrap['departments'])->not->toBeEmpty()
+        ->and($bootstrap['positions'])->not->toBeEmpty();
 
     $names = $members->pluck('name')->all();
     expect($names)->toContain('Kong Rathana', 'Ti Tong', 'Phal Kristar');
 
-    $response->assertSee('id="team-tbody"', false);
+    $response->assertSee('id="team-tbody"', false)
+        ->assertSee('id="departments-tbody"', false)
+        ->assertSee('id="positions-tbody"', false)
+        ->assertSee('id="form-department-create"', false)
+        ->assertSee('id="form-position-create"', false)
+        ->assertSee('id="drawer-team-member-password"', false)
+        ->assertSee('Login username');
 });

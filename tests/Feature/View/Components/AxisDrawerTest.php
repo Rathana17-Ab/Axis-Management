@@ -79,10 +79,11 @@ it('renders every workspace drawer on the shared component', function () {
 
     foreach ([
         'drawer-project-create', 'modal-add-project', 'drawer-project-view', 'drawer-project-edit', 'modal-create-task', 'drawer-task-edit',
-        'dev-issue-drawer', 'modal-report', 'modal-report-view', 'modal-team-member', 'drawer-team-member-edit', 'axis-confirm-drawer', 'drawer-axis-project-edit',
+        'dev-issue-drawer', 'modal-report', 'modal-report-view', 'modal-team-member', 'drawer-team-member-edit', 'drawer-team-member-password',
+        'drawer-department-edit', 'drawer-position-edit', 'axis-confirm-drawer', 'drawer-axis-project-edit',
     ] as $drawerId) {
         $response->assertSee('<div id="'.$drawerId.'"', false);
     }
 
-    expect(substr_count($response->getContent(), 'data-axis-drawer'))->toBe(13);
+    expect(substr_count($response->getContent(), 'data-axis-drawer'))->toBe(16);
 });

@@ -1,7 +1,11 @@
 <?php
 
-test('the application root redirects to the Axis project list', function () {
-    $response = $this->get('/');
+use App\Providers\RouteServiceProvider;
 
-    $response->assertRedirect('/admin/project');
+test('the application root redirects to the Axis dashboard', function () {
+    $this->get('/')->assertRedirect('/admin/dashboard');
+});
+
+test('the post-authentication destination is the dashboard', function () {
+    expect(RouteServiceProvider::HOME)->toBe('/admin/dashboard');
 });
