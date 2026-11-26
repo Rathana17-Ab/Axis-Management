@@ -2209,7 +2209,7 @@ function moduleMatchesModuleFilters(p) {
     return (projVal === 'all' || Number(p.projectId) === parseInt(projVal, 10))
         && (prodVal === 'all' || p.product === prodVal)
         && (statVal === 'all' || p.status === statVal)
-        && (!srchVal || [p.name, p.code, p.manager, p.customer, ...(p.team || [])]
+        && (!srchVal || [p.name, p.code, p.manager, ...(p.team || [])]
             .join(' ').toLowerCase().includes(srchVal));
 }
 
@@ -2235,8 +2235,8 @@ window.renderProjectsTable = function(shouldScroll = false) {
         document.getElementById('mod-view-cards').innerHTML = `<p class="col-span-full py-10 text-center text-sm text-slate-400">${emptyText}</p>`;
         document.getElementById('mod-view-board').innerHTML = boardHtml([], () => null, () => '', 'None');
         tbody.innerHTML = projects.length === 0
-            ? `<tr><td colspan="10" class="py-12 text-center text-slate-400">No modules yet. Create a project, then add a module to it.</td></tr>`
-            : `<tr><td colspan="10" class="py-12 text-center text-slate-400">No modules match these filters</td></tr>`;
+            ? `<tr><td colspan="9" class="py-12 text-center text-slate-400">No modules yet. Create a project, then add a module to it.</td></tr>`
+            : `<tr><td colspan="9" class="py-12 text-center text-slate-400">No modules match these filters</td></tr>`;
         document.getElementById('projects-showing-text').textContent = `Showing 0 of ${projects.length} modules`;
         return;
     }
@@ -2245,7 +2245,6 @@ window.renderProjectsTable = function(shouldScroll = false) {
         name: p => p.name.toLowerCase(),
         status: p => AXIS_STATUS_ORDER[p.status] ?? 9,
         progress: p => computeProjectCompletion(p),
-        customer: p => (p.customer || '').toLowerCase(),
         lead: p => (p.manager || '').toLowerCase(),
         tasks: p => moduleStats(p).tasksTotal ? moduleStats(p).tasksDone / moduleStats(p).tasksTotal : -1,
         issues: p => moduleStats(p).openIssues,
@@ -2327,7 +2326,7 @@ window.setModuleSortFromSelect = function(value) {
 };
 
 window.sortModules = function(key) {
-    moduleSort = nextSort(moduleSort, key, ['name', 'customer', 'lead', 'deadline']);
+    moduleSort = nextSort(moduleSort, key, ['name', 'lead', 'deadline']);
     SoundFX.buttonTap(0);
     renderProjectsTable();
 };
@@ -2366,7 +2365,7 @@ function renderModuleCard(p, compact = false, showProject = false) {
                 <span class="w-8 h-8 rounded-lg ${p.badgeClass} font-bold text-xs flex items-center justify-center shrink-0">${escapeHtml(p.projBadge)}</span>
                 <div class="min-w-0">
                     <h3 class="text-sm font-semibold text-white truncate" title="${name}">${name}</h3>
-                    <p class="text-xs text-slate-400 truncate mt-0.5">${showProject && p.projectName ? `${escapeHtml(p.projectName)} · ` : ''}<span class="font-mono">${escapeHtml(p.code)}</span> · ${escapeHtml(p.customer)}</p>
+                    <p class="text-xs text-slate-400 truncate mt-0.5">${showProject && p.projectName ? `${escapeHtml(p.projectName)} · ` : ''}<span class="font-mono">${escapeHtml(p.code)}</span> · ${escapeHtml((p.product || '').replace(/^Axis\s+/, '') || 'No product')}</p>
                 </div>
             </div>
             ${compact ? '' : `<div class="flex items-center gap-1.5 shrink-0" onclick="event.stopPropagation()">${statusSelectHtml(`updateProjectStatus(${p.id}, this.value); renderProjectsTable();`, p.status, name)}${statusMismatchHtml(statusMismatchText(p.status, Math.round(computeProjectCompletion(p)), (p.tasks || []).length, 'task'))}</div>`}
@@ -2451,12 +2450,6 @@ function renderProjectRow(p, showProject = false) {
                         <div class="h-full rounded-full ${barColor}" style="width: ${pct}%"></div>
                     </div>
                     <span class="text-xs font-mono font-semibold text-slate-200 w-9 text-right">${pct}%</span>
-                </div>
-            </td>
-            <td class="py-3 px-3">
-                <div class="w-[150px]">
-                    <div class="text-sm text-slate-100 truncate" title="${escapeHtml(p.customer)}">${escapeHtml(p.customer)}</div>
-                    <div class="text-xs text-slate-400 truncate mt-0.5" title="${escapeHtml(p.customerSub)}">${escapeHtml((p.customerSub || '').replace(/^\((.*)\)$/, '$1'))}</div>
                 </div>
             </td>
             <td class="py-3 px-3">
@@ -5927,13 +5920,12 @@ window.showToast = function(msg) {
 
 window.exportProjectsCSV = function() {
     const rows = [
-        ['Code', 'Module Name', 'Customer', 'Product Domain', 'Manager', 'Deadline', 'Status', 'Completion %']
+        ['Code', 'Module Name', 'Product Domain', 'Manager', 'Deadline', 'Status', 'Completion %']
     ];
     projects.forEach(p => {
         rows.push([
             p.code,
             `"${p.name}"`,
-            `"${p.customer}"`,
             `"${p.product}"`,
             `"${p.manager}"`,
             p.deadline,

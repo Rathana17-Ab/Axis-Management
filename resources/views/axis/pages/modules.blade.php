@@ -96,7 +96,6 @@
                             <option value="progress:asc">Progress (lowest)</option>
                             <option value="deadline:asc">Deadline (soonest)</option>
                             <option value="issues:desc">Open issues (most)</option>
-                            <option value="customer:asc">Customer (A–Z)</option>
                             <option value="lead:asc">Lead (A–Z)</option>
                         </select>
                         <div class="axis-command-actions flex items-center gap-1.5">
@@ -148,7 +147,6 @@
                                             ['name', 'Module', 'axis-sticky-left pl-5 pr-3'],
                                             ['status', 'Status', 'px-3'],
                                             ['progress', 'Progress', 'px-3'],
-                                            ['customer', 'Customer', 'px-3'],
                                             ['lead', 'Lead', 'px-3'],
                                             [null, 'Team', 'px-3'],
                                             ['tasks', 'Tasks done', 'px-3'],
