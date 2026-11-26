@@ -124,14 +124,14 @@ label.axis-topbar-pill:hover,
     color: var(--sales-text);
 }
 .btn-primary-glass {
-    background: linear-gradient(135deg, var(--sales-primary-strong), var(--sales-primary-deep));
+    background: linear-gradient(135deg, var(--sales-primary), var(--sales-signal));
     border: 1px solid rgba(47, 111, 214, 0.45);
     border-radius: 14px;
     color: #FFFFFF;
     box-shadow: 0 12px 28px rgba(47, 111, 214, 0.22);
 }
 .btn-primary-glass:hover {
-    background: linear-gradient(135deg, var(--sales-primary), var(--sales-primary-strong));
+    background: linear-gradient(135deg, #4A8CEB, var(--sales-primary));
     border-color: rgba(46, 198, 232, 0.5);
 }
 .axis-drawer__btn { border-radius: 14px !important; }
