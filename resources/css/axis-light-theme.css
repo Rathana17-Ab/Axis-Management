@@ -129,9 +129,12 @@ html:not(.dark) select.axis-input option { background-color: #FFFFFF; color: var
 html:not(.dark) select.axis-input,
 html:not(.dark) select.ent-input,
 html:not(.dark) select.axis-status-select,
+html:not(.dark) select.axis-assignee-select,
 html:not(.dark) input[type="date"].axis-input { color-scheme: light; }
-html:not(.dark) select.axis-status-select option { background-color: #FFFFFF; color: var(--light-text); }
+html:not(.dark) select.axis-status-select option,
+html:not(.dark) select.axis-assignee-select option { background-color: #FFFFFF; color: var(--light-text); }
 html:not(.dark) select.axis-status-select option:checked,
+html:not(.dark) select.axis-assignee-select option:checked,
 html:not(.dark) select.axis-input option:checked,
 html:not(.dark) select.ent-input option:checked { background-color: var(--sales-primary); color: #FFFFFF; }
 html:not(.dark) .axis-status-select[class*="bg-sky-500/15"] {

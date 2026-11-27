@@ -11,7 +11,6 @@ use App\Models\Position;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Str;
 
 class TeamAccessController extends Controller
 {
@@ -26,7 +25,6 @@ class TeamAccessController extends Controller
             ...$validated,
             ...$this->directoryAttributes($validated),
             'can_login' => true,
-            'password' => Str::password(32),
         ]);
 
         return TeamMemberResource::make($member)->response()->setStatusCode(201);

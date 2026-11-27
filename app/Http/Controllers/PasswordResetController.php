@@ -3,18 +3,23 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
+use App\Notifications\PasswordResetCode;
 use Illuminate\Auth\Events\PasswordReset;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Str;
 
 class PasswordResetController extends Controller
 {
+    /** Session key holding the email that owns the pending verification code. */
+    private const PENDING_EMAIL_SESSION_KEY = 'axis.password-reset.email';
+
     /**
-     * Show the form for requesting a password reset link.
+     * Show the form for requesting a password reset code.
      */
     public function showRequestForm(): View
     {
@@ -22,9 +27,9 @@ class PasswordResetController extends Controller
     }
 
     /**
-     * Email a password reset link to the matching Axis account.
+     * Email a six-digit verification code to the matching Axis account.
      */
-    public function sendResetLink(Request $request): RedirectResponse
+    public function sendResetCode(Request $request): RedirectResponse
     {
         $this->normalizeEmailInput($request);
 
@@ -32,48 +37,75 @@ class PasswordResetController extends Controller
             'email' => ['required', 'email', 'max:255'],
         ]);
 
-        $status = Password::sendResetLink([
-            'email' => $this->normalizeEmail($validated['email']),
-        ]);
+        $email = $this->normalizeEmail($validated['email']);
+        $user = User::query()->where('email', $email)->first();
 
-        return $status === Password::RESET_LINK_SENT
-            ? back()->with('status', __($status))
-            : back()->withInput($request->only('email'))->withErrors(['email' => __($status)]);
+        if ($user !== null && ! Password::getRepository()->recentlyCreatedToken($user)) {
+            $code = Str::password(length: 6, letters: false, numbers: true, symbols: false, spaces: false);
+
+            DB::table('password_reset_tokens')->updateOrInsert(
+                ['email' => $email],
+                ['token' => Hash::make($code), 'created_at' => now()],
+            );
+
+            $user->notify(new PasswordResetCode($code));
+        }
+
+        $request->session()->put(self::PENDING_EMAIL_SESSION_KEY, $email);
+
+        return redirect()->route('password.reset')
+            ->with('status', __('passwords.sent'));
     }
 
     /**
-     * Show the password reset form included in a reset link.
+     * Show the form for entering the emailed verification code.
      */
-    public function showResetForm(Request $request, string $token): View
+    public function showResetForm(Request $request): View|RedirectResponse
     {
-        $email = $request->input('email');
+        $email = $request->session()->get(self::PENDING_EMAIL_SESSION_KEY);
 
-        return view('axis.passwords.reset', [
-            'email' => is_string($email) ? $email : '',
-            'token' => $token,
-        ]);
+        if (! is_string($email) || $email === '') {
+            return redirect()->route('password.request');
+        }
+
+        return view('axis.passwords.reset', ['email' => $email]);
     }
 
     /**
-     * Replace the account password after validating the reset token.
+     * Replace the account password after validating the verification code.
      */
     public function resetPassword(Request $request): RedirectResponse
     {
         $this->normalizeEmailInput($request);
 
         $validated = $request->validate([
-            'token' => ['required', 'string'],
             'email' => ['required', 'email', 'max:255'],
+            'code' => ['required', 'digits:6'],
             'password' => ['required', 'string', 'min:8', 'confirmed'],
             'password_confirmation' => ['required', 'string'],
         ]);
 
+        $email = $this->normalizeEmail($validated['email']);
+        $pendingEmail = $request->session()->get(self::PENDING_EMAIL_SESSION_KEY);
+
+        if (! is_string($pendingEmail) || $pendingEmail !== $email) {
+            return back()->withInput($request->only('email'))
+                ->withErrors(['code' => __('passwords.expired_request')]);
+        }
+
+        $user = User::query()->where('email', $email)->first();
+
+        if ($user === null) {
+            return back()->withInput($request->only('email'))
+                ->withErrors(['code' => __('passwords.code')]);
+        }
+
         $status = Password::reset(
             [
-                'email' => $this->normalizeEmail($validated['email']),
+                'email' => $email,
                 'password' => $validated['password'],
                 'password_confirmation' => $validated['password_confirmation'],
-                'token' => $validated['token'],
+                'token' => $validated['code'],
             ],
             function (User $user, string $password): void {
                 $user->forceFill([
@@ -86,13 +118,18 @@ class PasswordResetController extends Controller
             },
         );
 
-        return $status === Password::PASSWORD_RESET
-            ? redirect()->route('login')->with('status', __($status))
-            : back()->withInput($request->only('email'))->withErrors(['email' => __($status)]);
+        if ($status !== Password::PASSWORD_RESET) {
+            return back()->withInput($request->only('email'))
+                ->withErrors(['code' => __('passwords.code')]);
+        }
+
+        $request->session()->forget(self::PENDING_EMAIL_SESSION_KEY);
+
+        return redirect()->route('login')->with('status', __($status));
     }
 
     /**
-     * Normalize the submitted email before validation and broker lookups.
+     * Normalize the submitted email before validation and account lookups.
      */
     private function normalizeEmailInput(Request $request): void
     {
@@ -104,7 +141,7 @@ class PasswordResetController extends Controller
     }
 
     /**
-     * Normalize an email address for broker lookups.
+     * Normalize an email address for account lookups.
      */
     private function normalizeEmail(string $email): string
     {

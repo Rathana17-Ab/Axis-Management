@@ -25,18 +25,27 @@
                 @endif
 
                 <h1 id="password-reset-title" class="text-base font-bold text-white">Choose a new password</h1>
-                <p class="text-xs text-slate-400 mt-1">Use at least eight characters for your Axis account.</p>
+                <p class="text-xs text-slate-400 mt-1">Enter the code sent to your email, then choose a new password.</p>
 
                 <form method="POST" action="{{ route('password.update') }}" class="mt-5 space-y-4">
                     @csrf
-                    <input type="hidden" name="token" value="{{ $token }}">
 
                     <div>
                         <label for="password-reset-email" class="block text-xs font-semibold text-slate-400 mb-1.5">Email</label>
-                        <input id="password-reset-email" name="email" type="email" value="{{ old('email', $email) }}" autocomplete="username" autofocus
+                        <input id="password-reset-email" name="email" type="email" value="{{ old('email', $email) }}" autocomplete="username" readonly
                                aria-invalid="@error('email') true @else false @enderror"
                                class="axis-input w-full h-10 px-3 text-sm">
                         @error('email')
+                            <p class="axis-field__error">{{ $message }}</p>
+                        @enderror
+                    </div>
+
+                    <div>
+                        <label for="password-reset-code" class="block text-xs font-semibold text-slate-400 mb-1.5">Verification code</label>
+                        <input id="password-reset-code" name="code" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="6" autocomplete="one-time-code" autofocus
+                               aria-invalid="@error('code') true @else false @enderror"
+                               class="axis-input w-full h-10 px-3 text-sm tracking-[0.3em]">
+                        @error('code')
                             <p class="axis-field__error">{{ $message }}</p>
                         @enderror
                     </div>

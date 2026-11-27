@@ -149,6 +149,8 @@ it('verifies Team Management page loads with all 11 team members', function () {
         ->assertDontSee('id="drawer-department-create"', false)
         ->assertDontSee('id="drawer-position-create"', false)
         ->assertSee('id="drawer-team-member-password"', false)
+        ->assertSee('id="tm-password-input"', false)
+        ->assertSee('id="tm-password-confirmation-input"', false)
         ->assertSee('Login username')
         ->assertDontSee('>Login</th>', false);
 });

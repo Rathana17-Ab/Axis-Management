@@ -81,8 +81,6 @@
                             <i class="fa-solid fa-moon" aria-hidden="true"></i>
                         </button>
 
-                        <x-axis.typography-inspector />
-
                         <div class="relative shrink-0">
                             <button type="button" id="header-profile-btn" onclick="toggleProfileMenu()" class="axis-topbar-pill axis-topbar-profile shrink-0" title="Account menu" aria-label="View profile" aria-haspopup="menu" aria-expanded="false" aria-controls="header-profile-menu">
                                 <span id="top-avatar" class="w-7 h-7 rounded-[10px] bg-gradient-to-br from-[#2F6FD6] to-[#2EC6E8] text-white font-bold text-xs flex items-center justify-center shrink-0">

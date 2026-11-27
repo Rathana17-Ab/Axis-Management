@@ -12,19 +12,27 @@ beforeEach(function () {
 
 describe('store', function () {
     it('adds a team member with login access', function () {
-        $this->postJson(route('admin.api.team.store'), [
+        $password = 'NewPassword123!';
+
+        $response = $this->postJson(route('admin.api.team.store'), [
             'name' => 'New Engineer',
             'job_title' => 'QA Engineer',
             'department' => 'Quality',
             'position' => 'developer',
             'email' => 'qa@eocambo.dev',
+            'password' => $password,
+            'password_confirmation' => $password,
         ])
             ->assertCreated()
             ->assertJsonPath('data.active', true)
             ->assertJsonPath('data.initials', 'NE')
             ->assertJsonMissingPath('data.password');
 
-        expect(User::firstWhere('email', 'qa@eocambo.dev')->can_login)->toBeTrue();
+        $member = User::firstWhere('email', 'qa@eocambo.dev');
+
+        expect($response->getContent())->not->toContain($password)
+            ->and($member->can_login)->toBeTrue()
+            ->and(Hash::check($password, $member->password))->toBeTrue();
     });
 
     it('returns 422 for an email that is already registered', function () {
@@ -35,7 +43,35 @@ describe('store', function () {
             'job_title' => 'QA',
             'position' => 'developer',
             'email' => 'qa@eocambo.dev',
+            'password' => 'NewPassword123!',
+            'password_confirmation' => 'NewPassword123!',
         ])->assertUnprocessable()->assertJsonValidationErrors('email');
+    });
+
+    it('returns 422 when the password confirmation does not match', function () {
+        $this->postJson(route('admin.api.team.store'), [
+            'name' => 'New Engineer',
+            'job_title' => 'QA Engineer',
+            'position' => 'developer',
+            'email' => 'qa@eocambo.dev',
+            'password' => 'NewPassword123!',
+            'password_confirmation' => 'Different123!',
+        ])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('password');
+    });
+
+    it('returns 422 for a password shorter than eight characters', function () {
+        $this->postJson(route('admin.api.team.store'), [
+            'name' => 'New Engineer',
+            'job_title' => 'QA Engineer',
+            'position' => 'developer',
+            'email' => 'qa@eocambo.dev',
+            'password' => 'short',
+            'password_confirmation' => 'short',
+        ])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('password');
     });
 });
 
@@ -89,6 +125,8 @@ describe('directory links', function () {
             'department_id' => $department->id,
             'position_id' => $position->id,
             'email' => 'new-lead@eocambo.dev',
+            'password' => 'NewPassword123!',
+            'password_confirmation' => 'NewPassword123!',
         ])
             ->assertCreated()
             ->assertJsonPath('data.departmentId', $department->id)
@@ -113,6 +151,8 @@ describe('directory links', function () {
             'department_id' => 999999,
             'position_id' => 999999,
             'email' => 'bad-link@eocambo.dev',
+            'password' => 'NewPassword123!',
+            'password_confirmation' => 'NewPassword123!',
         ])
             ->assertUnprocessable()
             ->assertJsonValidationErrors(['department_id', 'position_id']);

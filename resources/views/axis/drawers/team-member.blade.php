@@ -27,5 +27,11 @@
         <x-axis.drawer.field label="Login username (email)" for="tm-email-input" name="email" required span="full">
             <input type="email" id="tm-email-input" placeholder="sokha@eocambo.dev" class="axis-input" required maxlength="255">
         </x-axis.drawer.field>
+        <x-axis.drawer.field label="Password" for="tm-password-input" name="password" required hint="At least 8 characters.">
+            <input type="password" id="tm-password-input" class="axis-input" required minlength="8" autocomplete="new-password">
+        </x-axis.drawer.field>
+        <x-axis.drawer.field label="Confirm password" for="tm-password-confirmation-input" name="password_confirmation" required>
+            <input type="password" id="tm-password-confirmation-input" class="axis-input" required minlength="8" autocomplete="new-password">
+        </x-axis.drawer.field>
     </x-axis.drawer.section>
 </x-axis.drawer>

@@ -30,9 +30,9 @@ Route::post('/logout', [AuthenticatedSessionController::class, 'destroy'])
 
 Route::get('/forgot-password', [PasswordResetController::class, 'showRequestForm'])
     ->middleware('guest')->name('password.request');
-Route::post('/forgot-password', [PasswordResetController::class, 'sendResetLink'])
+Route::post('/forgot-password', [PasswordResetController::class, 'sendResetCode'])
     ->middleware(['guest', 'throttle:password-reset'])->name('password.email');
-Route::get('/reset-password/{token}', [PasswordResetController::class, 'showResetForm'])
+Route::get('/reset-password', [PasswordResetController::class, 'showResetForm'])
     ->middleware('guest')->name('password.reset');
 Route::post('/reset-password', [PasswordResetController::class, 'resetPassword'])
     ->middleware(['guest', 'throttle:password-reset'])->name('password.update');

@@ -167,9 +167,12 @@ select.axis-input option { background-color: var(--sales-bg2); color: var(--sale
    controls into dark UI chrome as well as explicit option colours. */
 select.axis-input,
 select.ent-input,
-select.axis-status-select { color-scheme: dark; }
-select.axis-status-select option { background-color: var(--sales-bg2); color: var(--sales-text); }
+select.axis-status-select,
+select.axis-assignee-select { color-scheme: dark; }
+select.axis-status-select option,
+select.axis-assignee-select option { background-color: var(--sales-bg2); color: var(--sales-text); }
 select.axis-status-select option:checked,
+select.axis-assignee-select option:checked,
 select.axis-input option:checked,
 select.ent-input option:checked { background-color: var(--sales-primary-strong); color: #FFFFFF; }
 

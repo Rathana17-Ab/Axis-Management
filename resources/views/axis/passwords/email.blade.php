@@ -31,7 +31,7 @@
                 @endif
 
                 <h1 id="password-request-title" class="text-base font-bold text-white">Reset your password</h1>
-                <p class="text-xs text-slate-400 mt-1">Enter your Axis email and we’ll send you a secure reset link.</p>
+                <p class="text-xs text-slate-400 mt-1">Enter your Axis email and we’ll send you a 6-digit verification code.</p>
 
                 <form method="POST" action="{{ route('password.email') }}" class="mt-5 space-y-4">
                     @csrf
@@ -46,7 +46,7 @@
                         @enderror
                     </div>
 
-                    <button type="submit" class="btn-primary-glass h-10 w-full text-xs font-semibold">Send reset link</button>
+                    <button type="submit" class="btn-primary-glass h-10 w-full text-xs font-semibold">Send verification code</button>
                 </form>
 
                 <p class="mt-4 text-xs text-slate-400">

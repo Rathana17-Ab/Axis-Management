@@ -37,6 +37,7 @@ class StoreTeamMemberRequest extends FormRequest
             'description' => ['nullable', 'string', 'max:5000'],
             'status' => ['sometimes', Rule::enum(EmployeeStatus::class)],
             'email' => ['required', 'email', 'max:255', 'unique:users,email'],
+            'password' => ['required', 'string', 'min:8', 'confirmed'],
         ];
     }
 }
