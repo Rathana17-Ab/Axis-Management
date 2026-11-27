@@ -69,14 +69,4 @@ class UserFactory extends Factory
             'can_login' => false,
         ]);
     }
-
-    /**
-     * Indicate that the model's email address should be unverified.
-     */
-    public function unverified(): static
-    {
-        return $this->state(fn (array $attributes) => [
-            'email_verified_at' => null,
-        ]);
-    }
 }

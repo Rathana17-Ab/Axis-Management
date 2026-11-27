@@ -134,7 +134,7 @@
                 </button>
                 <button type="submit" class="btn-primary-glass px-4 py-1.5 text-xs font-semibold flex items-center gap-1.5" data-drawer-submit>
                     <i class="fa-solid fa-paper-plane text-[10px]"></i>
-                    <span data-drawer-submit-label id="rep-modal-submit-label">Send report</span>
+                    <span data-drawer-submit-label>Send report</span>
                 </button>
             </div>
         </div>

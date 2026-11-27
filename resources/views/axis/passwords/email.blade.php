@@ -31,7 +31,7 @@
                 @endif
 
                 <h1 id="password-request-title" class="text-base font-bold text-white">Reset your password</h1>
-                <p class="text-xs text-slate-400 mt-1">Enter your Axis email and we’ll send you a 6-digit verification code.</p>
+                <p class="text-xs text-slate-400 mt-1">Enter the exact email on your Axis account and we’ll send you a 6-digit verification code.</p>
 
                 <form method="POST" action="{{ route('password.email') }}" class="mt-5 space-y-4">
                     @csrf

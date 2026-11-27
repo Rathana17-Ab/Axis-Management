@@ -37,24 +37,21 @@ class PasswordResetController extends Controller
             'email' => ['required', 'email', 'max:255'],
         ]);
 
-        $email = $this->normalizeEmail($validated['email']);
-        $user = User::query()->where('email', $email)->first();
+        return $this->issueVerificationCode($request, $validated['email'], false);
+    }
 
-        if ($user !== null && ! Password::getRepository()->recentlyCreatedToken($user)) {
-            $code = Str::password(length: 6, letters: false, numbers: true, symbols: false, spaces: false);
+    /**
+     * Email a fresh verification code from the verification form.
+     */
+    public function resendCode(Request $request): RedirectResponse
+    {
+        $this->normalizeEmailInput($request);
 
-            DB::table('password_reset_tokens')->updateOrInsert(
-                ['email' => $email],
-                ['token' => Hash::make($code), 'created_at' => now()],
-            );
+        $validated = $request->validate([
+            'email' => ['required', 'email', 'max:255'],
+        ]);
 
-            $user->notify(new PasswordResetCode($code));
-        }
-
-        $request->session()->put(self::PENDING_EMAIL_SESSION_KEY, $email);
-
-        return redirect()->route('password.reset')
-            ->with('status', __('passwords.sent'));
+        return $this->issueVerificationCode($request, $validated['email'], true);
     }
 
     /**
@@ -68,7 +65,11 @@ class PasswordResetController extends Controller
             return redirect()->route('password.request');
         }
 
-        return view('axis.passwords.reset', ['email' => $email]);
+        return view('axis.passwords.reset', [
+            'email' => $email,
+            'resendSeconds' => $this->passwordConfigValue('throttle'),
+            'expireMinutes' => $this->passwordConfigValue('expire'),
+        ]);
     }
 
     /**
@@ -88,12 +89,12 @@ class PasswordResetController extends Controller
         $email = $this->normalizeEmail($validated['email']);
         $pendingEmail = $request->session()->get(self::PENDING_EMAIL_SESSION_KEY);
 
-        if (! is_string($pendingEmail) || $pendingEmail !== $email) {
+        if (! is_string($pendingEmail) || $this->normalizeEmail($pendingEmail) !== $email) {
             return back()->withInput($request->only('email'))
                 ->withErrors(['code' => __('passwords.expired_request')]);
         }
 
-        $user = User::query()->where('email', $email)->first();
+        $user = $this->findUserByEmail($email);
 
         if ($user === null) {
             return back()->withInput($request->only('email'))
@@ -102,7 +103,7 @@ class PasswordResetController extends Controller
 
         $status = Password::reset(
             [
-                'email' => $email,
+                'email' => $user->email,
                 'password' => $validated['password'],
                 'password_confirmation' => $validated['password_confirmation'],
                 'token' => $validated['code'],
@@ -129,6 +130,53 @@ class PasswordResetController extends Controller
     }
 
     /**
+     * Create and email a verification code, unless one was issued moments ago.
+     */
+    private function issueVerificationCode(Request $request, string $submittedEmail, bool $requirePendingEmail): RedirectResponse
+    {
+        $email = $this->normalizeEmail($submittedEmail);
+        $pendingEmail = $request->session()->get(self::PENDING_EMAIL_SESSION_KEY);
+
+        if ($requirePendingEmail && (! is_string($pendingEmail) || $this->normalizeEmail($pendingEmail) !== $email)) {
+            return back()->withErrors(['email' => __('passwords.expired_request')]);
+        }
+
+        $user = $this->findUserByEmail($email);
+
+        if ($user !== null && Password::getRepository()->recentlyCreatedToken($user)) {
+            return back()->withInput(['email' => $user->email])
+                ->withErrors([
+                    'email' => __('passwords.resend_throttled', ['seconds' => $this->passwordConfigValue('throttle')]),
+                ]);
+        }
+
+        if ($user !== null) {
+            $email = $user->email;
+            $code = Str::password(length: 6, letters: false, numbers: true, symbols: false, spaces: false);
+
+            DB::table('password_reset_tokens')->updateOrInsert(
+                ['email' => $email],
+                ['token' => Hash::make($code), 'created_at' => now()],
+            );
+
+            $user->notify(new PasswordResetCode($code));
+        }
+
+        $request->session()->put(self::PENDING_EMAIL_SESSION_KEY, $email);
+
+        return redirect()->route('password.reset')
+            ->with('status', __('passwords.sent'));
+    }
+
+    /**
+     * Find an account without depending on the database collation's case sensitivity.
+     */
+    private function findUserByEmail(string $email): ?User
+    {
+        return User::query()->whereRaw('LOWER(email) = ?', [$email])->first();
+    }
+
+    /**
      * Normalize the submitted email before validation and account lookups.
      */
     private function normalizeEmailInput(Request $request): void
@@ -146,5 +194,13 @@ class PasswordResetController extends Controller
     private function normalizeEmail(string $email): string
     {
         return Str::transliterate(Str::lower(trim($email)));
+    }
+
+    /**
+     * Read a value from the configured password broker.
+     */
+    private function passwordConfigValue(string $key): int
+    {
+        return (int) config('auth.passwords.'.config('auth.defaults.passwords').'.'.$key);
     }
 }

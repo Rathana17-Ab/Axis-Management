@@ -2,7 +2,6 @@
 
 namespace App\Providers;
 
-use App\Enums\QueueAccess;
 use App\Enums\RecordShareAbility;
 use App\Enums\WorkspacePermission;
 use App\Http\Controllers\Controller;
@@ -10,21 +9,11 @@ use App\Models\Module;
 use App\Models\ProjectTask;
 use App\Models\RecordShare;
 use App\Models\User;
-use App\Models\WorkQueue;
 use Illuminate\Foundation\Support\Providers\AuthServiceProvider as ServiceProvider;
 use Illuminate\Support\Facades\Gate;
 
 class AuthServiceProvider extends ServiceProvider
 {
-    /**
-     * The model to policy mappings for the application.
-     *
-     * @var array<class-string, class-string>
-     */
-    protected $policies = [
-        //
-    ];
-
     /**
      * Register any authentication / authorization services.
      */
@@ -72,30 +61,6 @@ class AuthServiceProvider extends ServiceProvider
             }
 
             return $this->hasUpdateAccess($user, $record);
-        });
-
-        Gate::define('manage-work-queue', function (?User $user, WorkQueue $queue): bool {
-            $user = Controller::currentWorkspaceUser($user);
-            if ($user === null) {
-                return false;
-            }
-
-            if (! $user->hasWorkspaceRole()) {
-                return true;
-            }
-
-            if ($user->hasWorkspacePermission(WorkspacePermission::WorkQueuesManage)) {
-                return true;
-            }
-
-            if ($queue->owner_id === $user->id) {
-                return true;
-            }
-
-            return $queue->users()
-                ->where('user_id', $user->id)
-                ->where('access', QueueAccess::Editor->value)
-                ->exists();
         });
     }
 

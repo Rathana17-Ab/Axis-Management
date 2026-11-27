@@ -12,8 +12,6 @@ class StoreTeamMemberRequest extends FormRequest
 {
     /**
      * Determine if the user is authorized to make this request.
-     *
-     * The Axis workspace is an open internal console (see routes/web.php).
      */
     public function authorize(): bool
     {

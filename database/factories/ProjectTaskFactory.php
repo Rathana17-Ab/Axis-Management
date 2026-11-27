@@ -61,14 +61,4 @@ class ProjectTaskFactory extends Factory
             'timer_started_at' => now(),
         ]);
     }
-
-    /**
-     * A task assigned by the given leader (or a new one).
-     */
-    public function assignedBy(?User $leader = null): static
-    {
-        return $this->state(fn (array $attributes): array => [
-            'assigned_by_id' => $leader?->id ?? User::factory()->leader(),
-        ]);
-    }
 }

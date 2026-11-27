@@ -78,7 +78,7 @@
         </button>
     </x-slot:footer>
 
-    {{-- Legacy hooks written by renderDevIssueDrawerContent(); the header mirrors the task title --}}
+    {{-- Hooks written by renderDevIssueDrawerContent(); the header mirrors the task title --}}
     <span id="did-task-title" class="hidden"></span>
     <span id="did-task-status" class="hidden"></span>
 </x-axis.drawer>

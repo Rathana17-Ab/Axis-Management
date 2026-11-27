@@ -11,7 +11,6 @@ use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
-use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Facades\Auth;
@@ -98,16 +97,6 @@ class User extends Authenticatable
     }
 
     /**
-     * Tasks assigned to this employee.
-     *
-     * @return HasMany<ProjectTask, $this>
-     */
-    public function assignedTasks(): HasMany
-    {
-        return $this->hasMany(ProjectTask::class, 'emp_id');
-    }
-
-    /**
      * Roles assigned through the workspace permission system.
      *
      * @return BelongsToMany<Role, $this>
@@ -145,16 +134,6 @@ class User extends Authenticatable
     public function positionRecord(): BelongsTo
     {
         return $this->belongsTo(Position::class, 'position_id');
-    }
-
-    /**
-     * Work queues shared with or assigned to this person.
-     *
-     * @return BelongsToMany<WorkQueue, $this>
-     */
-    public function workQueues(): BelongsToMany
-    {
-        return $this->belongsToMany(WorkQueue::class, 'user_work_queue')->withPivot('access');
     }
 
     /**
@@ -213,14 +192,6 @@ class User extends Authenticatable
     public function scopeLeaders(Builder $query): Builder
     {
         return $query->where('position', EmployeePosition::Leader);
-    }
-
-    /**
-     * Employees who are currently active (can be given work).
-     */
-    public function scopeActive(Builder $query): Builder
-    {
-        return $query->where('status', EmployeeStatus::Active);
     }
 
     /**

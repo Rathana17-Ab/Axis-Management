@@ -55,6 +55,9 @@ it('offers only developers as assignees and only leaders as assigners in the new
     $response->assertViewHas(
         'developers',
         fn ($developers): bool => $developers->pluck('id')->all() === [$developer->id]
+    )->assertViewHas(
+        'handlers',
+        fn ($handlers): bool => $handlers->all() === ['Dev One', 'Lead One']
     );
 
     $html = $response->getContent();

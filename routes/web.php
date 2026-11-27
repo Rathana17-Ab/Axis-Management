@@ -34,6 +34,8 @@ Route::post('/forgot-password', [PasswordResetController::class, 'sendResetCode'
     ->middleware(['guest', 'throttle:password-reset'])->name('password.email');
 Route::get('/reset-password', [PasswordResetController::class, 'showResetForm'])
     ->middleware('guest')->name('password.reset');
+Route::post('/reset-password/resend', [PasswordResetController::class, 'resendCode'])
+    ->middleware(['guest', 'throttle:password-reset'])->name('password.resend');
 Route::post('/reset-password', [PasswordResetController::class, 'resetPassword'])
     ->middleware(['guest', 'throttle:password-reset'])->name('password.update');
 

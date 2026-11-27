@@ -18,6 +18,12 @@
             </div>
 
             <div class="px-5 py-5">
+                @if (session('status'))
+                    <div class="mb-4 text-xs text-emerald-300 border border-emerald-400/25 bg-emerald-500/10 rounded-xl px-3 py-2" role="status">
+                        {{ session('status') }}
+                    </div>
+                @endif
+
                 @if ($errors->any())
                     <div class="mb-4 text-xs text-rose-200 bg-rose-500/10 border border-rose-400/30 rounded-xl px-3 py-2" role="alert">
                         {{ $errors->first() }}
@@ -68,6 +74,16 @@
 
                     <button type="submit" class="btn-primary-glass h-10 w-full text-xs font-semibold">Reset password</button>
                 </form>
+
+                <div class="mt-4 flex items-center justify-between gap-3 text-xs text-slate-400">
+                    <span>Didn’t receive the code?</span>
+                    <form method="POST" action="{{ route('password.resend') }}">
+                        @csrf
+                        <input type="hidden" name="email" value="{{ $email }}">
+                        <button type="submit" class="font-semibold text-sky-300 hover:text-sky-200">Resend code</button>
+                    </form>
+                </div>
+                <p class="mt-1 text-[11px] text-slate-500">Codes expire after {{ $expireMinutes }} minutes. Wait {{ $resendSeconds }} seconds between requests.</p>
 
                 <p class="mt-4 text-xs text-slate-400">
                     <a href="{{ route('login') }}" class="font-semibold text-sky-300 hover:text-sky-200">Back to sign in</a>

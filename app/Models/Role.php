@@ -2,7 +2,6 @@
 
 namespace App\Models;
 
-use App\Enums\WorkspaceRole;
 use Database\Factories\RoleFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -33,13 +32,5 @@ class Role extends Model
     public function users(): BelongsToMany
     {
         return $this->belongsToMany(User::class);
-    }
-
-    /**
-     * Whether this is one of the seeded workspace roles.
-     */
-    public function isWorkspaceRole(WorkspaceRole $role): bool
-    {
-        return $this->slug === $role->value;
     }
 }

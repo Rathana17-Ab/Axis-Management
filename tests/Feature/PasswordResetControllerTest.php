@@ -30,6 +30,10 @@ test('redirects signed-in users away from the password reset forms', function ()
     $this->actingAs($user)
         ->get(route('password.reset'))
         ->assertRedirect(RouteServiceProvider::HOME);
+
+    $this->actingAs($user)
+        ->post(route('password.resend'), ['email' => $user->email])
+        ->assertRedirect(RouteServiceProvider::HOME);
 });
 
 test('redirects guests to the request form when no code is pending', function () {
@@ -90,14 +94,90 @@ test('requires a valid email when requesting a verification code', function (arr
     'malformed email' => [['email' => 'not-an-email'], 'email'],
 ]);
 
+test('does not issue another code before the resend cooldown expires', function () {
+    Notification::fake();
+
+    $user = User::factory()->create(['email' => 'cooldown-code@eocambo.dev']);
+
+    $this->post(route('password.email'), ['email' => $user->email])
+        ->assertRedirect(route('password.reset'));
+
+    $this->from(route('password.reset'))
+        ->post(route('password.resend'), ['email' => $user->email])
+        ->assertSessionHasErrors(['email' => __('passwords.resend_throttled', ['seconds' => 60])]);
+
+    Notification::assertSentTimes(PasswordResetCode::class, 1);
+});
+
+test('resends a fresh verification code after the cooldown expires', function () {
+    Notification::fake();
+
+    $user = User::factory()->create(['email' => 'resend-code@eocambo.dev']);
+
+    $this->post(route('password.email'), ['email' => $user->email]);
+
+    $this->travel(61)->seconds();
+
+    $this->from(route('password.reset'))
+        ->post(route('password.resend'), ['email' => $user->email])
+        ->assertRedirect(route('password.reset'))
+        ->assertSessionHas('status', __('passwords.sent'));
+
+    $sentCodes = [];
+
+    Notification::assertSentTo($user, function (PasswordResetCode $notification) use (&$sentCodes): bool {
+        $sentCodes[] = $notification->code;
+
+        return true;
+    });
+
+    expect($sentCodes)->toHaveCount(2);
+
+    $storedHash = DB::table('password_reset_tokens')
+        ->where('email', $user->email)
+        ->value('token');
+
+    expect(Hash::check((string) end($sentCodes), (string) $storedHash))->toBeTrue();
+});
+
+test('requires a pending request before resending a code', function () {
+    Notification::fake();
+
+    $user = User::factory()->create(['email' => 'no-resend@eocambo.dev']);
+
+    $this->from(route('password.request'))
+        ->post(route('password.resend'), ['email' => $user->email])
+        ->assertSessionHasErrors(['email' => __('passwords.expired_request')]);
+
+    Notification::assertNothingSent();
+});
+
+test('does not resend a code to an email other than the pending one', function () {
+    Notification::fake();
+
+    $pendingUser = User::factory()->create(['email' => 'pending-resend@eocambo.dev']);
+    $otherUser = User::factory()->create(['email' => 'other-resend@eocambo.dev']);
+
+    $this->post(route('password.email'), ['email' => $pendingUser->email]);
+
+    $this->from(route('password.reset'))
+        ->post(route('password.resend'), ['email' => $otherUser->email])
+        ->assertSessionHasErrors(['email' => __('passwords.expired_request')]);
+
+    Notification::assertSentTimes(PasswordResetCode::class, 1);
+});
+
 test('throttles rapid verification code requests', function () {
     Notification::fake();
 
     $user = User::factory()->create(['email' => 'throttled-code@eocambo.dev']);
 
-    for ($attempt = 1; $attempt <= 5; $attempt++) {
+    $this->post(route('password.email'), ['email' => $user->email])
+        ->assertRedirect(route('password.reset'));
+
+    for ($attempt = 2; $attempt <= 5; $attempt++) {
         $this->post(route('password.email'), ['email' => $user->email])
-            ->assertRedirect(route('password.reset'));
+            ->assertSessionHasErrors(['email' => __('passwords.resend_throttled', ['seconds' => 60])]);
     }
 
     $this->post(route('password.email'), ['email' => $user->email])
@@ -118,6 +198,9 @@ test('renders the verification form after a code request', function () {
         ->assertSee('<section class="axis-modal w-full max-w-md overflow-hidden" aria-labelledby="password-reset-title">', false)
         ->assertSee('Choose a new password')
         ->assertSee('action="'.route('password.update').'"', false)
+        ->assertSee('action="'.route('password.resend').'"', false)
+        ->assertSee('Resend code')
+        ->assertSee('Codes expire after 15 minutes. Wait 60 seconds between requests.')
         ->assertSee('name="email"', false)
         ->assertSee('name="code"', false)
         ->assertDontSee('name="token"', false)
@@ -154,6 +237,40 @@ test('resets the password and redirects to sign in with a valid verification cod
 
     $this->assertGuest();
     $this->assertDatabaseMissing('password_reset_tokens', ['email' => $user->email]);
+
+    expect(Hash::check('Replacement##456', $user->fresh()->password))->toBeTrue();
+});
+
+test('sends and accepts a code for any account with a usable email', function () {
+    Notification::fake();
+
+    $user = User::factory()->create([
+        'email' => 'MixedCase@EOCAMBO.dev',
+        'can_login' => false,
+        'password' => Hash::make('Original##123'),
+    ]);
+
+    $this->post(route('password.email'), ['email' => 'mixedcase@eocambo.dev'])
+        ->assertRedirect(route('password.reset'));
+
+    $this->get(route('password.reset'))->assertSee('MixedCase@EOCAMBO.dev');
+
+    $sentCode = null;
+
+    Notification::assertSentTo($user, function (PasswordResetCode $notification) use (&$sentCode): bool {
+        $sentCode = $notification->code;
+
+        return true;
+    });
+
+    $this->from(route('password.reset'))
+        ->post(route('password.update'), [
+            'email' => 'MIXEDCASE@EOCAMBO.DEV',
+            'code' => $sentCode,
+            'password' => 'Replacement##456',
+            'password_confirmation' => 'Replacement##456',
+        ])
+        ->assertRedirect(route('login'));
 
     expect(Hash::check('Replacement##456', $user->fresh()->password))->toBeTrue();
 });

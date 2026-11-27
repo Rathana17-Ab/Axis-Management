@@ -195,8 +195,8 @@ class AxisWorkspaceController extends Controller
 
         $activeProject = $projects->firstWhere('id', $activeProjectId) ?? $projects->sortBy('id')->first();
 
-        $handlers = collect(config('axis.handlers'))
-            ->merge($teamMembers->pluck('name'))
+        $handlers = $activeEmployees->pluck('name')
+            ->filter(fn ($name): bool => is_string($name) && $name !== '')
             ->unique()
             ->values();
 

@@ -3,13 +3,11 @@
 namespace App\Models;
 
 use App\Enums\FeatureUpgradeState;
-use Database\Factories\FeatureUpgradeFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class FeatureUpgrade extends Model
 {
-    /** @use HasFactory<FeatureUpgradeFactory> */
     use HasFactory;
 
     protected $fillable = ['key', 'label', 'description', 'state'];

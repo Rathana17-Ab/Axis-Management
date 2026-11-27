@@ -28,12 +28,4 @@ class PositionFactory extends Factory
             'is_active' => true,
         ];
     }
-
-    /**
-     * A position whose members may assign tasks to others.
-     */
-    public function leader(): static
-    {
-        return $this->state(fn (array $attributes): array => ['is_leader' => true]);
-    }
 }

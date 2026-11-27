@@ -10,7 +10,7 @@ use Illuminate\Validation\Rule;
 class UpdateTeamMemberLoginRequest extends FormRequest
 {
     /**
-     * The Axis workspace is an open internal console (see routes/web.php).
+     * Determine if the user is authorized to make this request.
      */
     public function authorize(): bool
     {
