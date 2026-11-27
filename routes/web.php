@@ -12,6 +12,7 @@ use App\Http\Controllers\ProfilePhotoController;
 use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\ProjectTaskController;
 use App\Http\Controllers\RecordShareController;
+use App\Http\Controllers\RegisteredUserController;
 use App\Http\Controllers\RoleController;
 use App\Http\Controllers\TaskIssueNoteController;
 use App\Http\Controllers\TeamAccessController;
@@ -24,6 +25,10 @@ Route::get('/login', [AuthenticatedSessionController::class, 'create'])
     ->middleware('guest')->name('login');
 Route::post('/login', [AuthenticatedSessionController::class, 'store'])
     ->middleware(['guest', 'throttle:login'])->name('login.store');
+Route::get('/register', [AuthenticatedSessionController::class, 'create'])
+    ->middleware('guest')->name('register');
+Route::post('/register', [RegisteredUserController::class, 'store'])
+    ->middleware(['guest', 'throttle:register'])->name('register.store');
 Route::post('/logout', [AuthenticatedSessionController::class, 'destroy'])
     ->middleware('auth')->name('logout');
 
