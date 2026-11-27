@@ -3,6 +3,10 @@
 use App\Models\CtoReport;
 use App\Models\User;
 
+beforeEach(function () {
+    $this->actingAs(User::factory()->create());
+});
+
 it('submits a report as the acting team member dated today', function () {
     $this->freezeTime();
     $member = User::factory()->create(['name' => 'Ti Tong']);
@@ -97,6 +101,8 @@ it('updates an existing report', function () {
 
 it('keeps not-null report fields valid when the update clears them', function () {
     $this->freezeTime();
+    $this->actingAs(User::factory()->create(['name' => 'Signed-in Developer']));
+
     $report = CtoReport::factory()->create([
         'recipient' => 'Dear Bong and team',
         'handler_name' => 'Ti Tong',
@@ -118,7 +124,7 @@ it('keeps not-null report fields valid when the update clears them', function ()
 
     $report->refresh();
     expect($report->report_date->toDateString())->toBe(now()->toDateString())
-        ->and($report->handler_name)->toBe('Unknown Developer');
+        ->and($report->handler_name)->toBe('Signed-in Developer');
 });
 
 it('deletes a report', function () {

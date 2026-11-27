@@ -15,6 +15,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 class User extends Authenticatable
@@ -27,7 +28,7 @@ class User extends Authenticatable
      *
      * @var list<string>
      */
-    protected $fillable = ['name', 'email', 'password', 'job_title', 'department', 'department_id', 'position', 'position_id', 'description', 'status', 'avatar_initials', 'can_login'];
+    protected $fillable = ['name', 'email', 'password', 'job_title', 'department', 'department_id', 'position', 'position_id', 'description', 'status', 'avatar_initials', 'avatar_path', 'can_login'];
 
     /**
      * The attributes that should be hidden for serialization.
@@ -236,6 +237,18 @@ class User extends Authenticatable
     public function isDeveloper(): bool
     {
         return $this->position === EmployeePosition::Developer;
+    }
+
+    /**
+     * Public URL for the uploaded profile photo, or null when only initials are set.
+     *
+     * @return Attribute<?string, never>
+     */
+    protected function avatarUrl(): Attribute
+    {
+        return Attribute::get(fn (): ?string => $this->avatar_path
+            ? Storage::disk('public')->url($this->avatar_path)
+            : null);
     }
 
     /**

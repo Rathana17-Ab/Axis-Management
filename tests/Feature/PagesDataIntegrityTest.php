@@ -1,10 +1,12 @@
 <?php
 
 use App\Models\Module;
+use App\Models\User;
 use Database\Seeders\AxisSystemSeeder;
 
 beforeEach(function () {
     $this->seed(AxisSystemSeeder::class);
+    $this->actingAs(User::query()->orderBy('id')->firstOrFail());
 });
 
 it('verifies Dashboard page loads with only the module, project, task and team lists', function () {

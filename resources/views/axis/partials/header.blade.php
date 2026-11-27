@@ -77,14 +77,16 @@
                             <i class="fa-regular fa-file-lines" aria-hidden="true"></i>
                         </button>
 
-                        <button type="button" onclick="openModal('login-modal')" class="axis-topbar-pill axis-topbar-profile shrink-0" title="Switch user" aria-label="Switch user">
+                        <button type="button" id="header-theme-toggle" onclick="toggleTheme()" class="axis-topbar-icon-btn" aria-label="Switch to light theme" aria-pressed="false" title="Switch to light theme">
+                            <i class="fa-solid fa-moon" aria-hidden="true"></i>
+                        </button>
+
+                        <button type="button" onclick="switchPage('profile')" class="axis-topbar-pill axis-topbar-profile shrink-0" title="View profile" aria-label="View profile">
                             <span id="top-avatar" class="w-7 h-7 rounded-[10px] bg-gradient-to-br from-[#2F6FD6] to-[#2EC6E8] text-white font-bold text-xs flex items-center justify-center shrink-0">
                                 {{ $currentUser?->initials }}
                             </span>
                             <span id="top-username" class="tb-show-2xl font-medium whitespace-nowrap">{{ $currentUser?->name }}</span>
-                            <svg class="axis-topbar-pill__chevron tb-show-xs w-3 h-3 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
-                            </svg>
+                            <i class="fa-solid fa-angle-right text-[11px] shrink-0" aria-hidden="true"></i>
                         </button>
                     </div>
                 </header>

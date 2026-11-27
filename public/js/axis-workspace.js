@@ -231,6 +231,13 @@ window.updateDynamicHeader = function(pageId) {
             createLabel: 'New module',
             createModal: 'modal-add-project'
         },
+        'profile': {
+            section: 'Account',
+            route: 'admin/profile',
+            title: 'Profile',
+            badge: currentUser.positionName || currentUser.title || 'Member',
+            searchPlaceholder: 'Search your workspace…'
+        },
         'projects': {
             section: 'Project Management',
             route: 'admin/project',
@@ -395,7 +402,6 @@ const AxisSearch = (() => {
             }],
             ['add-person', 'Add a person', 'Invite someone to the team', () => openModal('modal-team-member')],
             ['new-report', 'Send a report', 'Daily or weekly update', () => openModal('modal-report')],
-            ['switch-user', 'Switch user', 'Sign in as someone else', () => openModal('login-modal')],
         ].forEach(([key, title, subtitle, run]) => items.push({ type: 'action', key, title, subtitle, haystack: `${title} ${subtitle}`, run }));
 
         axisProjects.forEach(ap => items.push({
@@ -832,8 +838,42 @@ window.openProjectTaskList = function(projectId) {
         activeProjectId = found.id;
     }
     switchPage('task-detail');
-    updateDynamicHeader('task-detail');
 };
+
+// ---------------------------------------------------------------------
+// Theme: dark is the default; a saved light preference is applied before first paint
+// ---------------------------------------------------------------------
+const THEME_KEY = 'axis.theme';
+
+window.setTheme = function(theme, save = true) {
+    const isLight = theme === 'light';
+    document.documentElement.classList.toggle('dark', !isLight);
+    const button = document.getElementById('header-theme-toggle');
+    if (button) {
+        const label = isLight ? 'Switch to dark theme' : 'Switch to light theme';
+        button.setAttribute('aria-label', label);
+        button.setAttribute('aria-pressed', isLight ? 'true' : 'false');
+        button.title = label;
+        const icon = button.querySelector('i');
+        if (icon) icon.className = isLight ? 'fa-solid fa-sun' : 'fa-solid fa-moon';
+    }
+    if (save) {
+        try { localStorage.setItem(THEME_KEY, isLight ? 'light' : 'dark'); } catch (e) { /* keep for this visit */ }
+    }
+};
+
+window.toggleTheme = function() {
+    setTheme(document.documentElement.classList.contains('dark') ? 'light' : 'dark');
+};
+
+function initTheme() {
+    let theme = 'dark';
+    try {
+        const saved = localStorage.getItem(THEME_KEY);
+        if (saved === 'light' || saved === 'dark') theme = saved;
+    } catch (e) { /* default to dark */ }
+    setTheme(theme, false);
+}
 
 // ---------------------------------------------------------------------
 // Left sidebar: always visible on desktop; below 1024px it slides in from the header's menu button
@@ -6285,97 +6325,8 @@ window.handleResetTeamMemberPassword = function(e) {
 };
 
 // =====================================================================
-// SESSION SWITCHER & MODALS
+// MODALS
 // =====================================================================
-/** Reset the Switch user dialog each time it opens and mark who is signed in. */
-function prepareLoginModal() {
-    const email = document.getElementById('login-email-input');
-    if (email) email.value = currentUser?.email || '';
-    const pass = document.getElementById('login-pass-input');
-    if (pass) pass.value = '';
-    document.getElementById('login-error-msg')?.classList.add('hidden');
-    markCurrentSwitchCard();
-}
-
-function markCurrentSwitchCard() {
-    document.querySelectorAll('[data-switch-email]').forEach(card => {
-        const isCurrent = (card.dataset.switchEmail || '').toLowerCase() === (currentUser?.email || '').toLowerCase();
-        card.classList.toggle('is-current', isCurrent);
-        card.setAttribute('aria-current', isCurrent ? 'true' : 'false');
-    });
-}
-
-/** Disable the dialog's actions while a sign-in request is in flight. */
-function setLoginBusy(busy) {
-    const submit = document.getElementById('login-submit-btn');
-    if (submit) {
-        submit.disabled = busy;
-        submit.textContent = busy ? 'Signing in…' : 'Sign in';
-    }
-    document.querySelectorAll('[data-switch-email]').forEach(card => { card.disabled = busy; });
-}
-
-function showLoginError(message) {
-    const errBox = document.getElementById('login-error-msg');
-    errBox.textContent = message;
-    errBox.classList.remove('hidden');
-}
-
-window.quickSwitchSession = function(email) {
-    if ((currentUser?.email || '').toLowerCase() === String(email).toLowerCase()) {
-        closeModal('login-modal');
-        showToast(`You're already signed in as ${currentUser.name}`);
-        return;
-    }
-    document.getElementById('login-email-input').value = email;
-    handleManualSignIn(null, { withPassword: false });
-};
-
-window.handleManualSignIn = async function(e, options = { withPassword: true }) {
-    if (e) e.preventDefault();
-    const email = document.getElementById('login-email-input').value.trim().toLowerCase();
-    const password = document.getElementById('login-pass-input')?.value || '';
-
-    if (!email) return showLoginError('Enter an email address.');
-    if (options.withPassword && !password) return showLoginError('Enter the password for this account.');
-
-    let res;
-    setLoginBusy(true);
-    try {
-        res = await AxisAPI.request(AxisAPI.url('session.switch'), 'POST', {
-            email: email,
-            password: options.withPassword ? password : null
-        });
-    } catch (err) {
-        showLoginError(err.message || 'Unable to switch user.');
-        return;
-    } finally {
-        setLoginBusy(false);
-    }
-    const member = res.data;
-
-    // Laravel regenerates the session (and CSRF token) on sign-in
-    if (res.csrf_token) document.querySelector('meta[name="csrf-token"]').content = res.csrf_token;
-
-    currentUser = teamMembers.find(m => m.id === member.id) || member;
-    Object.assign(currentUser, member);
-    document.getElementById('login-error-msg').classList.add('hidden');
-    closeModal('login-modal');
-
-    const initials = currentUser.initials || currentUser.name.split(' ').map(w => w[0]).join('').substring(0, 2).toUpperCase();
-    document.getElementById('sb-avatar').textContent = initials;
-    document.getElementById('top-avatar').textContent = initials;
-    document.getElementById('sb-name').textContent = currentUser.name;
-    document.getElementById('top-username').textContent = currentUser.name;
-    document.getElementById('sb-role').textContent = currentUser.title || '';
-    markCurrentSwitchCard();
-
-    // A successful sign-in always opens the dashboard.
-    switchPage('dashboard');
-
-    showToast(`You're now signed in as ${currentUser.name}`);
-};
-
 window.openModal = function(id) {
     const el = document.getElementById(id);
     if (!el) return;
@@ -6387,7 +6338,6 @@ window.openModal = function(id) {
     }
     el.classList.remove('hidden');
     el.classList.add('flex');
-    if (id === 'login-modal') prepareLoginModal();
     el.querySelector('[data-autofocus]')?.focus();
 };
 
@@ -6923,6 +6873,7 @@ window.addEventListener('DOMContentLoaded', () => {
     renderTaskDetailPage();
     renderReportsPage();
     renderTeamTable();
+    initTheme();
     initSidebar();
     syncQuickModulePercentages();
     syncHeaderTimerPill();
@@ -6932,7 +6883,6 @@ window.addEventListener('DOMContentLoaded', () => {
     document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape') {
             closeDevIssueDrawer();
-            closeModal('login-modal');
             toggleSidebar(false);
         }
     });

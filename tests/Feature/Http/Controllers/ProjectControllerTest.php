@@ -3,6 +3,11 @@
 use App\Enums\WorkStatus;
 use App\Models\Module;
 use App\Models\Project;
+use App\Models\User;
+
+beforeEach(function () {
+    $this->actingAs(User::factory()->create());
+});
 
 it('creates a top-level project', function () {
     $this->postJson(route('admin.api.projects.store'), [

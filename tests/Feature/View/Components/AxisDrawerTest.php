@@ -3,6 +3,10 @@
 use App\Models\Module;
 use App\Models\User;
 
+beforeEach(function () {
+    $this->actingAs(User::factory()->create());
+});
+
 it('renders the standard header, body and footer structure', function () {
     $view = $this->blade(
         '<x-axis.drawer id="drawer-demo" title="Create New Project" description="Set it up." breadcrumb="Projects" icon="fa-folder-plus" submit="save(event)">Body content</x-axis.drawer>'

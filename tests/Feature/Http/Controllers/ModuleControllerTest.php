@@ -10,10 +10,15 @@ use App\Models\Role;
 use App\Models\User;
 use Database\Seeders\SalesAccessSeeder;
 
+beforeEach(function () {
+    $this->actingAs(User::factory()->create());
+});
+
 describe('store', function () {
     it('creates a module with the next code and an initial architecture task', function () {
         $this->freezeTime();
-        User::factory()->create(['name' => 'Kong Rathana']);
+        $kong = User::factory()->create(['name' => 'Kong Rathana']);
+        $this->actingAs($kong);
         Module::factory()->create(['code' => 'PROJ-1888']);
         $project = Project::factory()->create(['name' => 'EOT Axis']);
         $lead = User::factory()->create(['name' => 'Ti Tong']);
@@ -195,8 +200,9 @@ describe('reorder', function () {
             ->and($modules[1]->fresh()->sort_order)->toBe(3);
     });
 
-    it('lets the legacy open console reorder through the fallback member', function () {
-        User::factory()->create(['can_login' => true]);
+    it('lets a signed-in legacy member reorder the modules they can see', function () {
+        $member = User::factory()->create(['can_login' => true]);
+        $this->actingAs($member);
         $modules = collect([1, 2])->map(fn (int $order): Module => Module::factory()->create(['sort_order' => $order]));
 
         $this->postJson(route('admin.api.modules.reorder'), ['ordered_ids' => [$modules[1]->id, $modules[0]->id]])

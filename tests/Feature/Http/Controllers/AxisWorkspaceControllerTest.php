@@ -10,7 +10,7 @@ use App\Models\User;
 use Database\Seeders\SalesAccessSeeder;
 
 it('opens the workspace on the page matching each admin route', function (string $routeName, string $page) {
-    User::factory()->create();
+    $this->actingAs(User::factory()->create());
 
     $this->get(route($routeName))
         ->assertOk()
@@ -19,6 +19,7 @@ it('opens the workspace on the page matching each admin route', function (string
         ->assertSee('<div id="page-'.$page.'" class="app-page active-page space-y-5">', false);
 })->with([
     'dashboard' => ['admin.dashboard', 'dashboard'],
+    'profile' => ['admin.profile', 'profile'],
     'projects' => ['admin.projects.index', 'projects'],
     'modules' => ['admin.modules.index', 'modules'],
     'cto reports' => ['admin.reports.index', 'reports'],
@@ -26,6 +27,7 @@ it('opens the workspace on the page matching each admin route', function (string
 ]);
 
 it('opens the task list detail for the requested project', function () {
+    $this->actingAs(User::factory()->create());
     $project = Module::factory()->create();
 
     $this->get(route('admin.projects.tasks', $project))
@@ -35,11 +37,14 @@ it('opens the task list detail for the requested project', function () {
 });
 
 it('returns 404 for the task list of a missing project', function () {
+    $this->actingAs(User::factory()->create());
+
     $this->get('/admin/project-task-list/999')->assertNotFound();
 });
 
 it('offers only developers as assignees and only leaders as assigners in the new task drawer', function () {
     $developer = User::factory()->create(['name' => 'Dev One']);
+    $this->actingAs($developer);
     $leader = User::factory()->leader()->create(['name' => 'Lead One']);
     User::factory()->inactive()->create(['name' => 'Former Dev']);
 
@@ -64,6 +69,7 @@ it('offers only developers as assignees and only leaders as assigners in the new
 });
 
 it('renders only the module, project, task and team lists on the dashboard', function () {
+    $this->actingAs(User::factory()->create());
     Module::factory()->create(['name' => 'Zeta Module', 'sort_order' => 2]);
     Module::factory()->create(['name' => 'Alpha Module', 'sort_order' => 1]);
 
@@ -125,6 +131,7 @@ it('renders only the module, project, task and team lists on the dashboard', fun
 });
 
 it('hydrates running timers with server-accurate elapsed seconds', function () {
+    $this->actingAs(User::factory()->create());
     $this->freezeTime();
     $task = ProjectTask::factory()->running()->create(['act_seconds' => 100]);
     $this->travel(90)->seconds();
@@ -139,6 +146,7 @@ it('hydrates running timers with server-accurate elapsed seconds', function () {
 });
 
 it('escapes user content in the hydrated state so it cannot break out of the script tag', function () {
+    $this->actingAs(User::factory()->create());
     Module::factory()->create(['name' => '</script><script>alert(1)</script>']);
 
     $this->get(route('admin.projects.index'))
@@ -168,7 +176,7 @@ it('offers module reordering to a signed-in Sales Person', function () {
 });
 
 it('renders the top header bar with page title, live save status and reload', function () {
-    User::factory()->create();
+    $this->actingAs(User::factory()->create());
 
     $this->get(route('admin.projects.index'))
         ->assertOk()
@@ -182,11 +190,65 @@ it('renders the top header bar with page title, live save status and reload', fu
         ->assertSee('role="combobox"', false)
         ->assertSee('id="header-sync-pill"', false)
         ->assertSee('aria-label="Reload the latest data"', false)
-        ->assertSee('id="header-create-btn"', false);
+        ->assertSee('id="header-create-btn"', false)
+        ->assertSee('onclick="switchPage(\'profile\')"', false)
+        ->assertSee('aria-label="View profile"', false)
+        ->assertDontSee('<form method="POST" action="'.route('logout').'" class="shrink-0">', false)
+        ->assertDontSee('<form method="POST" action="'.route('logout').'" class="w-full">', false)
+        ->assertDontSee('Switch user');
+});
+
+it('requires authentication to open the profile page', function () {
+    $this->get(route('admin.profile'))
+        ->assertRedirect(route('login'));
+});
+
+it('shows profile details, photo upload, password change, and a separate sign-out action', function () {
+    $member = User::factory()->create([
+        'name' => 'Smith Profile',
+        'email' => 'smith.profile@eocambo.dev',
+        'job_title' => 'Deployment Lead',
+        'description' => 'Handles releases',
+        'avatar_path' => 'avatars/profile.png',
+    ]);
+
+    $this->actingAs($member)
+        ->get(route('admin.profile'))
+        ->assertOk()
+        ->assertViewHas('initialPage', 'profile')
+        ->assertSee('<div id="page-profile" class="app-page active-page space-y-5">', false)
+        ->assertSee('Profile photo')
+        ->assertSee('storage/avatars/profile.png')
+        ->assertSee('Login username')
+        ->assertSee('smith.profile@eocambo.dev')
+        ->assertSee('Deployment Lead')
+        ->assertSee('Handles releases')
+        ->assertSee('id="profile-photo-upload"', false)
+        ->assertSee('Remove photo')
+        ->assertSee('Change password')
+        ->assertSee('name="current_password"', false)
+        ->assertSee('name="password"', false)
+        ->assertSee('name="password_confirmation"', false)
+        ->assertSee('id="profile-password-update"', false)
+        ->assertSee('id="profile-sign-out"', false)
+        ->assertSee('action="'.route('logout').'"', false)
+        ->assertSee('aria-label="Sign out"', false)
+        ->assertDontSee('value="password"', false);
+});
+
+it('renders a theme toggle and applies the saved theme before first paint', function () {
+    $this->actingAs(User::factory()->create());
+
+    $this->get(route('admin.projects.index'))
+        ->assertOk()
+        ->assertSee('id="header-theme-toggle"', false)
+        ->assertSee('onclick="toggleTheme()"', false)
+        ->assertSee('aria-label="Switch to light theme"', false)
+        ->assertSee("localStorage.getItem('axis.theme')", false);
 });
 
 it('shows the live in-progress count in the projects metadata pills', function () {
-    User::factory()->create();
+    $this->actingAs(User::factory()->create());
     Module::factory()->count(2)->create();
     Module::factory()->create(['status' => WorkStatus::Finished]);
 
@@ -195,6 +257,7 @@ it('shows the live in-progress count in the projects metadata pills', function (
 });
 
 it('renders the task page KPI strip with the shared KPI card', function () {
+    $this->actingAs(User::factory()->create());
     $project = Module::factory()->create();
 
     $this->get(route('admin.projects.tasks', $project))
@@ -206,7 +269,7 @@ it('renders the task page KPI strip with the shared KPI card', function () {
 });
 
 it('does not show a fabricated notification count on the header bell', function () {
-    User::factory()->create();
+    $this->actingAs(User::factory()->create());
 
     $this->get(route('admin.projects.index'))
         ->assertOk()
@@ -216,7 +279,7 @@ it('does not show a fabricated notification count on the header bell', function 
 });
 
 it('fills the projects status banner from live data instead of fixed text', function () {
-    User::factory()->create();
+    $this->actingAs(User::factory()->create());
 
     $this->get(route('admin.projects.index'))
         ->assertOk()
@@ -226,7 +289,7 @@ it('fills the projects status banner from live data instead of fixed text', func
 });
 
 it('lets the new task drawer pick any module, labelled with its project', function () {
-    User::factory()->create();
+    $this->actingAs(User::factory()->create());
     $project = Project::factory()->create(['name' => 'EOT Axis']);
     $sales = Module::factory()->for($project)->create(['code' => 'PROJ-1888', 'name' => 'Axis Sales']);
     Module::factory()->for($project)->create(['code' => 'PROJ-1889', 'name' => 'Axis Hotel Commerce']);

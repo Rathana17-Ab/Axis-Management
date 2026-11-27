@@ -165,19 +165,12 @@ it('hydrates the workspace with permission-aware client flags', function () {
         });
 });
 
-it('hides administration flags from guests in the open console', function () {
+it('redirects guests to sign-in before the workspace shell opens', function () {
     $this->get(route('admin.dashboard'))
-        ->assertOk()
-        ->assertSee('id="nav-team"', false)
-        ->assertViewHas('bootstrap', function (array $bootstrap): bool {
-            return $bootstrap['isSignedIn'] === false
-                && $bootstrap['roleKeys'] === []
-                && $bootstrap['permissions'] === []
-                && ! $bootstrap['canAccessAdministration']
-                && ! $bootstrap['canViewWorkQueues']
-                && ! $bootstrap['canViewSharing']
-                && ! $bootstrap['canViewP18'];
-        });
+        ->assertRedirect(route('login'));
+
+    $this->get(route('admin.team.index'))
+        ->assertRedirect(route('login'));
 });
 
 it('forbids Sales Person from changing administration records', function () {
@@ -352,11 +345,11 @@ it('validates administration payloads for authorized admins', function () {
     ])->assertUnprocessable()->assertJsonValidationErrors(['shareable_type', 'ability']);
 });
 
-it('requires a signed-in session for the new workspace administration endpoints', function () {
-    $this->get(route('admin.dashboard'))->assertOk();
+it('requires a signed-in session for the workspace administration endpoints', function () {
+    $this->get(route('admin.dashboard'))->assertRedirect(route('login'));
 
     foreach (['admin.roles.index', 'admin.work-queues.index', 'admin.sharing.index', 'admin.p18.index'] as $routeName) {
-        $this->get(route($routeName))->assertUnauthorized();
+        $this->get(route($routeName))->assertRedirect(route('login'));
     }
 
     $this->postJson(route('admin.api.work-queues.store'), ['name' => 'Anonymous queue'])->assertUnauthorized();

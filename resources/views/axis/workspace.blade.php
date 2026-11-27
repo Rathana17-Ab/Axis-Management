@@ -4,8 +4,6 @@
     <!-- Toast Notifications -->
     <div id="toast-container" class="fixed bottom-4 right-4 z-[300] flex flex-col gap-2 pointer-events-none"></div>
 
-    @include('axis.partials.login-modal')
-
     <!-- ===================================================================== -->
     <!-- MAIN AUTHENTICATED WORKSPACE (Opens Immediately)                      -->
     <!-- ===================================================================== -->
@@ -27,6 +25,7 @@
                 @include('axis.pages.task-detail')
                 @include('axis.pages.reports')
                 @include('axis.pages.team')
+                @include('axis.pages.profile')
                 @include('axis.pages.roles')
                 @include('axis.pages.work-queues')
                 @include('axis.pages.sharing')

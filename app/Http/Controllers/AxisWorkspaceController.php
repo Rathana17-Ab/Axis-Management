@@ -41,6 +41,7 @@ class AxisWorkspaceController extends Controller
      */
     private const PAGES = [
         'admin.dashboard' => 'dashboard',
+        'admin.profile' => 'profile',
         'admin.projects.index' => 'projects',
         'admin.modules.index' => 'modules',
         'admin.projects.tasks' => 'task-detail',
@@ -89,7 +90,6 @@ class AxisWorkspaceController extends Controller
         'work-queues.index', 'work-queues.store', 'work-queues.update', 'work-queues.members', 'work-queues.destroy',
         'record-shares.index', 'record-shares.store', 'record-shares.destroy',
         'feature-upgrades.index', 'feature-upgrades.update',
-        'session.switch',
     ];
 
     /**
@@ -200,12 +200,6 @@ class AxisWorkspaceController extends Controller
             ->unique()
             ->values();
 
-        $quickSwitchEmails = collect(config('axis.quick_switch_emails'));
-        $quickSwitchMembers = $teamMembers
-            ->filter(fn (User $member): bool => $quickSwitchEmails->contains($member->email))
-            ->sortBy(fn (User $member): int|false => $quickSwitchEmails->search($member->email))
-            ->values();
-
         return view('axis.workspace', [
             'initialPage' => $initialPage,
             'projects' => $projects,
@@ -215,7 +209,6 @@ class AxisWorkspaceController extends Controller
             'leaders' => $leaders,
             'developers' => $developers,
             'axisProjects' => $axisProjects,
-            'quickSwitchMembers' => $quickSwitchMembers->isNotEmpty() ? $quickSwitchMembers : $teamMembers->take(4),
             'currentUser' => $currentUser,
             'canAccessAdministration' => $canAccessAdministration,
             'canViewWorkQueues' => $canViewWorkQueues,
@@ -256,6 +249,7 @@ class AxisWorkspaceController extends Controller
                     ->mapWithKeys(fn (string $name): array => [$name => $this->routeTemplate('admin.api.'.$name)]),
                 'pageUrls' => [
                     'dashboard' => route('admin.dashboard', absolute: false),
+                    'profile' => route('admin.profile', absolute: false),
                     'projects' => route('admin.projects.index', absolute: false),
                     'modules' => route('admin.modules.index', absolute: false),
                     'task-detail' => $this->routeTemplate('admin.projects.tasks'),

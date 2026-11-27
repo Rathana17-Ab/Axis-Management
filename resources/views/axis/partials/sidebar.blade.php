@@ -43,7 +43,7 @@
             </nav>
 
             <div class="axis-sidebar__footer">
-                <button type="button" onclick="openModal('login-modal')" class="axis-sidebar__profile" aria-label="Switch user — signed in as {{ $currentUser?->name }}">
+                <button type="button" onclick="switchPage('profile')" class="axis-sidebar__profile" aria-label="View profile — signed in as {{ $currentUser?->name }}">
                     <span class="relative shrink-0">
                         <span id="sb-avatar" class="axis-sidebar__avatar">{{ $currentUser?->initials }}</span>
                         <span class="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-emerald-400 ring-2 ring-[#0B2248]" aria-hidden="true"></span>
@@ -52,7 +52,7 @@
                         <span id="sb-name" class="block text-sm font-semibold text-white truncate">{{ $currentUser?->name }}</span>
                         <span id="sb-role" class="block text-xs text-slate-400 truncate">{{ $currentUser?->job_title }}</span>
                     </span>
-                    <i class="axis-sidebar__text fa-solid fa-chevron-right text-[11px] text-slate-400" aria-hidden="true"></i>
+                    <i class="axis-sidebar__text fa-solid fa-angle-right text-[11px] text-slate-400" aria-hidden="true"></i>
                 </button>
             </div>
         </aside>

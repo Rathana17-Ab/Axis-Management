@@ -4,6 +4,10 @@ use App\Enums\EmployeePosition;
 use App\Models\Position;
 use App\Models\User;
 
+beforeEach(function () {
+    $this->actingAs(User::factory()->create());
+});
+
 it('lists positions with their member counts', function () {
     $position = Position::factory()->create(['name' => 'Support Lead']);
     User::factory()->create([

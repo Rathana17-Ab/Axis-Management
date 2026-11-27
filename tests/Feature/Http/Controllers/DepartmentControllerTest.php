@@ -3,6 +3,10 @@
 use App\Models\Department;
 use App\Models\User;
 
+beforeEach(function () {
+    $this->actingAs(User::factory()->create());
+});
+
 it('lists departments with their member counts', function () {
     $department = Department::factory()->create(['name' => 'Quality']);
     User::factory()->create([

@@ -6,6 +6,10 @@ use App\Models\Position;
 use App\Models\User;
 use Illuminate\Support\Facades\Hash;
 
+beforeEach(function () {
+    $this->actingAs(User::factory()->create());
+});
+
 describe('store', function () {
     it('adds a team member with login access', function () {
         $this->postJson(route('admin.api.team.store'), [
@@ -72,47 +76,6 @@ it('locks and re-enables a member login', function () {
 
     $this->patchJson(route('admin.api.team.toggle-login', $member))->assertOk()->assertJsonPath('data.active', false);
     $this->patchJson(route('admin.api.team.toggle-login', $member))->assertOk()->assertJsonPath('data.active', true);
-});
-
-describe('session switch', function () {
-    it('signs in as the selected member and returns a fresh csrf token', function () {
-        $member = User::factory()->create(['email' => 'titong@eocambo.dev']);
-
-        $this->postJson(route('admin.api.session.switch'), ['email' => 'TiTong@eocambo.dev'])
-            ->assertOk()
-            ->assertJsonPath('data.id', $member->id)
-            ->assertJsonStructure(['csrf_token']);
-
-        $this->assertAuthenticatedAs($member);
-    });
-
-    it('returns 423 for a locked member', function () {
-        User::factory()->locked()->create(['email' => 'maco@eocambo.dev']);
-
-        $this->postJson(route('admin.api.session.switch'), ['email' => 'maco@eocambo.dev'])
-            ->assertStatus(423)
-            ->assertJsonPath('message', 'This account is locked. Ask an admin to turn sign-in back on.');
-
-        $this->assertGuest();
-    });
-
-    it('returns 422 for an unknown email', function () {
-        $this->postJson(route('admin.api.session.switch'), ['email' => 'ghost@eocambo.dev'])
-            ->assertUnprocessable()
-            ->assertJsonPath('message', "We couldn't find anyone with that email.");
-
-        $this->assertGuest();
-    });
-
-    it('returns 422 when a provided password is wrong', function () {
-        User::factory()->create(['email' => 'rathana@eocambo.dev', 'password' => 'correct-password']);
-
-        $this->postJson(route('admin.api.session.switch'), ['email' => 'rathana@eocambo.dev', 'password' => 'wrong'])
-            ->assertUnprocessable()
-            ->assertJsonPath('message', "That password doesn't look right.");
-
-        $this->assertGuest();
-    });
 });
 
 describe('directory links', function () {

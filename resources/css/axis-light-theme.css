@@ -1,0 +1,267 @@
+/*
+| AXIS — light workspace theme
+| Applied only when the root no longer carries `.dark`. The existing dark theme is
+| unchanged; this file supplies the matching light surfaces and text colours.
+| Loaded unlayered after the sales theme so it overrides both layered Tailwind
+| utilities and the dark-only rules in axis-sales-theme.css.
+*/
+html:not(.dark) {
+    --sales-bg1: #EEF4FB;
+    --sales-bg2: #F7FAFE;
+    --sales-glass: rgba(255, 255, 255, 0.90);
+    --sales-glass2: rgba(255, 255, 255, 0.96);
+    --sales-border: #D7E2F0;
+    --sales-divider: #E3EBF5;
+    --sales-text: #102547;
+    --sales-muted: #4A5F7D;
+    --sales-faint: #5A7090;
+    --sales-primary: #2F6FD6;
+    --sales-primary-strong: #255BB0;
+    --sales-primary-deep: #1E4FA0;
+    --sales-signal: #0E7490;
+    --sales-success: #0F8F63;
+    --sales-warning: #915C00;
+    --sales-danger: #B42318;
+    --sales-shadow: 0 14px 34px -12px rgba(15, 35, 70, 0.18);
+    --sales-surface: linear-gradient(145deg, rgba(255, 255, 255, 0.98), rgba(245, 249, 253, 0.96));
+
+    --light-bg: #F4F8FC;
+    --light-surface: #FFFFFF;
+    --light-surface-soft: #F1F6FC;
+    --light-border: #D7E2F0;
+    --light-border-strong: #B9CCE4;
+    --light-text: #102547;
+    --light-muted: #4A5F7D;
+    --light-faint: #5A7090;
+    --light-primary-dark: #1E5CB8;
+    --light-success: #0F7A56;
+    --light-warning: #915C00;
+    --light-danger: #B42318;
+
+    color-scheme: light;
+    background: var(--light-bg);
+}
+
+html:not(.dark) body {
+    color: var(--light-text);
+    background-color: var(--light-bg);
+    background-image:
+        radial-gradient(circle at 8% 10%, rgba(47, 111, 214, 0.07), transparent 27%),
+        radial-gradient(circle at 88% 0%, rgba(14, 116, 144, 0.06), transparent 24%),
+        linear-gradient(135deg, #EEF4FB, #F7FAFE);
+}
+
+html:not(.dark) ::selection { background: rgba(47, 111, 214, 0.18); color: var(--light-text); }
+html:not(.dark) ::-webkit-scrollbar-track { background: #EDF3FA; }
+html:not(.dark) ::-webkit-scrollbar-thumb { background: #B7C9DE; }
+html:not(.dark) ::-webkit-scrollbar-thumb:hover { background: #9FB6D0; }
+
+/* Surfaces that were explicit dark colours rather than theme tokens. */
+html:not(.dark) .axis-topbar { background: rgba(255, 255, 255, 0.96); }
+html:not(.dark) .axis-drawer__footer,
+html:not(.dark) .axis-palette__footer { background: #F5F8FC; }
+html:not(.dark) .axis-drawer__overlay { background: rgba(15, 23, 42, 0.38); }
+html:not(.dark) .axis-modal-overlay { background: rgba(15, 23, 42, 0.36); }
+html:not(.dark) .axis-side-backdrop:not(.hidden) { background: rgba(15, 23, 42, 0.32); }
+html:not(.dark) .ent-table th { background-color: #F5F9FD; color: var(--light-muted); }
+html:not(.dark) .axis-wide-table {
+    --cell-bg: #FFFFFF;
+    --cell-bg-hover: #F3F8FE;
+    --head-bg: #F3F7FC;
+}
+html:not(.dark) .axis-hscroll { scrollbar-color: #B7C9DE transparent; }
+html:not(.dark) .axis-task-table tr.timer-running-row td { background-color: #E6F2FF; }
+html:not(.dark) .axis-task-table tr.timer-running-row:hover td { background-color: #DCEBFC; }
+html:not(.dark) .axis-board-col { background: #F4F8FD; }
+html:not(.dark) .axis-list-card,
+html:not(.dark) .axis-team-chip,
+html:not(.dark) .axis-note-tab,
+html:not(.dark) .axis-note-empty,
+html:not(.dark) .axis-note,
+html:not(.dark) .axis-note-composer { background-color: #F7FAFE; }
+html:not(.dark) .axis-list-card:hover,
+html:not(.dark) .axis-team-chip:hover { background-color: #EFF5FC; }
+html:not(.dark) .dash-module-card {
+    background: #FFFFFF;
+    border-color: var(--light-border-strong);
+    box-shadow: 0 8px 20px rgba(15, 35, 70, 0.10);
+}
+html:not(.dark) .dash-module-card:hover {
+    background: #FBFDFF;
+    box-shadow: 0 12px 26px rgba(15, 35, 70, 0.14);
+}
+html:not(.dark) .axis-module-switch:hover,
+html:not(.dark) .axis-module-switch[aria-expanded="true"],
+html:not(.dark) .axis-module-menu__item:hover,
+html:not(.dark) .axis-module-menu__item:focus-visible,
+html:not(.dark) .axis-module-drag:hover,
+html:not(.dark) .axis-deadline-cell:hover,
+html:not(.dark) .axis-deadline-cell[aria-expanded="true"],
+html:not(.dark) .axis-dp-nav:hover,
+html:not(.dark) .axis-dp-day:hover { background: var(--light-surface-soft); }
+html:not(.dark) .axis-progress-track__rail { background: #DCE7F4; }
+html:not(.dark) .axis-progress-track__thumb {
+    border: 1px solid var(--light-border-strong);
+    box-shadow: 0 0 0 3px rgba(47, 111, 214, 0.20), 0 2px 6px rgba(15, 35, 70, 0.18);
+}
+html:not(.dark) #header-theme-toggle > i { color: var(--light-primary-dark); }
+
+/* Sidebar: dark logo and light navigation surfaces. */
+html:not(.dark) #eot-sidebar.axis-sidebar { background: #FFFFFF; }
+html:not(.dark) .axis-sidebar__logo img {
+    filter: brightness(0) saturate(100%) invert(10%) sepia(30%) saturate(1800%) hue-rotate(197deg) brightness(92%) contrast(95%);
+}
+html:not(.dark) .axis-sidebar__item:hover,
+html:not(.dark) .axis-sidebar__pin:hover,
+html:not(.dark) .axis-sidebar__profile:hover {
+    background: var(--light-surface-soft);
+    color: var(--light-text);
+}
+html:not(.dark) .axis-sidebar__item.nav-active {
+    background: var(--sales-primary);
+    color: #FFFFFF;
+}
+
+/* Inputs and native controls. */
+html:not(.dark) .ent-input option,
+html:not(.dark) .axis-input option,
+html:not(.dark) select.axis-input option { background-color: #FFFFFF; color: var(--light-text); }
+html:not(.dark) select.axis-input,
+html:not(.dark) select.ent-input,
+html:not(.dark) select.axis-status-select,
+html:not(.dark) input[type="date"].axis-input { color-scheme: light; }
+html:not(.dark) select.axis-status-select option { background-color: #FFFFFF; color: var(--light-text); }
+html:not(.dark) select.axis-status-select option:checked,
+html:not(.dark) select.axis-input option:checked,
+html:not(.dark) select.ent-input option:checked { background-color: var(--sales-primary); color: #FFFFFF; }
+html:not(.dark) .axis-status-select[class*="bg-sky-500/15"] {
+    background-color: #E8F2FF;
+    color: #155EAB;
+    border-color: #A9CDF2;
+}
+html:not(.dark) .axis-status-select[class*="bg-emerald-500/15"] {
+    background-color: #E6F7F0;
+    color: #0F7A56;
+    border-color: #9FD8C2;
+}
+html:not(.dark) .axis-status-select[class*="bg-amber-500/15"] {
+    background-color: #FFF5E2;
+    color: #915C00;
+    border-color: #F0CE8A;
+}
+html:not(.dark) .axis-field__label,
+html:not(.dark) .axis-kpi__value { color: var(--light-text); }
+html:not(.dark) .axis-field__hint,
+html:not(.dark) .axis-detail__label { color: var(--light-muted); }
+html:not(.dark) .axis-field__error { color: var(--light-danger); }
+html:not(.dark) .axis-detail__value { color: var(--light-text); }
+
+/* Drawer details that used pale-on-dark accents. */
+html:not(.dark) .axis-drawer__icon {
+    color: var(--light-primary-dark);
+    background: rgba(47, 111, 214, 0.10);
+    border-color: rgba(47, 111, 214, 0.24);
+}
+html:not(.dark) .axis-drawer[data-mode="delete"] .axis-drawer__icon {
+    color: var(--light-danger);
+    background: rgba(239, 68, 68, 0.08);
+    border-color: rgba(239, 68, 68, 0.24);
+}
+html:not(.dark) .axis-drawer[data-mode="edit"] .axis-drawer__icon,
+html:not(.dark) .axis-drawer[data-mode="assign"] .axis-drawer__icon {
+    color: #4C46A8;
+    background: rgba(99, 102, 241, 0.08);
+    border-color: rgba(99, 102, 241, 0.24);
+}
+html:not(.dark) .axis-drawer__close:hover { color: var(--light-text); background: var(--light-surface-soft); }
+html:not(.dark) .axis-row-btn--danger:hover { color: var(--light-danger); }
+html:not(.dark) .axis-note__sev.is-critical { color: var(--light-danger); background: rgba(239, 68, 68, 0.08); border-color: rgba(239, 68, 68, 0.28); }
+html:not(.dark) .axis-note__sev.is-high { color: var(--light-warning); background: rgba(245, 158, 11, 0.08); border-color: rgba(245, 158, 11, 0.28); }
+html:not(.dark) .axis-note__sev.is-medium { color: var(--light-primary-dark); background: rgba(14, 116, 144, 0.08); border-color: rgba(14, 116, 144, 0.28); }
+html:not(.dark) .axis-note__status.is-open { color: var(--light-warning); background: rgba(245, 158, 11, 0.08); border-color: rgba(245, 158, 11, 0.28); }
+html:not(.dark) .axis-note__status.is-investigating { color: var(--light-primary-dark); background: rgba(14, 116, 144, 0.08); border-color: rgba(14, 116, 144, 0.28); }
+html:not(.dark) .axis-note__status.is-resolved { color: var(--light-success); background: rgba(16, 185, 129, 0.08); border-color: rgba(16, 185, 129, 0.28); }
+html:not(.dark) #axis-confirm-drawer .axis-drawer__icon { color: var(--light-danger); background: rgba(239, 68, 68, 0.08); border-color: rgba(239, 68, 68, 0.24); }
+html:not(.dark) .axis-palette__item.is-selected { background: var(--light-surface-soft); color: var(--light-text); }
+
+/* Utility classes generated from Blade and workspace JS. The sales theme forces
+   several of these to pale colours for dark surfaces; restore light-mode contrast. */
+html:not(.dark) :is(.text-sky-200, .text-sky-300, .text-sky-400, [class~="text-sky-300/80"]) { color: var(--light-primary-dark); }
+html:not(.dark) :is(.text-emerald-200, .text-emerald-300, .text-emerald-400, [class~="text-emerald-200/90"]) { color: var(--light-success); }
+html:not(.dark) :is(.text-teal-300, [class~="text-teal-300/80"], .text-cyan-300) { color: var(--light-primary-dark); }
+html:not(.dark) :is(.text-violet-200, .text-indigo-200, .text-indigo-300, .text-indigo-400) { color: #4C46A8; }
+html:not(.dark) :is(.text-amber-200, .text-amber-300, .text-amber-400) { color: var(--light-warning); }
+html:not(.dark) :is(.text-rose-100, .text-rose-200, .text-rose-300, .text-rose-400) { color: var(--light-danger); }
+html:not(.dark) :is(.text-slate-400, .text-slate-500):not(:disabled):not([aria-disabled='true']) { color: var(--light-muted); }
+html:not(.dark) :is(.text-white, .text-slate-100, .text-slate-200, .text-slate-300, [class~="text-slate-300/90"]):not(#top-avatar) { color: var(--light-text); }
+html:not(.dark) .text-white\/40:not(:disabled):not([aria-disabled='true']) { color: var(--light-faint); }
+/* Button lifecycle states keep white icons/text on the blue primary gradient. */
+html:not(.dark) .btn-primary-glass :is(.text-sky-300, .text-emerald-200, .text-emerald-300) { color: #FFFFFF; }
+html:not(.dark) [class*="hover:text-white"]:hover { color: var(--light-text); }
+html:not(.dark) [class*="hover:text-sky-"]:hover { color: var(--light-primary-dark); }
+html:not(.dark) [class*="hover:text-emerald-"]:hover { color: var(--light-success); }
+html:not(.dark) [class*="hover:text-amber-"]:hover { color: var(--light-warning); }
+html:not(.dark) [class*="hover:text-rose-"]:hover { color: var(--light-danger); }
+html:not(.dark) [class*="hover:text-slate-"]:hover { color: var(--light-text); }
+html:not(.dark) [class*="bg-white/"],
+html:not(.dark) [class*="bg-slate-950/"],
+html:not(.dark) [class*="bg-slate-800"] { background-color: var(--light-surface-soft); }
+html:not(.dark) [class*="hover:bg-white/"]:hover { background-color: #E8EFF7; }
+html:not(.dark) [class*="hover:bg-sky-500/"]:hover { background-color: #DCEBFA; }
+html:not(.dark) [class*="hover:bg-emerald-500/"]:hover { background-color: #E2F5EC; }
+html:not(.dark) [class*="hover:bg-amber-500/"]:hover { background-color: #FDF0D8; }
+html:not(.dark) [class*="hover:bg-rose-500/"]:hover { background-color: #FBE7E7; }
+html:not(.dark) [class*="border-white/"] { border-color: var(--light-border); }
+html:not(.dark) input::placeholder,
+html:not(.dark) textarea::placeholder { color: var(--light-faint); }
+
+/* Explicit pale-on-dark component colours that need a light equivalent. */
+html:not(.dark) .axis-topbar-pill--status,
+html:not(.dark) .axis-topbar-pill--status[data-state="saving"],
+html:not(.dark) .axis-topbar-pill--status[data-state="error"] { color: var(--light-text); }
+html:not(.dark) .axis-topbar-pill--status > i:first-child { color: var(--light-success); }
+html:not(.dark) .axis-topbar-pill--status[data-state="saving"] {
+    background: rgba(47, 111, 214, 0.10);
+    border-color: rgba(47, 111, 214, 0.28);
+}
+html:not(.dark) .axis-topbar-pill--status[data-state="saving"] > i:first-child { color: var(--light-primary-dark); }
+html:not(.dark) .axis-topbar-pill--status[data-state="error"] {
+    background: rgba(225, 29, 72, 0.08);
+    border-color: rgba(225, 29, 72, 0.28);
+}
+html:not(.dark) .axis-topbar-pill--status[data-state="error"] > i:first-child { color: var(--light-danger); }
+html:not(.dark) .axis-topbar-pill--timer { color: var(--light-primary-dark); }
+
+html:not(.dark) .axis-palette__input,
+html:not(.dark) .axis-palette__title,
+html:not(.dark) .axis-palette mark { color: var(--light-text); }
+html:not(.dark) .axis-palette__subtitle,
+html:not(.dark) .axis-palette__empty { color: var(--light-muted); }
+html:not(.dark) .axis-palette__item[aria-selected="true"] .axis-palette__meta { color: var(--light-primary-dark); }
+
+html:not(.dark) [class~="bg-slate-950"] { background-color: var(--light-surface-soft); }
+
+html:not(.dark) .axis-kpi--cyan { --kpi-rgb: 30, 92, 184; }
+html:not(.dark) .axis-kpi--emerald { --kpi-rgb: 15, 122, 86; }
+html:not(.dark) .axis-kpi--violet { --kpi-rgb: 14, 116, 144; }
+html:not(.dark) .axis-kpi--amber { --kpi-rgb: 145, 92, 0; }
+html:not(.dark) .axis-kpi__badge[data-tone="warn"] {
+    color: var(--light-warning);
+    background: rgba(245, 158, 11, 0.10);
+    border-color: rgba(145, 92, 0, 0.28);
+}
+html:not(.dark) .axis-kpi__badge[data-tone="warn"] .axis-kpi__badge-dot { background: var(--light-warning); }
+html:not(.dark) .axis-kpi-legend { color: var(--light-muted); }
+
+html:not(.dark) .axis-drawer__alert { color: var(--light-danger); }
+html:not(.dark) .axis-drawer__close { color: var(--light-muted); }
+html:not(.dark) .axis-dp-nav:hover { color: var(--light-text); }
+html:not(.dark) .axis-dp-preset:hover { color: var(--light-primary-dark); }
+
+/* These icon rules use !important inside the components layer, so the light
+   override must also be layered before that layer to win the cascade. */
+@layer base {
+    html:not(.dark) button:hover .fa-rotate-left,
+    html:not(.dark) button[title*="Reset"]:hover svg { color: var(--light-primary-dark) !important; }
+    html:not(.dark) button:hover .fa-trash-can { color: var(--light-danger) !important; }
+}

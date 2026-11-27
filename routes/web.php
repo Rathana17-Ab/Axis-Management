@@ -1,11 +1,14 @@
 <?php
 
+use App\Http\Controllers\AuthenticatedSessionController;
 use App\Http\Controllers\AxisWorkspaceController;
 use App\Http\Controllers\CtoReportController;
 use App\Http\Controllers\DepartmentController;
 use App\Http\Controllers\FeatureUpgradeController;
 use App\Http\Controllers\ModuleController;
 use App\Http\Controllers\PositionController;
+use App\Http\Controllers\ProfilePasswordController;
+use App\Http\Controllers\ProfilePhotoController;
 use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\ProjectTaskController;
 use App\Http\Controllers\RecordShareController;
@@ -17,11 +20,22 @@ use App\Http\Controllers\UserRoleController;
 use App\Http\Controllers\WorkQueueController;
 use Illuminate\Support\Facades\Route;
 
+Route::get('/login', [AuthenticatedSessionController::class, 'create'])
+    ->middleware('guest')->name('login');
+Route::post('/login', [AuthenticatedSessionController::class, 'store'])
+    ->middleware(['guest', 'throttle:login'])->name('login.store');
+Route::post('/logout', [AuthenticatedSessionController::class, 'destroy'])
+    ->middleware('auth')->name('logout');
+
 Route::redirect('/', '/admin/dashboard');
 
-Route::prefix('admin')->name('admin.')->group(function () {
+Route::middleware('auth')->prefix('admin')->name('admin.')->group(function () {
     // Workspace shell: each URL hydrates the full state and opens the matching page.
     Route::get('/dashboard', [AxisWorkspaceController::class, 'index'])->name('dashboard');
+    Route::get('/profile', [AxisWorkspaceController::class, 'index'])->name('profile');
+    Route::post('/profile/photo', [ProfilePhotoController::class, 'store'])->name('profile.photo.store');
+    Route::delete('/profile/photo', [ProfilePhotoController::class, 'destroy'])->name('profile.photo.destroy');
+    Route::patch('/profile/password', [ProfilePasswordController::class, 'update'])->name('profile.password.update');
     Route::get('/project', [AxisWorkspaceController::class, 'index'])->name('projects.index');
     Route::get('/modules', [AxisWorkspaceController::class, 'index'])->name('modules.index');
     Route::get('/project-task-list/{module}', [AxisWorkspaceController::class, 'showTaskList'])->name('projects.tasks');
@@ -118,7 +132,5 @@ Route::prefix('admin')->name('admin.')->group(function () {
             ->middleware(['workspace.session', 'workspace.can:p18.view'])->name('feature-upgrades.index');
         Route::patch('/feature-upgrades/{featureUpgrade}', [FeatureUpgradeController::class, 'update'])
             ->middleware(['workspace.session', 'workspace.can:p18.manage'])->name('feature-upgrades.update');
-
-        Route::post('/session/switch', [TeamAccessController::class, 'switchSession'])->name('session.switch');
     });
 });

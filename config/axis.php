@@ -28,22 +28,6 @@ return [
 
     /*
     |--------------------------------------------------------------------------
-    | 1-Click Session Switcher
-    |--------------------------------------------------------------------------
-    |
-    | Team members featured in the login modal's instant role switcher.
-    |
-    */
-
-    'quick_switch_emails' => [
-        'rathana@eocambo.dev',
-        'cto@eocambo.dev',
-        'titong@eocambo.dev',
-        'maco@eocambo.dev',
-    ],
-
-    /*
-    |--------------------------------------------------------------------------
     | Issue Note Categories
     |--------------------------------------------------------------------------
     */

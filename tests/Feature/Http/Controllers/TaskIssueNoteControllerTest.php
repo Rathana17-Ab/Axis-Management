@@ -5,6 +5,10 @@ use App\Models\ProjectTask;
 use App\Models\TaskIssueNote;
 use App\Models\User;
 
+beforeEach(function () {
+    $this->actingAs(User::factory()->create());
+});
+
 describe('store', function () {
     it('logs a note authored by the acting team member', function () {
         $member = User::factory()->create(['name' => 'Phal Kristar']);

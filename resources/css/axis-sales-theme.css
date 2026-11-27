@@ -610,6 +610,8 @@ select.ent-input option:checked { background-color: var(--sales-primary-strong);
     font-weight: 600;
     white-space: nowrap;
 }
+/* switchPage() hides this button on pages without a create action, such as Profile. */
+.axis-topbar-create.hidden { display: none; }
 .axis-topbar-profile { padding-left: 7px; padding-right: 10px; }
 #header-module-select { height: 44px; border-radius: 13px; }
 @container topbar (min-width: 760px) { .axis-topbar .tb-search-icon { display: none; } }
@@ -646,48 +648,6 @@ select.ent-input option:checked { background-color: var(--sales-primary-strong);
     background: var(--sales-glass2);
     color: var(--sales-signal);
 }
-
-/* Switch user dialog — quick switch cards */
-.axis-switch-card {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 10px;
-    text-align: left;
-    border: 1px solid var(--sales-border);
-    border-radius: 12px;
-    background: rgba(255, 255, 255, 0.04);
-    transition: border-color .15s, background-color .15s;
-}
-.axis-switch-card:hover { border-color: rgba(46, 198, 232, 0.35); background: rgba(46, 198, 232, 0.07); }
-.axis-switch-card:focus-visible { outline: 2px solid var(--sales-signal); outline-offset: 2px; }
-.axis-switch-card:disabled { cursor: default; }
-.axis-switch-card__avatar {
-    width: 32px;
-    height: 32px;
-    flex-shrink: 0;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 10px;
-    background: linear-gradient(135deg, var(--sales-primary-strong), var(--sales-primary-deep));
-    color: #FFFFFF;
-    font-size: 11px;
-    font-weight: 700;
-}
-.axis-switch-card__you {
-    display: none;
-    flex-shrink: 0;
-    padding: 2px 8px;
-    border-radius: 999px;
-    border: 1px solid rgba(47, 111, 214, 0.34);
-    background: rgba(47, 111, 214, 0.14);
-    color: var(--sales-text);
-    font-size: 11px;
-    font-weight: 600;
-}
-.axis-switch-card.is-current { border-color: rgba(47, 111, 214, 0.34); }
-.axis-switch-card.is-current .axis-switch-card__you { display: inline-block; }
 
 /* ===== Left sidebar: one menu item per page ===== */
 #eot-sidebar.axis-sidebar {
@@ -1121,6 +1081,7 @@ html.axis-drawer-open #toast-container { bottom: 92px; }
 
 /* Readability — small secondary text stays clear on the dark navy surfaces.
    Unlayered rules intentionally override Tailwind's layered text utilities. */
+.dark .text-slate-600:not(:disabled):not([aria-disabled='true']) { color: #94a3b8; }
 .text-slate-500:not(:disabled):not([aria-disabled='true']) { color: #94a3b8; }
 .text-slate-400:not(:disabled):not([aria-disabled='true']) { color: #cbd5e1; }
 .text-white\/40:not(:disabled):not([aria-disabled='true']) { color: rgba(255, 255, 255, 0.72); }

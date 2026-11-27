@@ -7,6 +7,10 @@ use App\Models\ProjectTask;
 use App\Models\TaskIssueNote;
 use App\Models\User;
 
+beforeEach(function () {
+    $this->actingAs(User::factory()->create());
+});
+
 describe('store', function () {
     it('creates a task at the end of the module list', function () {
         $module = Module::factory()->create();

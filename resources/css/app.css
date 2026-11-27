@@ -1,6 +1,7 @@
 @import 'tailwindcss';
 @import './axis.css' layer(components);
 @import './axis-sales-theme.css';
+@import './axis-light-theme.css';
 
 @source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
 @source '../../storage/framework/views/*.php';

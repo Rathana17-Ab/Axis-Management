@@ -2,6 +2,10 @@
 
 use App\Models\User;
 
+beforeEach(function () {
+    $this->actingAs(User::factory()->create());
+});
+
 it('renders the status, icon, value, title and visual hooks keyed by the card key', function () {
     $view = $this->blade(
         '<x-axis.kpi-card key="proj-active" accent="cyan" icon="fa-briefcase" status="Live" :live="true" title="Active projects" />'
