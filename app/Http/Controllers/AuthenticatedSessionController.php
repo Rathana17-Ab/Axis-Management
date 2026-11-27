@@ -14,11 +14,9 @@ class AuthenticatedSessionController extends Controller
     /**
      * Show the workspace sign-in form.
      */
-    public function create(Request $request): View
+    public function create(): View
     {
-        return view('axis.login', [
-            'mode' => $request->routeIs('register') ? 'register' : 'login',
-        ]);
+        return view('axis.login');
     }
 
     /**

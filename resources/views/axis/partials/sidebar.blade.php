@@ -43,17 +43,34 @@
             </nav>
 
             <div class="axis-sidebar__footer">
-                <button type="button" onclick="switchPage('profile')" class="axis-sidebar__profile" aria-label="View profile — signed in as {{ $currentUser?->name }}">
-                    <span class="relative shrink-0">
-                        <span id="sb-avatar" class="axis-sidebar__avatar">{{ $currentUser?->initials }}</span>
-                        <span class="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-emerald-400 ring-2 ring-[#0B2248]" aria-hidden="true"></span>
-                    </span>
-                    <span class="axis-sidebar__text min-w-0 flex-1 text-left">
-                        <span id="sb-name" class="block text-sm font-semibold text-white truncate">{{ $currentUser?->name }}</span>
-                        <span id="sb-role" class="block text-xs text-slate-400 truncate">{{ $currentUser?->job_title }}</span>
-                    </span>
-                    <i class="axis-sidebar__text fa-solid fa-angle-right text-[11px] text-slate-400" aria-hidden="true"></i>
-                </button>
+                <div class="relative">
+                    <button type="button" id="sidebar-profile-btn" onclick="toggleSidebarProfileMenu()" class="axis-sidebar__profile" aria-label="View profile — signed in as {{ $currentUser?->name }}" aria-haspopup="menu" aria-expanded="false" aria-controls="sidebar-profile-menu">
+                        <span class="relative shrink-0">
+                            <span id="sb-avatar" class="axis-sidebar__avatar">{{ $currentUser?->initials }}</span>
+                            <span class="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-emerald-400 ring-2 ring-[#0B2248]" aria-hidden="true"></span>
+                        </span>
+                        <span class="axis-sidebar__text min-w-0 flex-1 text-left">
+                            <span id="sb-name" class="block text-sm font-semibold text-white truncate">{{ $currentUser?->name }}</span>
+                            <span id="sb-role" class="block text-xs text-slate-400 truncate">{{ $currentUser?->job_title }}</span>
+                        </span>
+                        <i class="axis-sidebar__text fa-solid fa-chevron-down text-[11px] text-slate-400 shrink-0" aria-hidden="true"></i>
+                    </button>
+
+                    <div id="sidebar-profile-menu" style="bottom: calc(100% + 0.5rem);" class="hidden ent-card absolute right-0 z-40 w-full overflow-hidden" role="menu" aria-labelledby="sidebar-profile-btn">
+                        <button type="button" role="menuitem" data-profile-menu-item onclick="switchPage('profile')" class="flex w-full items-center gap-2 px-3 py-1.5 text-left text-xs font-semibold text-slate-100 transition-colors hover:bg-white/10 hover:text-white">
+                            <i class="fa-regular fa-user text-[11px] text-slate-300" aria-hidden="true"></i>
+                            <span>Profile</span>
+                        </button>
+                        <div class="border-t border-white/10" aria-hidden="true"></div>
+                        <form method="POST" action="{{ route('logout') }}">
+                            @csrf
+                            <button type="submit" id="sidebar-profile-sign-out" role="menuitem" data-profile-menu-item class="flex w-full items-center gap-2 px-3 py-1.5 text-left text-xs font-semibold text-rose-300 transition-colors hover:bg-white/10">
+                                <i class="fa-solid fa-right-from-bracket text-[11px]" aria-hidden="true"></i>
+                                <span>Sign out</span>
+                            </button>
+                        </form>
+                    </div>
+                </div>
             </div>
         </aside>
         <div id="axis-side-backdrop" class="axis-side-backdrop hidden" onclick="toggleSidebar(false)" aria-hidden="true"></div>

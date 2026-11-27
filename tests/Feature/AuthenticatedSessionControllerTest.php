@@ -13,7 +13,11 @@ test('shows the sign-in form to guests', function () {
         ->assertSee('action="'.route('login.store').'"', false)
         ->assertSee('name="email"', false)
         ->assertSee('name="password"', false)
-        ->assertDontSee('Switch user');
+        ->assertSee('Forgot password?')
+        ->assertSee('href="'.route('password.request').'"', false)
+        ->assertDontSee('Switch user')
+        ->assertDontSee('Create account')
+        ->assertDontSee('Need an account?');
 });
 
 test('redirects signed-in users away from the sign-in form', function () {

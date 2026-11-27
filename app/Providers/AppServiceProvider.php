@@ -41,8 +41,8 @@ class AppServiceProvider extends ServiceProvider
             ];
         });
 
-        RateLimiter::for('register', function (Request $request): Limit {
-            return Limit::perMinute(6)->by('register:'.$request->ip());
+        RateLimiter::for('password-reset', function (Request $request): Limit {
+            return Limit::perMinute(6)->by('password-reset:'.$request->ip());
         });
     }
 }

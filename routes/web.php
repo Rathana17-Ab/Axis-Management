@@ -6,13 +6,13 @@ use App\Http\Controllers\CtoReportController;
 use App\Http\Controllers\DepartmentController;
 use App\Http\Controllers\FeatureUpgradeController;
 use App\Http\Controllers\ModuleController;
+use App\Http\Controllers\PasswordResetController;
 use App\Http\Controllers\PositionController;
 use App\Http\Controllers\ProfilePasswordController;
 use App\Http\Controllers\ProfilePhotoController;
 use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\ProjectTaskController;
 use App\Http\Controllers\RecordShareController;
-use App\Http\Controllers\RegisteredUserController;
 use App\Http\Controllers\RoleController;
 use App\Http\Controllers\TaskIssueNoteController;
 use App\Http\Controllers\TeamAccessController;
@@ -25,12 +25,17 @@ Route::get('/login', [AuthenticatedSessionController::class, 'create'])
     ->middleware('guest')->name('login');
 Route::post('/login', [AuthenticatedSessionController::class, 'store'])
     ->middleware(['guest', 'throttle:login'])->name('login.store');
-Route::get('/register', [AuthenticatedSessionController::class, 'create'])
-    ->middleware('guest')->name('register');
-Route::post('/register', [RegisteredUserController::class, 'store'])
-    ->middleware(['guest', 'throttle:register'])->name('register.store');
 Route::post('/logout', [AuthenticatedSessionController::class, 'destroy'])
     ->middleware('auth')->name('logout');
+
+Route::get('/forgot-password', [PasswordResetController::class, 'showRequestForm'])
+    ->middleware('guest')->name('password.request');
+Route::post('/forgot-password', [PasswordResetController::class, 'sendResetLink'])
+    ->middleware(['guest', 'throttle:password-reset'])->name('password.email');
+Route::get('/reset-password/{token}', [PasswordResetController::class, 'showResetForm'])
+    ->middleware('guest')->name('password.reset');
+Route::post('/reset-password', [PasswordResetController::class, 'resetPassword'])
+    ->middleware(['guest', 'throttle:password-reset'])->name('password.update');
 
 Route::redirect('/', '/admin/dashboard');
 

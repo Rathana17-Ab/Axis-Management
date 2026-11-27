@@ -16,7 +16,8 @@ it('opens the workspace on the page matching each admin route', function (string
         ->assertOk()
         ->assertViewIs('axis.workspace')
         ->assertViewHas('initialPage', $page)
-        ->assertSee('<div id="page-'.$page.'" class="app-page active-page space-y-5">', false);
+        ->assertSee('<div id="page-'.$page.'" class="app-page active-page space-y-5">', false)
+        ->assertSee('id="header-typography-btn"', false);
 })->with([
     'dashboard' => ['admin.dashboard', 'dashboard'],
     'profile' => ['admin.profile', 'profile'],
@@ -193,6 +194,15 @@ it('renders the top header bar with page title, live save status and reload', fu
         ->assertSee('id="header-create-btn"', false)
         ->assertSee('onclick="switchPage(\'profile\')"', false)
         ->assertSee('aria-label="View profile"', false)
+        ->assertSee('id="header-profile-btn"', false)
+        ->assertSee('aria-haspopup="menu"', false)
+        ->assertSee('aria-controls="header-profile-menu"', false)
+        ->assertSee('id="header-profile-menu"', false)
+        ->assertSee('id="header-profile-sign-out"', false)
+        ->assertSee('id="sidebar-profile-btn"', false)
+        ->assertSee('aria-controls="sidebar-profile-menu"', false)
+        ->assertSee('id="sidebar-profile-menu"', false)
+        ->assertSee('id="sidebar-profile-sign-out"', false)
         ->assertDontSee('<form method="POST" action="'.route('logout').'" class="shrink-0">', false)
         ->assertDontSee('<form method="POST" action="'.route('logout').'" class="w-full">', false)
         ->assertDontSee('Switch user');
@@ -245,6 +255,41 @@ it('renders a theme toggle and applies the saved theme before first paint', func
         ->assertSee('onclick="toggleTheme()"', false)
         ->assertSee('aria-label="Switch to light theme"', false)
         ->assertSee("localStorage.getItem('axis.theme')", false);
+});
+
+it('renders the typography inspector with copyable exact label styles', function () {
+    $this->actingAs(User::factory()->create());
+
+    $this->get(route('admin.projects.index'))
+        ->assertOk()
+        ->assertSee('id="axis-typography-popover"', false)
+        ->assertSee('role="dialog" aria-label="Typography inspector"', false)
+        ->assertSee('bg-[#1e1e1e]', false)
+        ->assertSee('data-typography-close', false)
+        ->assertSee('Font name')
+        ->assertSee('San Francisco')
+        ->assertSee('System font')
+        ->assertSee('data-typography-font-name', false)
+        ->assertSee('data-typography-font-source', false)
+        ->assertSee('data-typography-key="fontSize"', false)
+        ->assertSee('data-typography-value="color"', false)
+        ->assertSee('data-typography-stack', false)
+        ->assertSee('data-typography-sample-wrap', false)
+        ->assertSee('data-typography-sample', false)
+        ->assertSee('data-typography-label="Font size"', false)
+        ->assertSee('data-typography-copy="12px"', false)
+        ->assertSee('data-typography-copy="19px"', false)
+        ->assertSee('data-typography-copy="-0.11px"', false)
+        ->assertSee('data-typography-copy="650"', false)
+        ->assertSee('data-typography-copy="strong"', false)
+        ->assertSee('data-typography-copy="#132033"', false)
+        ->assertSee('data-typography-copy="Inter, ui-sans-serif, system-ui, -apple-system, &quot;Segoe UI&quot;, sans-serif"', false)
+        ->assertSee('Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif', false)
+        ->assertSee('[font-family:Inter,ui-sans-serif,system-ui,-apple-system,\'Segoe_UI\',sans-serif]', false)
+        ->assertSee('[font-size:12px] [line-height:19px] [letter-spacing:-0.11px] [font-weight:650]', false)
+        ->assertSee('AaBbCcDdEeFfGgHhIiJjKkLlMmNnOoPpQqRrSsTtUuVvWwXxYyZz')
+        ->assertSee('Click a value to copy')
+        ->assertSee('data-typography-copy-css', false);
 });
 
 it('shows the live in-progress count in the projects metadata pills', function () {

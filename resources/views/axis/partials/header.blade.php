@@ -81,13 +81,32 @@
                             <i class="fa-solid fa-moon" aria-hidden="true"></i>
                         </button>
 
-                        <button type="button" onclick="switchPage('profile')" class="axis-topbar-pill axis-topbar-profile shrink-0" title="View profile" aria-label="View profile">
-                            <span id="top-avatar" class="w-7 h-7 rounded-[10px] bg-gradient-to-br from-[#2F6FD6] to-[#2EC6E8] text-white font-bold text-xs flex items-center justify-center shrink-0">
-                                {{ $currentUser?->initials }}
-                            </span>
-                            <span id="top-username" class="tb-show-2xl font-medium whitespace-nowrap">{{ $currentUser?->name }}</span>
-                            <i class="fa-solid fa-angle-right text-[11px] shrink-0" aria-hidden="true"></i>
-                        </button>
+                        <x-axis.typography-inspector />
+
+                        <div class="relative shrink-0">
+                            <button type="button" id="header-profile-btn" onclick="toggleProfileMenu()" class="axis-topbar-pill axis-topbar-profile shrink-0" title="Account menu" aria-label="View profile" aria-haspopup="menu" aria-expanded="false" aria-controls="header-profile-menu">
+                                <span id="top-avatar" class="w-7 h-7 rounded-[10px] bg-gradient-to-br from-[#2F6FD6] to-[#2EC6E8] text-white font-bold text-xs flex items-center justify-center shrink-0">
+                                    {{ $currentUser?->initials }}
+                                </span>
+                                <span id="top-username" class="tb-show-2xl font-medium whitespace-nowrap">{{ $currentUser?->name }}</span>
+                                <i class="fa-solid fa-chevron-down text-[10px] text-slate-300 shrink-0" aria-hidden="true"></i>
+                            </button>
+
+                            <div id="header-profile-menu" class="hidden ent-card absolute right-0 z-40 mt-2 w-48 overflow-hidden" role="menu" aria-labelledby="header-profile-btn">
+                                <button type="button" role="menuitem" data-profile-menu-item onclick="switchPage('profile')" class="flex w-full items-center gap-2 px-3 py-1.5 text-left text-xs font-semibold text-slate-100 transition-colors hover:bg-white/10 hover:text-white">
+                                    <i class="fa-regular fa-user text-[11px] text-slate-300" aria-hidden="true"></i>
+                                    <span>Profile</span>
+                                </button>
+                                <div class="border-t border-white/10" aria-hidden="true"></div>
+                                <form method="POST" action="{{ route('logout') }}">
+                                    @csrf
+                                    <button type="submit" id="header-profile-sign-out" role="menuitem" data-profile-menu-item class="flex w-full items-center gap-2 px-3 py-1.5 text-left text-xs font-semibold text-rose-300 transition-colors hover:bg-white/10">
+                                        <i class="fa-solid fa-right-from-bracket text-[11px]" aria-hidden="true"></i>
+                                        <span>Sign out</span>
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
                     </div>
                 </header>
             </div>
