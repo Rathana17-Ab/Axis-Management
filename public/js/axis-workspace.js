@@ -36,6 +36,8 @@ const canReorderModules = AXIS_BOOT.canReorderModules !== false;
 const canManageP18 = () => workspaceCan('p18.manage');
 const canManageAdministration = () => workspaceCan('administration.access');
 const canManageTeam = AXIS_BOOT.canManageTeam === true;
+const canManageTasks = AXIS_BOOT.canManageTasks === true;
+const canDeleteModules = AXIS_BOOT.canDeleteModules === true;
 
 // Only active employees can be given work; `keepIds` keeps a currently assigned (now inactive) person selectable.
 const employees = (keepIds = []) => teamMembers
@@ -2745,6 +2747,13 @@ function moduleStats(p) {
     };
 }
 
+function moduleDeleteButtonHtml(p) {
+    if (!canDeleteModules) return '';
+    const name = escapeHtml(p.name);
+    const hasTasks = (p.tasks || []).length > 0;
+    return `<button type="button" onclick="deleteModule(${p.id})" class="axis-row-btn axis-row-btn--danger" title="${hasTasks ? 'Remove its tasks before deleting' : 'Delete module'}" aria-label="Delete ${name}"><i class="fa-solid fa-trash-can text-xs" aria-hidden="true"></i></button>`;
+}
+
 /** One module as a card (Cards view) or a compact card (Board view). */
 function renderModuleCard(p, compact = false, showProject = false) {
     const name = escapeHtml(p.name);
@@ -2760,6 +2769,7 @@ function renderModuleCard(p, compact = false, showProject = false) {
                 <button type="button" onclick="openAddTaskFor(${p.id})" class="axis-row-btn" title="Add a task" aria-label="Add a task to ${name}"><i class="fa-solid fa-plus text-xs" aria-hidden="true"></i></button>
                 <button type="button" onclick="openProjectDetails(${p.id})" class="axis-row-btn" title="Module details" aria-label="Details of ${name}"><i class="fa-solid fa-circle-info text-xs" aria-hidden="true"></i></button>
                 <button type="button" onclick="openProjectEdit(${p.id})" class="axis-row-btn" title="Edit module" aria-label="Edit ${name}"><i class="fa-solid fa-pen text-xs" aria-hidden="true"></i></button>
+                ${moduleDeleteButtonHtml(p)}
             </div>
         </div>`;
     return `
@@ -2796,6 +2806,39 @@ function renderModuleCard(p, compact = false, showProject = false) {
 window.openAddTaskFor = function(moduleId) {
     openProjectTaskList(moduleId);
     openModal('modal-create-task');
+};
+
+window.deleteModule = async function(moduleId) {
+    if (!canDeleteModules) return;
+    const p = projects.find(x => x.id === moduleId);
+    if (!p) return;
+    const taskCount = (p.tasks || []).length;
+    if (taskCount) {
+        showToast(`${p.name} still has ${taskCount} task${taskCount === 1 ? '' : 's'}. Remove them first.`);
+        return;
+    }
+    const confirmed = await AxisDrawer.confirm({
+        title: 'Delete this module?',
+        breadcrumb: 'Modules',
+        message: `${p.name} has no tasks. This can't be undone.`,
+        confirmLabel: 'Delete module'
+    });
+    if (!confirmed) return;
+    try {
+        await AxisAPI.request(AxisAPI.url('modules.destroy', moduleId), 'DELETE');
+        const parent = axisProjects.find(ap => ap.id === p.projectId);
+        if (parent && typeof parent.moduleCount === 'number') parent.moduleCount = Math.max(0, parent.moduleCount - 1);
+        projects = projects.filter(x => x.id !== moduleId);
+        if (activeProjectId === moduleId) activeProjectId = projects[0]?.id ?? null;
+        populateModuleDropdowns();
+        renderProjectsTable(true);
+        renderAxisProjectsPage();
+        syncQuickModulePercentages();
+        updateDynamicHeader(activePageId);
+        showToast(`Deleted ${p.name}`);
+    } catch (err) {
+        AxisAPI.fail(err);
+    }
 };
 
 function renderProjectRow(p, showProject = false) {
@@ -2897,6 +2940,7 @@ function renderProjectRow(p, showProject = false) {
                         <button type="button" onclick="openProjectEdit(${p.id})" class="axis-row-btn" title="Edit module" aria-label="Edit ${name}">
                             <i class="fa-solid fa-pen text-xs" aria-hidden="true"></i>
                         </button>
+                        ${moduleDeleteButtonHtml(p)}
                     </div>
                 </div>
             </td>
@@ -4176,12 +4220,12 @@ function renderTasksTableRows(flashCard = false) {
     }
 
     if (filteredTasks.length === 0) {
-        // A module with no tasks at all needs "add one", not "clear your filters"
+        // A module with no tasks at all needs "add one" for leaders, not "clear your filters"
         const emptyHtml = p.tasks.length === 0 ? `
             <div class="py-12 text-center space-y-2">
                 <div class="text-sm font-semibold text-white">No tasks yet</div>
-                <p class="text-xs text-slate-400">Add the first task for ${escapeHtml(p.name)}.</p>
-                <button type="button" onclick="openModal('modal-create-task')" class="btn-primary-glass px-3.5 py-1.5 text-xs font-semibold mt-1">New task</button>
+                <p class="text-xs text-slate-400">${canManageTasks ? `Add the first task for ${escapeHtml(p.name)}.` : 'No tasks have been added yet.'}</p>
+                ${canManageTasks ? '<button type="button" onclick="openModal(\'modal-create-task\')" class="btn-primary-glass px-3.5 py-1.5 text-xs font-semibold mt-1">New task</button>' : ''}
             </div>
         ` : `
             <div class="py-12 text-center space-y-2">
@@ -4190,7 +4234,7 @@ function renderTasksTableRows(flashCard = false) {
                 <button type="button" onclick="resetTaskDetailFilters()" class="btn-glass px-3.5 py-1.5 text-xs font-semibold mt-1">Reset filters</button>
             </div>
         `;
-        tbody.innerHTML = `<tr><td colspan="9">${emptyHtml}</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="${canManageTasks ? 9 : 8}">${emptyHtml}</td></tr>`;
         if (cardsWrap) cardsWrap.innerHTML = `<div class="col-span-2">${emptyHtml}</div>`;
         return;
     }
@@ -4540,6 +4584,8 @@ function taskTimerStartDisabled(t) {
 
 /** Action buttons for a task, shared by the table and card views so both offer the same actions. */
 function taskActionsHtml(t) {
+    if (!canManageTasks) return '';
+
     const name = escapeHtml(t.name);
     return `
         <div class="axis-row-actions" role="group" aria-label="Actions for ${name}">
@@ -4556,6 +4602,44 @@ function taskActionsHtml(t) {
                 <i class="fa-regular fa-trash-can text-xs" aria-hidden="true"></i>
             </button>
         </div>`;
+}
+
+function readOnlyTaskStatusHtml(status, label) {
+    const cls = TASK_STATUS_STYLES[status] || TASK_STATUS_STYLES['Processing'];
+    return `<span class="px-2.5 py-1 rounded-full border text-xs font-semibold ${cls}" aria-label="Status of ${escapeHtml(label)}">${escapeHtml(status)}</span>`;
+}
+
+function readOnlyTaskProgressHtml(prog, barColor) {
+    const value = formatProgressValue(prog);
+    return `
+        <div class="flex items-center gap-2 w-[150px]" title="${value}% complete">
+            <div class="axis-progress-track pointer-events-none">
+                <div class="axis-progress-track__rail">
+                    <div class="h-full ${barColor} rounded-full" style="width: ${prog}%"></div>
+                </div>
+                <span class="axis-progress-track__thumb" style="--p: ${prog}" aria-hidden="true"></span>
+            </div>
+            <span class="text-xs font-mono font-semibold text-slate-200">${value}%</span>
+        </div>`;
+}
+
+function readOnlyTaskAssigneeHtml(t) {
+    return `
+        <div class="flex items-center gap-2.5 w-[240px]">
+            <span class="w-8 h-8 rounded-full ${avatarToneFor(t.handler)} text-xs font-semibold inline-flex items-center justify-center shrink-0" aria-hidden="true">${escapeHtml(initialsOf(t.handler))}</span>
+            <div class="min-w-0 flex-1">
+                <div class="text-sm text-slate-100 truncate">${escapeHtml(t.handler || 'Unassigned')}</div>
+                <div class="text-xs text-slate-500 truncate">Assigned by ${escapeHtml(t.assignedBy || 'Not recorded')}</div>
+            </div>
+        </div>`;
+}
+
+function readOnlyTaskPriorityHtml(t, priority) {
+    return `<span class="inline-flex items-center gap-1.5 text-sm font-medium ${priority.cls}"><span class="w-1.5 h-1.5 rounded-full ${priority.dot}" aria-hidden="true"></span>${escapeHtml(t.priority)}</span>`;
+}
+
+function readOnlyTaskNameHtml(name) {
+    return `<div class="w-full px-1.5 py-0.5 -ml-1.5 text-sm font-semibold text-white truncate" title="${escapeHtml(name)}" aria-label="Task name">${escapeHtml(name)}</div>`;
 }
 
 function renderTaskRow(t) {
@@ -4590,9 +4674,10 @@ function renderTaskRow(t) {
         <tr data-task-row="${t.id}" class="${t.running ? 'timer-running-row' : ''} transition-colors group">
             <td class="py-3 pl-5 pr-3 axis-sticky-left">
                 <div class="w-[290px]">
+                    ${canManageTasks ? `
                     <input type="text" value="${name}" title="${name}" aria-label="Task name"
                         oninput="updateTaskField(${t.id}, 'name', this.value)"
-                        class="${GHOST_FIELD} w-full px-1.5 py-0.5 -ml-1.5 text-sm font-semibold text-white truncate">
+                        class="${GHOST_FIELD} w-full px-1.5 py-0.5 -ml-1.5 text-sm font-semibold text-white truncate">` : readOnlyTaskNameHtml(t.name)}
                     <button type="button" id="task-desc-preview-${t.id}" onclick="editTaskDescription(${t.id})"
                         class="w-full flex items-center gap-1.5 text-left text-xs text-slate-400 hover:text-slate-200 mt-0.5 min-w-0" title="${escapeHtml(summary || 'Add details')}">
                         <span class="font-mono text-slate-500 shrink-0">TASK-${t.id}</span>
@@ -4607,9 +4692,12 @@ function renderTaskRow(t) {
                 </div>
             </td>
             <td class="py-3 px-3">
-                ${statusSelectHtml(`updateTaskStatus(${t.id}, this.value)`, t.status, name, `task-status-${t.id}`)}
+                ${canManageTasks
+                    ? statusSelectHtml(`updateTaskStatus(${t.id}, this.value)`, t.status, name, `task-status-${t.id}`)
+                    : readOnlyTaskStatusHtml(t.status, name)}
             </td>
             <td class="py-3 px-3">
+                ${canManageTasks ? `
                 <div class="flex items-center gap-2 w-[150px]">
                     <div class="axis-progress-track" id="task-track-${t.id}" role="slider" tabindex="0"
                         aria-label="Progress of ${name}" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${formatProgressValue(prog)}" aria-valuetext="${formatProgressValue(prog)}%"
@@ -4631,9 +4719,10 @@ function renderTaskRow(t) {
                             class="${GHOST_FIELD} [field-sizing:content] min-w-[1.5rem] px-0.5 py-0 text-right text-xs font-mono font-semibold text-slate-200 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none">
                         <span class="text-xs text-slate-400">%</span>
                     </span>
-                </div>
+                </div>` : readOnlyTaskProgressHtml(prog, barColor)}
             </td>
             <td class="py-3 px-3">
+                ${canManageTasks ? `
                 <div class="flex items-center gap-2.5 w-[240px]">
                     <span class="w-8 h-8 rounded-full ${avatarToneFor(t.handler)} text-xs font-semibold inline-flex items-center justify-center shrink-0" aria-hidden="true">${escapeHtml(initialsOf(t.handler))}</span>
                     <div class="min-w-0 flex-1">
@@ -4649,9 +4738,10 @@ function renderTaskRow(t) {
                             ${chevron}
                         </div>
                     </div>
-                </div>
+                </div>` : readOnlyTaskAssigneeHtml(t)}
             </td>
             <td class="py-3 px-3">
+                ${canManageTasks ? `
                 <div class="relative inline-flex items-center">
                     <span class="w-1.5 h-1.5 rounded-full ${priority.dot} absolute left-2 pointer-events-none" aria-hidden="true"></span>
                     <select onchange="updateTaskField(${t.id}, 'priority', this.value); renderTasksTableRows();" aria-label="Priority"
@@ -4661,7 +4751,7 @@ function renderTaskRow(t) {
                         <option value="Low" ${t.priority === 'Low' ? 'selected' : ''}>Low</option>
                     </select>
                     ${chevron}
-                </div>
+                </div>` : readOnlyTaskPriorityHtml(t, priority)}
             </td>
             <td class="py-3 px-3">
                 <div class="flex items-center gap-2.5 w-[200px]">
@@ -4710,6 +4800,7 @@ const TASK_API_FIELDS = { name: 'name', description: 'description', priority: 'p
  * The server validates that the assigner is a leader; names come back with the response.
  */
 window.updateTaskAssignment = function(taskId, apiField, value) {
+    if (!canManageTasks) return;
     const p = projects.find(x => x.id === activeProjectId);
     const t = p && p.tasks.find(x => x.id === taskId);
     if (!t) return;
@@ -4742,6 +4833,7 @@ function persistTask(t, payload, rollback) {
 }
 
 window.updateTaskField = function(taskId, field, value) {
+    if ((field === 'name' || field === 'priority') && !canManageTasks) return;
     const p = projects.find(x => x.id === activeProjectId);
     if (!p) return;
     const t = p.tasks.find(x => x.id === taskId);
@@ -4757,6 +4849,7 @@ window.updateTaskField = function(taskId, field, value) {
 };
 
 window.updateTaskStatus = function(taskId, newStatus) {
+    if (!canManageTasks) return;
     const p = projects.find(x => x.id === activeProjectId);
     if (!p) return;
     const t = p.tasks.find(x => x.id === taskId);
@@ -4832,6 +4925,7 @@ function paintTaskProgressBar(taskId, pct) {
 
 /** Set the progress number then apply it once (same path as typing + Enter). */
 function setTaskProgressFromSlider(taskId, pct) {
+    if (!canManageTasks) return;
     const input = document.getElementById('task-pct-input-' + taskId);
     if (!input) return;
     input.value = Math.min(100, Math.max(0, pct));
@@ -4843,7 +4937,7 @@ function setTaskProgressFromSlider(taskId, pct) {
  * releasing applies the value once. Values snap to 5% steps, like the arrow keys.
  */
 window.startTaskProgressDrag = function(e, taskId, track) {
-    if (e.button !== 0) return;
+    if (!canManageTasks || e.button !== 0) return;
     e.preventDefault();
     track.focus({ preventScroll: true });
     const input = document.getElementById('task-pct-input-' + taskId);
@@ -4881,6 +4975,7 @@ window.startTaskProgressDrag = function(e, taskId, track) {
 
 /** Keyboard on the focused bar: ←/→ or ↑/↓ change by 5%, Home = 0%, End = 100%. */
 window.handleTaskProgressSliderKey = function(e, taskId) {
+    if (!canManageTasks) return;
     const input = document.getElementById('task-pct-input-' + taskId);
     if (!input) return;
     const current = Number(input.dataset.committed) || 0;
@@ -4896,12 +4991,14 @@ window.handleTaskProgressSliderKey = function(e, taskId) {
 
 /** While typing: only the bar previews the value — status and saving wait for the commit. */
 window.previewTaskProgress = function(taskId, raw) {
+    if (!canManageTasks) return;
     const pct = parseProgressInput(raw);
     if (pct !== null) paintTaskProgressBar(taskId, pct);
 };
 
 /** Enter / Tab / click away: apply the value once (invalid or blank input reverts). */
 window.commitTaskProgressInput = function(taskId, input) {
+    if (!canManageTasks) return;
     const committed = Number(input.dataset.committed) || 0;
     const pct = parseProgressInput(input.value);
     if (pct === null) {
@@ -4924,6 +5021,7 @@ window.commitTaskProgressInput = function(taskId, input) {
 };
 
 window.handleTaskProgressKey = function(e, taskId, input) {
+    if (!canManageTasks) return;
     if (e.key === 'Enter') {
         e.preventDefault();
         input.blur(); // fires "change" → commit
@@ -4943,6 +5041,7 @@ window.handleTaskProgressKey = function(e, taskId, input) {
 };
 
 window.updateTaskProgress = function(taskId, val) {
+    if (!canManageTasks) return;
     const p = projects.find(x => x.id === activeProjectId);
     if (!p) return;
     const t = p.tasks.find(x => x.id === taskId);
@@ -5043,6 +5142,7 @@ window.toggleTaskStopwatch = function(taskId) {
 };
 
 window.resetTaskStopwatch = function(taskId) {
+    if (!canManageTasks) return;
     const p = projects.find(x => x.id === activeProjectId);
     if (!p) return;
     const t = p.tasks.find(x => x.id === taskId);
@@ -5083,6 +5183,7 @@ window.resetTaskStopwatch = function(taskId) {
 };
 
 window.deleteTaskRow = async function(taskId) {
+    if (!canManageTasks) return;
     const p = projects.find(x => x.id === activeProjectId);
     if (!p) return;
     const idx = p.tasks.findIndex(x => x.id === taskId);
@@ -5132,6 +5233,7 @@ function syncNewTaskModuleSelect() {
 let editingTaskId = null;
 
 window.openTaskEdit = function(taskId) {
+    if (!canManageTasks) return;
     const p = projects.find(x => x.id === activeProjectId);
     const t = p && p.tasks.find(x => x.id === taskId);
     if (!t) return;
@@ -5174,6 +5276,7 @@ window.syncTaskEditStatusFromProgress = function(raw) {
 };
 
 window.handleUpdateTask = function(e) {
+    if (!canManageTasks) return;
     e.preventDefault();
     const p = projects.find(x => x.id === activeProjectId);
     const t = p && p.tasks.find(x => x.id === editingTaskId);
@@ -5226,6 +5329,7 @@ window.handleUpdateTask = function(e) {
 };
 
 window.handleCreateTask = function(e) {
+    if (!canManageTasks) return;
     e.preventDefault();
     const moduleId = Number(document.getElementById('new-task-module')?.value) || activeProjectId;
     const p = projects.find(x => x.id === moduleId);

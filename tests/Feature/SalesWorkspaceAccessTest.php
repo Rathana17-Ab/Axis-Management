@@ -348,7 +348,7 @@ it('lets Sales Person start and pause the timer on a task assigned to them', fun
         ->timer_started_at->toBeNull();
 });
 
-it('keeps logged time when Sales Person edits an assigned task', function () {
+it('keeps logged time when Sales Person edits an allowed field on an assigned task', function () {
     $this->freezeTime();
     $sales = workspaceMemberWithRole(WorkspaceRole::SalesPerson);
     $task = ProjectTask::factory()->running()->create([
@@ -358,15 +358,35 @@ it('keeps logged time when Sales Person edits an assigned task', function () {
     $this->travel(30)->seconds();
 
     $this->actingAs($sales)
-        ->patchJson(route('admin.api.tasks.update', $task), ['progress' => 50])
+        ->patchJson(route('admin.api.tasks.update', $task), ['description' => 'Edited while timing'])
         ->assertOk()
-        ->assertJsonPath('data.progress', 50)
+        ->assertJsonPath('data.description', 'Edited while timing')
         ->assertJsonPath('data.actSeconds', 150);
 
     expect($task->fresh())
+        ->description->toBe('Edited while timing')
         ->act_seconds->toBe(120)
         ->is_running->toBeTrue();
 });
+
+it('does not let Sales Person change leader-only task fields', function (string $field) {
+    $sales = workspaceMemberWithRole(WorkspaceRole::SalesPerson);
+    $task = ProjectTask::factory()->create(['emp_id' => $sales->id, 'name' => 'Original name']);
+    $leader = User::factory()->leader()->create(['name' => 'Lead One']);
+
+    $payload = match ($field) {
+        'name' => ['name' => 'Renamed by Sales'],
+        'priority' => ['priority' => 'Low'],
+        'status' => ['status' => 'Finished'],
+        'progress' => ['progress' => 50],
+        'emp_id' => ['emp_id' => $leader->id],
+        'assigned_by_id' => ['assigned_by_id' => $leader->id],
+    };
+
+    $this->actingAs($sales)
+        ->patchJson(route('admin.api.tasks.update', $task), $payload)
+        ->assertForbidden();
+})->with(['name', 'priority', 'status', 'progress', 'emp_id', 'assigned_by_id']);
 
 it('does not let Sales Person time-track a task assigned to someone else', function () {
     $sales = workspaceMemberWithRole(WorkspaceRole::SalesPerson);

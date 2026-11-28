@@ -66,6 +66,18 @@ abstract class Controller
     }
 
     /**
+     * Require a team-leader position for a privileged workspace action.
+     */
+    protected function authorizeTeamLeader(string $message = 'Only team leaders can perform this action.'): void
+    {
+        $user = $this->actingMember();
+
+        if ($user === null || ! $user->isLeader()) {
+            abort(403, $message);
+        }
+    }
+
+    /**
      * Apply a workspace record gate only to members who have an assigned role.
      * Role-less members keep the original open-console behavior.
      */

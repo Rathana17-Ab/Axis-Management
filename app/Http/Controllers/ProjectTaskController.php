@@ -30,6 +30,7 @@ class ProjectTaskController extends Controller
      */
     public function store(StoreProjectTaskRequest $request, Module $module): JsonResponse
     {
+        $this->authorizeTeamLeader('Only team leaders can manage tasks.');
         $this->authorizeWorkspacePermission(WorkspacePermission::RecordsManageAll);
 
         $validated = $request->validated();
@@ -126,6 +127,7 @@ class ProjectTaskController extends Controller
      */
     public function resetTimer(ProjectTask $task): ProjectTaskResource
     {
+        $this->authorizeTeamLeader('Only team leaders can manage tasks.');
         $this->authorizeWorkspaceRecord('update-record', $task);
 
         $task->resetTimer();
@@ -139,6 +141,7 @@ class ProjectTaskController extends Controller
      */
     public function destroy(ProjectTask $task): Response
     {
+        $this->authorizeTeamLeader('Only team leaders can manage tasks.');
         $this->authorizeWorkspaceRecord('update-record', $task);
 
         $task->delete();

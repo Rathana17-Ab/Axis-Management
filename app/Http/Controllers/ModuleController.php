@@ -127,6 +127,25 @@ class ModuleController extends Controller
     }
 
     /**
+     * Delete an empty module. Tasks must be removed first so their notes and logged time are not lost.
+     */
+    public function destroy(Module $module): JsonResponse
+    {
+        $this->authorizeTeamLeader('Only team leaders can delete modules.');
+        $this->authorizeWorkspaceRecord('update-record', $module);
+
+        if ($module->tasks()->exists()) {
+            return response()->json([
+                'message' => 'This module still has tasks. Remove them before deleting it.',
+            ], 422);
+        }
+
+        $module->delete();
+
+        return response()->json(null, 204);
+    }
+
+    /**
      * Persist the drag-and-drop order of the Modules page.
      */
     public function reorder(ReorderModulesRequest $request): JsonResponse

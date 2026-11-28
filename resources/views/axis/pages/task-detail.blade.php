@@ -35,10 +35,12 @@
                         </div>
 
                         <div class="flex flex-wrap items-center gap-2">
-                            <button type="button" onclick="openProjectEdit(activeProjectId)" class="btn-glass axis-hero-action" title="Edit this module's details and team">
-                                <i class="fa-solid fa-pen-to-square text-xs" aria-hidden="true"></i>
-                                <span>Edit</span>
-                            </button>
+                            @if ($canManageTasks)
+                                <button type="button" onclick="openProjectEdit(activeProjectId)" class="btn-glass axis-hero-action" title="Edit this module's details and team">
+                                    <i class="fa-solid fa-pen-to-square text-xs" aria-hidden="true"></i>
+                                    <span>Edit</span>
+                                </button>
+                            @endif
                             <button type="button" onclick="exportActiveTasksCSV()" class="btn-glass axis-hero-action">
                                 <i class="fa-solid fa-download text-xs" aria-hidden="true"></i>
                                 <span>Export</span>
@@ -47,10 +49,12 @@
                                 <i class="fa-solid fa-bug text-xs" aria-hidden="true"></i>
                                 <span>Issues</span>
                             </button>
-                            <button type="button" onclick="openModal('modal-create-task')" class="btn-primary-glass axis-hero-action">
-                                <i class="fa-solid fa-plus text-xs" aria-hidden="true"></i>
-                                <span>New task</span>
-                            </button>
+                            @if ($canManageTasks)
+                                <button type="button" onclick="openModal('modal-create-task')" class="btn-primary-glass axis-hero-action">
+                                    <i class="fa-solid fa-plus text-xs" aria-hidden="true"></i>
+                                    <span>New task</span>
+                                </button>
+                            @endif
                         </div>
                         <dl class="axis-hero-meta">
                             <div>
@@ -155,7 +159,7 @@
                                         <h2 class="text-sm font-bold text-white">Task list</h2>
                                         <span id="td-showing-count-pill" class="px-2 py-0.5 rounded-full bg-emerald-500/15 border border-emerald-400/30 text-emerald-300 text-xs font-semibold">Showing 4 of 4 tasks</span>
                                     </div>
-                                    <p class="text-xs text-slate-400">Click any field to change it. Changes save automatically.</p>
+                                    <p class="text-xs text-slate-400">{{ $canManageTasks ? 'Click any field to change it. Changes save automatically.' : 'Review task progress, timing and notes.' }}</p>
                                 </div>
                             </div>
 
@@ -179,7 +183,9 @@
                                             </button>
                                         </th>
                                         <th class="py-3 px-3">Notes</th>
-                                        <th class="py-3 pl-3 pr-5 axis-sticky-right text-right">Actions</th>
+                                        @if ($canManageTasks)
+                                            <th id="td-actions-header" class="py-3 pl-3 pr-5 axis-sticky-right text-right">Actions</th>
+                                        @endif
                                     </tr>
                                 </thead>
                                 <tbody id="tasks-tbody"></tbody>

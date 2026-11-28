@@ -6,6 +6,7 @@ use App\Enums\EmployeePosition;
 use App\Enums\EmployeeStatus;
 use App\Enums\TaskPriority;
 use App\Enums\WorkStatus;
+use App\Models\User;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -13,10 +14,37 @@ use Illuminate\Validation\Rule;
 class UpdateProjectTaskRequest extends FormRequest
 {
     /**
+     * Fields that only a team leader may change on a task.
+     *
+     * @var list<string>
+     */
+    private const LEADER_ONLY_FIELDS = [
+        'name',
+        'priority',
+        'status',
+        'progress',
+        'emp_id',
+        'assigned_by_id',
+    ];
+
+    /**
      * Determine if the user is authorized to make this request.
      */
     public function authorize(): bool
     {
+        $user = $this->user();
+        $user = $user instanceof User ? $user : User::currentWorkspaceUser();
+
+        if ($user === null || $user->isLeader()) {
+            return true;
+        }
+
+        foreach (self::LEADER_ONLY_FIELDS as $field) {
+            if ($this->exists($field)) {
+                return false;
+            }
+        }
+
         return true;
     }
 

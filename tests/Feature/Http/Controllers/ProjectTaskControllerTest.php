@@ -8,7 +8,7 @@ use App\Models\TaskIssueNote;
 use App\Models\User;
 
 beforeEach(function () {
-    $this->actingAs(User::factory()->create());
+    $this->actingAs(User::factory()->leader()->create());
 });
 
 describe('store', function () {
@@ -316,6 +316,107 @@ describe('update', function () {
         $this->patchJson(route('admin.api.tasks.update', $task), ['progress' => 101])
             ->assertUnprocessable()
             ->assertJsonValidationErrors('progress');
+    });
+});
+
+describe('leader-only task controls', function () {
+    it('lets a non-leader edit a field that is not leader-only', function () {
+        $this->actingAs(User::factory()->create());
+        $task = ProjectTask::factory()->create(['description' => 'Original details']);
+
+        $this->patchJson(route('admin.api.tasks.update', $task), ['description' => 'Developer edit'])
+            ->assertOk()
+            ->assertJsonPath('data.description', 'Developer edit');
+
+        expect($task->fresh()->description)->toBe('Developer edit');
+    });
+
+    it('refuses leader-only task field changes from a non-leader', function (string $field) {
+        $this->actingAs(User::factory()->create());
+        $task = ProjectTask::factory()->create(['name' => 'Original name']);
+        $leader = User::factory()->leader()->create(['name' => 'Lead One']);
+
+        $payload = match ($field) {
+            'name' => ['name' => 'Developer edit'],
+            'priority' => ['priority' => 'Low'],
+            'status' => ['status' => 'Finished'],
+            'progress' => ['progress' => 100],
+            'emp_id' => ['emp_id' => $leader->id],
+            'assigned_by_id' => ['assigned_by_id' => $leader->id],
+        };
+        $columns = ['name', 'priority', 'status', 'progress', 'emp_id', 'assigned_by_id'];
+        $before = $task->fresh()->only($columns);
+
+        $this->patchJson(route('admin.api.tasks.update', $task), $payload)->assertForbidden();
+
+        expect($task->fresh()->only($columns))->toEqual($before);
+    })->with(['name', 'priority', 'status', 'progress', 'emp_id', 'assigned_by_id']);
+
+    it('lets a leader change leader-only task fields', function () {
+        $task = ProjectTask::factory()->create();
+        $developer = User::factory()->create(['name' => 'Dev One']);
+        $leader = User::factory()->leader()->create(['name' => 'Lead One']);
+
+        $this->patchJson(route('admin.api.tasks.update', $task), [
+            'name' => 'Leader edit',
+            'priority' => 'Low',
+            'status' => 'Finished',
+            'progress' => 100,
+            'emp_id' => $developer->id,
+            'assigned_by_id' => $leader->id,
+        ])
+            ->assertOk()
+            ->assertJsonPath('data.name', 'Leader edit')
+            ->assertJsonPath('data.priority', 'Low')
+            ->assertJsonPath('data.status', 'Finished')
+            ->assertJsonPath('data.progress', 100)
+            ->assertJsonPath('data.handler', 'Dev One')
+            ->assertJsonPath('data.assignedBy', 'Lead One');
+    });
+
+    it('refuses task creation from a non-leader', function () {
+        $this->actingAs(User::factory()->create());
+        $module = Module::factory()->create();
+        $employee = User::factory()->create();
+
+        $this->postJson(route('admin.api.tasks.store', $module), ['name' => 'Not allowed', 'emp_id' => $employee->id])
+            ->assertForbidden()
+            ->assertJsonPath('message', 'Only team leaders can manage tasks.');
+
+        expect(ProjectTask::count())->toBe(0);
+    });
+
+    it('refuses task deletion from a non-leader', function () {
+        $this->actingAs(User::factory()->create());
+        $task = ProjectTask::factory()->create();
+
+        $this->deleteJson(route('admin.api.tasks.destroy', $task))
+            ->assertForbidden()
+            ->assertJsonPath('message', 'Only team leaders can manage tasks.');
+
+        $this->assertModelExists($task);
+    });
+
+    it('refuses logged-time reset from a non-leader', function () {
+        $this->actingAs(User::factory()->create());
+        $task = ProjectTask::factory()->create(['act_seconds' => 120, 'is_running' => false]);
+
+        $this->postJson(route('admin.api.tasks.timer.reset', $task))
+            ->assertForbidden()
+            ->assertJsonPath('message', 'Only team leaders can manage tasks.');
+
+        expect($task->fresh()->act_seconds)->toBe(120);
+    });
+
+    it('lets a non-leader keep using the task timer', function () {
+        $this->freezeTime();
+        $this->actingAs(User::factory()->create());
+        $task = ProjectTask::factory()->pending()->create();
+
+        $this->postJson(route('admin.api.tasks.timer.toggle', $task))
+            ->assertOk()
+            ->assertJsonPath('data.running', true)
+            ->assertJsonPath('data.actSeconds', 0);
     });
 });
 

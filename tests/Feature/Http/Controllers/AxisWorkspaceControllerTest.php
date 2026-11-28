@@ -55,6 +55,24 @@ it('hides team management controls from a non-leader', function () {
         ->assertDontSee('<th class="py-3 px-3 text-center">Actions</th>', false);
 });
 
+it('exposes module deletion to a leader', function () {
+    $this->actingAs(User::factory()->leader()->create());
+
+    $this->get(route('admin.modules.index'))
+        ->assertOk()
+        ->assertViewHas('canDeleteModules', true)
+        ->assertViewHas('bootstrap', fn (array $bootstrap): bool => $bootstrap['canDeleteModules'] === true);
+});
+
+it('does not expose module deletion to a non-leader', function () {
+    $this->actingAs(User::factory()->create());
+
+    $this->get(route('admin.modules.index'))
+        ->assertOk()
+        ->assertViewHas('canDeleteModules', false)
+        ->assertViewHas('bootstrap', fn (array $bootstrap): bool => $bootstrap['canDeleteModules'] === false);
+});
+
 it('marks only the acting member report as editable in the report list', function () {
     $member = User::factory()->create(['name' => 'Own Reporter']);
     $other = User::factory()->create(['name' => 'Other Reporter']);
@@ -126,6 +144,32 @@ it('opens the task list detail for the requested project', function () {
         ->assertOk()
         ->assertViewHas('initialPage', 'task-detail')
         ->assertViewHas('bootstrap', fn (array $bootstrap): bool => $bootstrap['activeProjectId'] === $project->id);
+});
+
+it('shows task management controls to a leader', function () {
+    $this->actingAs(User::factory()->leader()->create());
+    $module = Module::factory()->create();
+
+    $this->get(route('admin.projects.tasks', $module))
+        ->assertOk()
+        ->assertViewHas('canManageTasks', true)
+        ->assertViewHas('bootstrap', fn (array $bootstrap): bool => $bootstrap['canManageTasks'] === true)
+        ->assertSee('id="td-actions-header"', false)
+        ->assertSee("openModal('modal-create-task')", false);
+});
+
+it('hides task management controls from a non-leader', function () {
+    $this->actingAs(User::factory()->create());
+    $module = Module::factory()->create();
+
+    $this->get(route('admin.projects.tasks', $module))
+        ->assertOk()
+        ->assertViewHas('canManageTasks', false)
+        ->assertViewHas('bootstrap', fn (array $bootstrap): bool => $bootstrap['canManageTasks'] === false)
+        ->assertDontSee('id="td-actions-header"', false)
+        ->assertDontSee("openModal('modal-create-task')", false)
+        ->assertSee('Review task progress, timing and notes.', false)
+        ->assertDontSee('Click any field to change it.', false);
 });
 
 it('returns 404 for the task list of a missing project', function () {

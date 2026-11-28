@@ -5,6 +5,7 @@ use App\Enums\WorkspaceRole;
 use App\Enums\WorkStatus;
 use App\Models\Module;
 use App\Models\Project;
+use App\Models\ProjectTask;
 use App\Models\RecordShare;
 use App\Models\Role;
 use App\Models\User;
@@ -201,6 +202,41 @@ describe('update', function () {
         $this->patchJson(route('admin.api.modules.update', $module), ['status' => 'Archived'])
             ->assertUnprocessable()
             ->assertJsonValidationErrors('status');
+    });
+});
+
+describe('destroy', function () {
+    it('lets a leader delete an empty module', function () {
+        $this->actingAs(User::factory()->leader()->create());
+        $module = Module::factory()->create();
+
+        $this->deleteJson(route('admin.api.modules.destroy', $module))->assertNoContent();
+
+        $this->assertModelMissing($module);
+    });
+
+    it('does not let a non-leader delete a module', function () {
+        $this->actingAs(User::factory()->create());
+        $module = Module::factory()->create();
+
+        $this->deleteJson(route('admin.api.modules.destroy', $module))
+            ->assertForbidden()
+            ->assertJsonPath('message', 'Only team leaders can delete modules.');
+
+        $this->assertModelExists($module);
+    });
+
+    it('refuses to delete a module that still has tasks', function () {
+        $this->actingAs(User::factory()->leader()->create());
+        $module = Module::factory()->create();
+        ProjectTask::factory()->for($module)->create();
+
+        $this->deleteJson(route('admin.api.modules.destroy', $module))
+            ->assertUnprocessable()
+            ->assertJsonPath('message', 'This module still has tasks. Remove them before deleting it.');
+
+        $this->assertModelExists($module);
+        expect($module->tasks()->count())->toBe(1);
     });
 });
 
