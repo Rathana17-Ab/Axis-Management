@@ -5,6 +5,7 @@ namespace App\Providers;
 use App\Enums\RecordShareAbility;
 use App\Enums\WorkspacePermission;
 use App\Http\Controllers\Controller;
+use App\Models\CtoReport;
 use App\Models\Module;
 use App\Models\ProjectTask;
 use App\Models\RecordShare;
@@ -61,6 +62,14 @@ class AuthServiceProvider extends ServiceProvider
             }
 
             return $this->hasUpdateAccess($user, $record);
+        });
+
+        // Reports are personal records: leaders manage all of them, while other
+        // members may change only the reports they filed themselves.
+        Gate::define('update-report', function (?User $user, CtoReport $report): bool {
+            $user = Controller::currentWorkspaceUser($user);
+
+            return $user !== null && $report->isEditableBy($user);
         });
     }
 

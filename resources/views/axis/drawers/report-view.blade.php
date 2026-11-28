@@ -6,10 +6,10 @@
         <button type="button" onclick="copyActiveReportTelegram()" class="axis-drawer__close text-sky-400 hover:text-sky-300" title="Copy for Telegram" aria-label="Copy for Telegram">
             <i class="fa-solid fa-copy text-xs"></i>
         </button>
-        <button type="button" onclick="editActiveReport()" class="axis-drawer__close text-amber-400 hover:text-amber-300" title="Edit report" aria-label="Edit report">
+        <button type="button" id="repview-edit-header" onclick="editActiveReport()" class="axis-drawer__close text-amber-400 hover:text-amber-300" title="Edit report" aria-label="Edit report">
             <i class="fa-solid fa-pen text-xs"></i>
         </button>
-        <button type="button" onclick="deleteActiveReport()" class="axis-drawer__close text-rose-400 hover:text-rose-300" title="Delete report" aria-label="Delete report">
+        <button type="button" id="repview-delete-header" onclick="deleteActiveReport()" class="axis-drawer__close text-rose-400 hover:text-rose-300" title="Delete report" aria-label="Delete report">
             <i class="fa-solid fa-trash text-xs"></i>
         </button>
     </x-slot:headerActions>
@@ -82,12 +82,12 @@
 
     <x-slot:footer>
         <div class="flex items-center justify-between w-full">
-            <button type="button" onclick="deleteActiveReport()" class="px-3.5 py-1.5 rounded-lg text-xs font-semibold text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 transition-colors flex items-center gap-1.5">
+            <button type="button" id="repview-delete-footer" onclick="deleteActiveReport()" class="px-3.5 py-1.5 rounded-lg text-xs font-semibold text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 transition-colors flex items-center gap-1.5">
                 <i class="fa-solid fa-trash text-xs"></i>
                 <span>Delete</span>
             </button>
             <div class="flex items-center gap-2">
-                <button type="button" onclick="editActiveReport()" class="px-3.5 py-1.5 rounded-lg text-xs font-semibold text-amber-300 bg-amber-500/15 hover:bg-amber-500/25 border border-amber-400/30 transition-colors flex items-center gap-1.5">
+                <button type="button" id="repview-edit-footer" onclick="editActiveReport()" class="px-3.5 py-1.5 rounded-lg text-xs font-semibold text-amber-300 bg-amber-500/15 hover:bg-amber-500/25 border border-amber-400/30 transition-colors flex items-center gap-1.5">
                     <i class="fa-solid fa-pen text-xs"></i>
                     <span>Edit</span>
                 </button>

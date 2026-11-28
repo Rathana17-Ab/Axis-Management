@@ -29,6 +29,61 @@ it('opens the workspace on the page matching each admin route', function (string
     'team' => ['admin.team.index', 'team'],
 ]);
 
+it('shows team management controls to a leader', function () {
+    $this->actingAs(User::factory()->leader()->create());
+
+    $this->get(route('admin.team.index'))
+        ->assertOk()
+        ->assertViewHas('canManageTeam', true)
+        ->assertViewHas('bootstrap', fn (array $bootstrap): bool => $bootstrap['canManageTeam'] === true)
+        ->assertSee("openModal('modal-team-member')", false)
+        ->assertSee("openModal('modal-department-create')", false)
+        ->assertSee("openModal('modal-position-create')", false)
+        ->assertSee('<th class="py-3 px-3 text-center">Actions</th>', false);
+});
+
+it('hides team management controls from a non-leader', function () {
+    $this->actingAs(User::factory()->create());
+
+    $this->get(route('admin.team.index'))
+        ->assertOk()
+        ->assertViewHas('canManageTeam', false)
+        ->assertViewHas('bootstrap', fn (array $bootstrap): bool => $bootstrap['canManageTeam'] === false)
+        ->assertDontSee("openModal('modal-team-member')", false)
+        ->assertDontSee("openModal('modal-department-create')", false)
+        ->assertDontSee("openModal('modal-position-create')", false)
+        ->assertDontSee('<th class="py-3 px-3 text-center">Actions</th>', false);
+});
+
+it('marks only the acting member report as editable in the report list', function () {
+    $member = User::factory()->create(['name' => 'Own Reporter']);
+    $other = User::factory()->create(['name' => 'Other Reporter']);
+    $ownReport = CtoReport::factory()->authoredBy($member)->create();
+    $otherReport = CtoReport::factory()->authoredBy($other)->create();
+
+    $flags = fn (array $bootstrap): bool => collect($bootstrap['ctoReports'])
+        ->firstWhere('id', $ownReport->id)['canEdit'] === true
+        && collect($bootstrap['ctoReports'])
+            ->firstWhere('id', $otherReport->id)['canEdit'] === false;
+
+    $this->actingAs($member)
+        ->get(route('admin.reports.index'))
+        ->assertOk()
+        ->assertViewHas('bootstrap', $flags);
+});
+
+it('marks every report editable for a leader in the report list', function () {
+    $leader = User::factory()->leader()->create(['name' => 'Team Leader']);
+    $other = User::factory()->create(['name' => 'Other Reporter']);
+    $report = CtoReport::factory()->authoredBy($other)->create();
+
+    $this->actingAs($leader)
+        ->get(route('admin.reports.index'))
+        ->assertOk()
+        ->assertViewHas('bootstrap', fn (array $bootstrap): bool => collect($bootstrap['ctoReports'])
+            ->firstWhere('id', $report->id)['canEdit'] === true);
+});
+
 it('opens the module details page for the requested module', function () {
     $this->actingAs(User::factory()->create());
     $module = Module::factory()->create(['name' => 'Details Module']);

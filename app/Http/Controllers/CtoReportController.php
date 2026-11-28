@@ -6,7 +6,9 @@ use App\Http\Requests\StoreCtoReportRequest;
 use App\Http\Requests\UpdateCtoReportRequest;
 use App\Http\Resources\CtoReportResource;
 use App\Models\CtoReport;
+use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\Gate;
 
 class CtoReportController extends Controller
 {
@@ -27,10 +29,11 @@ class CtoReportController extends Controller
     public function store(StoreCtoReportRequest $request): JsonResponse
     {
         $validated = $request->validated();
+        $actingMember = $this->actingMember();
+        $fields = $this->normalizeReportFields($validated, true, $actingMember?->name);
+        $fields['user_id'] = $actingMember?->id;
 
-        $report = CtoReport::create(
-            $this->normalizeReportFields($validated, true, $this->actingMember()?->name)
-        );
+        $report = CtoReport::create($fields);
 
         return CtoReportResource::make($report)->response()->setStatusCode(201);
     }
@@ -50,6 +53,7 @@ class CtoReportController extends Controller
      */
     public function update(UpdateCtoReportRequest $request, CtoReport $report): JsonResponse
     {
+        $this->authorizeReportEdit($report);
         $this->authorizeWorkspaceRecord('update-record', $report);
 
         $report->update(
@@ -64,6 +68,7 @@ class CtoReportController extends Controller
      */
     public function destroy(CtoReport $report): JsonResponse
     {
+        $this->authorizeReportEdit($report);
         $this->authorizeWorkspaceRecord('update-record', $report);
 
         $report->delete();
@@ -72,6 +77,16 @@ class CtoReportController extends Controller
             'success' => true,
             'message' => 'Report deleted successfully.',
         ]);
+    }
+
+    /**
+     * A report may only be changed by its author or by a leader.
+     *
+     * @throws AuthorizationException
+     */
+    private function authorizeReportEdit(CtoReport $report): void
+    {
+        Gate::authorize('update-report', $report);
     }
 
     /**

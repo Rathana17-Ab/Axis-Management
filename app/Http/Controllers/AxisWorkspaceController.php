@@ -112,6 +112,7 @@ class AxisWorkspaceController extends Controller
         $currentUser = $this->actingMember();
         $currentUser?->loadMissing('roles.permissions');
         $isSignedIn = Auth::check();
+        $canManageTeam = $currentUser?->isLeader() ?? false;
         $hasWorkspaceRole = $currentUser?->hasWorkspaceRole() ?? false;
         $restrictRecords = $hasWorkspaceRole
             && ! $currentUser->hasWorkspacePermission(WorkspacePermission::RecordsViewAll);
@@ -221,6 +222,7 @@ class AxisWorkspaceController extends Controller
             'assignees' => $assignees,
             'axisProjects' => $axisProjects,
             'currentUser' => $currentUser,
+            'canManageTeam' => $canManageTeam,
             'canAccessAdministration' => $canAccessAdministration,
             'canViewWorkQueues' => $canViewWorkQueues,
             'canViewSharing' => $canViewSharing,
@@ -235,6 +237,7 @@ class AxisWorkspaceController extends Controller
                 'moduleProjectFilter' => $request->integer('project') ?: null,
                 'currentUserId' => $currentUser?->id,
                 'isSignedIn' => $isSignedIn,
+                'canManageTeam' => $canManageTeam,
                 'roleKeys' => $isSignedIn ? ($currentUser?->roles->pluck('slug')->all() ?? []) : [],
                 'permissionLabels' => collect(WorkspacePermission::cases())
                     ->mapWithKeys(fn (WorkspacePermission $permission): array => [$permission->value => $permission->label()])

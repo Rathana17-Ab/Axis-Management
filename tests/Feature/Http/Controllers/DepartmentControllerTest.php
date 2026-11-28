@@ -4,7 +4,7 @@ use App\Models\Department;
 use App\Models\User;
 
 beforeEach(function () {
-    $this->actingAs(User::factory()->create());
+    $this->actingAs(User::factory()->leader()->create());
 });
 
 it('lists departments with their member counts', function () {

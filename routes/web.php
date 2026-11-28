@@ -91,21 +91,25 @@ Route::middleware('auth')->prefix('admin')->name('admin.')->group(function () {
         Route::patch('/cto-reports/{report}', [CtoReportController::class, 'update'])->name('reports.update');
         Route::delete('/cto-reports/{report}', [CtoReportController::class, 'destroy'])->name('reports.destroy');
 
-        Route::post('/team-members', [TeamAccessController::class, 'store'])->name('team.store');
-        Route::patch('/team-members/{user}', [TeamAccessController::class, 'update'])->name('team.update');
-        Route::patch('/team-members/{user}/toggle-login', [TeamAccessController::class, 'toggleLogin'])->name('team.toggle-login');
-        Route::patch('/team-members/{user}/password', [TeamAccessController::class, 'resetPassword'])->name('team.password');
-        Route::delete('/team-members/{user}', [TeamAccessController::class, 'destroy'])->name('team.destroy');
-
         Route::get('/departments', [DepartmentController::class, 'index'])->name('departments.index');
-        Route::post('/departments', [DepartmentController::class, 'store'])->name('departments.store');
-        Route::patch('/departments/{department}', [DepartmentController::class, 'update'])->name('departments.update');
-        Route::delete('/departments/{department}', [DepartmentController::class, 'destroy'])->name('departments.destroy');
-
         Route::get('/positions', [PositionController::class, 'index'])->name('positions.index');
-        Route::post('/positions', [PositionController::class, 'store'])->name('positions.store');
-        Route::patch('/positions/{position}', [PositionController::class, 'update'])->name('positions.update');
-        Route::delete('/positions/{position}', [PositionController::class, 'destroy'])->name('positions.destroy');
+
+        Route::middleware('team.leader')->group(function () {
+            Route::post('/team-members', [TeamAccessController::class, 'store'])->name('team.store');
+            Route::patch('/team-members/{user}', [TeamAccessController::class, 'update'])->name('team.update');
+            Route::patch('/team-members/{user}/toggle-login', [TeamAccessController::class, 'toggleLogin'])->name('team.toggle-login');
+            Route::patch('/team-members/{user}/password', [TeamAccessController::class, 'resetPassword'])->name('team.password');
+            Route::delete('/team-members/{user}', [TeamAccessController::class, 'destroy'])->name('team.destroy');
+
+            Route::post('/departments', [DepartmentController::class, 'store'])->name('departments.store');
+            Route::patch('/departments/{department}', [DepartmentController::class, 'update'])->name('departments.update');
+            Route::delete('/departments/{department}', [DepartmentController::class, 'destroy'])->name('departments.destroy');
+
+            Route::post('/positions', [PositionController::class, 'store'])->name('positions.store');
+            Route::patch('/positions/{position}', [PositionController::class, 'update'])->name('positions.update');
+            Route::delete('/positions/{position}', [PositionController::class, 'destroy'])->name('positions.destroy');
+        });
+
         Route::patch('/team-members/{user}/roles', [UserRoleController::class, 'update'])
             ->middleware(['workspace.session', 'workspace.can:users.manage'])->name('user-roles.update');
 

@@ -35,6 +35,7 @@ const canManageRecords = () => workspaceCan('records.manage_all');
 const canReorderModules = AXIS_BOOT.canReorderModules !== false;
 const canManageP18 = () => workspaceCan('p18.manage');
 const canManageAdministration = () => workspaceCan('administration.access');
+const canManageTeam = AXIS_BOOT.canManageTeam === true;
 
 // Only active employees can be given work; `keepIds` keeps a currently assigned (now inactive) person selectable.
 const employees = (keepIds = []) => teamMembers
@@ -372,7 +373,9 @@ window.updateDynamicHeader = function(pageId) {
     if (createBtn) {
         createBtn.title = cfg.createLabel;
         createBtn.setAttribute('aria-label', cfg.createLabel);
-        createBtn.classList.toggle('hidden', !['dashboard', 'projects', 'modules', 'task-detail', 'reports', 'team'].includes(activePageId));
+        const creatablePages = ['dashboard', 'projects', 'modules', 'task-detail', 'reports'];
+        if (activePageId === 'team' && canManageTeam) creatablePages.push('team');
+        createBtn.classList.toggle('hidden', !creatablePages.includes(activePageId));
     }
 
     if (hdrModSelect) {
@@ -436,16 +439,19 @@ const AxisSearch = (() => {
         }));
 
         const activeProj = projects.find(p => p.id === activeProjectId);
-        [
+        const quickActions = [
             ['new-project', 'New project', 'Create a project that groups modules', () => openModal('drawer-project-create')],
             ['new-module', 'New module', 'Add a module to a project', () => openModal('modal-add-project')],
             ['new-task', 'New task', activeProj ? `Add a task to ${activeProj.name}` : 'Add a task to the current project', () => {
                 if (activeProj) openProjectTaskList(activeProj.id);
                 openModal('modal-create-task');
             }],
-            ['add-person', 'Add a person', 'Invite someone to the team', () => openModal('modal-team-member')],
-            ['new-report', 'Send a report', 'Daily or weekly update', () => openModal('modal-report')],
-        ].forEach(([key, title, subtitle, run]) => items.push({ type: 'action', key, title, subtitle, haystack: `${title} ${subtitle}`, run }));
+        ];
+        if (canManageTeam) {
+            quickActions.push(['add-person', 'Add a person', 'Invite someone to the team', () => openModal('modal-team-member')]);
+        }
+        quickActions.push(['new-report', 'Send a report', 'Daily or weekly update', () => openModal('modal-report')]);
+        quickActions.forEach(([key, title, subtitle, run]) => items.push({ type: 'action', key, title, subtitle, haystack: `${title} ${subtitle}`, run }));
 
         axisProjects.forEach(ap => items.push({
             type: 'project', key: ap.id, title: ap.name,
@@ -747,6 +753,8 @@ function focusTaskRow(projectId, taskId) {
 }
 
 window.triggerHeaderContextCreate = function() {
+    if (activePageId === 'team' && !canManageTeam) return;
+
     // Opens the create drawer for the current page straight away (no button text swap: it is an icon button)
     const openTargetModal = () => {
         if (activePageId === 'task-detail') {
@@ -5443,12 +5451,13 @@ window.renderReportsPage = function() {
                                 <button type="button" onclick="openReportDetail(${r.id}); event.stopPropagation();" class="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-white/10 text-xs transition-colors" title="View details">
                                     <i class="fa-solid fa-eye"></i>
                                 </button>
+                                ${r.canEdit ? `
                                 <button type="button" onclick="editReportById(${r.id}, event)" class="p-1.5 rounded-lg text-amber-400 hover:text-white hover:bg-amber-500/20 text-xs transition-colors" title="Edit report">
                                     <i class="fa-solid fa-pen"></i>
                                 </button>
                                 <button type="button" onclick="deleteReportById(${r.id}, event)" class="p-1.5 rounded-lg text-rose-400 hover:text-white hover:bg-rose-500/20 text-xs transition-colors" title="Delete report">
                                     <i class="fa-solid fa-trash"></i>
-                                </button>
+                                </button>` : ''}
                             </div>
                         </td>
                     </tr>
@@ -5941,6 +5950,12 @@ window.handleSaveReport = function(e) {
     e.preventDefault();
     AxisDrawer.submit('modal-report', async () => {
         const id = document.getElementById('rep-modal-id')?.value;
+        const existingReport = id ? ctoReports.find(r => r.id == id) : null;
+        if (existingReport && existingReport.canEdit !== true) {
+            showToast('You can only change your own reports.');
+            return;
+        }
+
         const payload = {
             report_type: document.getElementById('rep-modal-type').value,
             handler_name: document.getElementById('rep-modal-handler')?.value || undefined,
@@ -5979,6 +5994,12 @@ window.openReportDetail = function(id) {
     if (!report) return;
 
     activeReportDetailId = id;
+
+    const canEdit = report.canEdit === true;
+    ['repview-edit-header', 'repview-delete-header', 'repview-edit-footer', 'repview-delete-footer'].forEach(buttonId => {
+        const button = document.getElementById(buttonId);
+        if (button) button.style.display = canEdit ? '' : 'none';
+    });
 
     const typeBadge = document.getElementById('repview-type-badge');
     if (typeBadge) {
@@ -6130,7 +6151,7 @@ window.editActiveReport = function() {
 window.editReportById = function(id, e) {
     if (e) e.stopPropagation();
     const report = ctoReports.find(r => r.id == id);
-    if (!report) return;
+    if (!report || report.canEdit !== true) return;
 
     const idInput = document.getElementById('rep-modal-id');
     if (idInput) idInput.value = report.id;
@@ -6187,7 +6208,7 @@ window.deleteActiveReport = function() {
 window.deleteReportById = async function(id, e) {
     if (e) e.stopPropagation();
     const report = ctoReports.find(r => r.id == id);
-    if (!report) return;
+    if (!report || report.canEdit !== true) return;
 
     const confirmed = await AxisDrawer.confirm({
         title: 'Delete this report?',
@@ -6240,6 +6261,7 @@ function renderTeamDirectory() {
                         ${department.description ? `<div class="text-xs text-slate-500">${escapeHtml(department.description)}</div>` : ''}
                     </td>
                     <td class="py-3 px-3 text-center text-xs text-slate-300">${department.memberCount ?? 0}</td>
+                    ${canManageTeam ? `
                     <td class="py-3 px-3 text-right whitespace-nowrap space-x-1.5">
                         <button type="button" onclick="openDepartmentEdit(${department.id})" class="axis-row-btn" title="Edit department" aria-label="Edit ${escapeHtml(department.name)}">
                             <i class="fa-solid fa-pen text-xs" aria-hidden="true"></i>
@@ -6247,10 +6269,10 @@ function renderTeamDirectory() {
                         <button type="button" onclick="deleteDepartment(${department.id})" class="axis-row-btn axis-row-btn--danger" title="Remove department" aria-label="Remove ${escapeHtml(department.name)}">
                             <i class="fa-solid fa-trash-can text-xs" aria-hidden="true"></i>
                         </button>
-                    </td>
+                    </td>` : ''}
                 </tr>
             `).join('')
-            : workspaceRow(3, 'No departments have been added yet.');
+            : workspaceRow(canManageTeam ? 3 : 2, 'No departments have been added yet.');
     }
 
     const positionsBody = document.getElementById('positions-tbody');
@@ -6263,6 +6285,7 @@ function renderTeamDirectory() {
                         ${position.description ? `<div class="text-xs text-slate-500">${escapeHtml(position.description)}</div>` : ''}
                     </td>
                     <td class="py-3 px-3 text-center text-xs text-slate-300">${position.memberCount ?? 0}</td>
+                    ${canManageTeam ? `
                     <td class="py-3 px-3 text-right whitespace-nowrap space-x-1.5">
                         <button type="button" onclick="openPositionEdit(${position.id})" class="axis-row-btn" title="Edit position" aria-label="Edit ${escapeHtml(position.name)}">
                             <i class="fa-solid fa-pen text-xs" aria-hidden="true"></i>
@@ -6270,10 +6293,10 @@ function renderTeamDirectory() {
                         <button type="button" onclick="deletePosition(${position.id})" class="axis-row-btn axis-row-btn--danger" title="Remove position" aria-label="Remove ${escapeHtml(position.name)}">
                             <i class="fa-solid fa-trash-can text-xs" aria-hidden="true"></i>
                         </button>
-                    </td>
+                    </td>` : ''}
                 </tr>
             `).join('')
-            : workspaceRow(3, 'No positions have been added yet.');
+            : workspaceRow(canManageTeam ? 3 : 2, 'No positions have been added yet.');
     }
 
     const createDepartmentSelect = document.getElementById('tm-dept-input');
@@ -6299,7 +6322,10 @@ window.renderTeamTable = function() {
         <tr>
             <td class="py-3.5 px-3 text-center font-mono text-slate-400">${i + 1}</td>
             <td class="py-3.5 px-3">
-                <div class="font-medium text-white whitespace-nowrap">${escapeHtml(m.name)}</div>
+                <div class="font-medium text-white whitespace-nowrap">
+                    ${escapeHtml(m.name)}
+                    ${currentUser?.id === m.id ? '<span class="ml-1.5 text-xs font-normal text-sky-300">(You)</span>' : ''}
+                </div>
                 ${m.title ? `<div class="text-xs text-slate-500 mt-0.5">${escapeHtml(m.title)}</div>` : ''}
             </td>
             <td class="py-3.5 px-3 text-slate-300">${m.departmentName || m.department ? escapeHtml(m.departmentName || m.department) : '<span class="text-slate-500">—</span>'}</td>
@@ -6309,18 +6335,29 @@ window.renderTeamTable = function() {
             <td class="py-3.5 px-3 text-xs text-slate-400">
                 <div class="max-w-[220px] truncate" title="${escapeHtml(m.description || '')}">${m.description ? escapeHtml(m.description) : '<span class="text-slate-500">—</span>'}</div>
             </td>
-            <td class="py-3.5 px-3 font-mono text-slate-400">${m.email ? escapeHtml(m.email) : '<span class="text-slate-500">—</span>'}</td>
+            <td class="py-3.5 px-3 font-mono text-slate-400">
+                ${m.email ? escapeHtml(m.email) : '<span class="text-slate-500">—</span>'}
+                ${canManageTeam ? `
+                <div class="mt-0.5 font-sans text-[11px] ${!m.hasAccount ? 'text-slate-500' : m.active ? 'text-emerald-300' : 'text-amber-300'}">
+                    ${!m.hasAccount ? 'No login' : m.active ? 'Can sign in' : 'Login locked'}
+                </div>` : ''}
+            </td>
             <td class="py-3.5 px-3 text-center">
+                ${canManageTeam ? `
                 <button type="button" onclick="toggleEmployeeStatus(${m.id})" title="${m.status === 'inactive' ? 'Mark as active' : 'Mark as inactive'}"
                     class="px-2.5 py-0.5 rounded-full text-xs font-semibold border ${m.status === 'inactive' ? 'bg-white/5 text-slate-400 border-white/10' : 'bg-emerald-500/15 text-emerald-300 border-emerald-400/30'}">
                     ${m.status === 'inactive' ? 'Inactive' : 'Active'}
-                </button>
+                </button>` : `
+                <span class="px-2.5 py-0.5 rounded-full text-xs font-semibold border ${m.status === 'inactive' ? 'bg-white/5 text-slate-400 border-white/10' : 'bg-emerald-500/15 text-emerald-300 border-emerald-400/30'}">
+                    ${m.status === 'inactive' ? 'Inactive' : 'Active'}
+                </span>`}
             </td>
+            ${canManageTeam ? `
             <td class="py-3.5 px-3 text-center whitespace-nowrap space-x-1.5">
                 <button type="button" onclick="openTeamMemberEdit(${m.id})" class="px-2.5 py-0.5 rounded-full text-xs font-semibold border bg-sky-500/15 text-sky-200 border-sky-400/30">Edit</button>
                 ${currentUser?.id !== m.id ? `
                 <button type="button" onclick="deleteTeamMember(${m.id})" class="px-2.5 py-0.5 rounded-full text-xs font-semibold border bg-rose-500/15 text-rose-300 border-rose-400/30">Remove</button>` : ''}
-            </td>
+            </td>` : ''}
         </tr>
     `).join('');
 

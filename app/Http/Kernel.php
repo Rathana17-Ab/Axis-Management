@@ -6,6 +6,7 @@ use App\Http\Middleware\Authenticate;
 use App\Http\Middleware\EncryptCookies;
 use App\Http\Middleware\PreventRequestsDuringMaintenance;
 use App\Http\Middleware\RedirectIfAuthenticated;
+use App\Http\Middleware\RequireTeamLeader;
 use App\Http\Middleware\RequireWorkspacePermission;
 use App\Http\Middleware\RequireWorkspaceSession;
 use App\Http\Middleware\TrimStrings;
@@ -89,6 +90,7 @@ class Kernel extends HttpKernel
         'signed' => ValidateSignature::class,
         'throttle' => ThrottleRequests::class,
         'verified' => EnsureEmailIsVerified::class,
+        'team.leader' => RequireTeamLeader::class,
         'workspace.can' => RequireWorkspacePermission::class,
         'workspace.session' => RequireWorkspaceSession::class,
     ];

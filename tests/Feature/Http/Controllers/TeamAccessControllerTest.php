@@ -7,7 +7,7 @@ use App\Models\User;
 use Illuminate\Support\Facades\Hash;
 
 beforeEach(function () {
-    $this->actingAs(User::factory()->create());
+    $this->actingAs(User::factory()->leader()->create());
 });
 
 describe('store', function () {
@@ -211,7 +211,7 @@ describe('delete', function () {
     });
 
     it('refuses to remove the signed-in account', function () {
-        $member = User::factory()->create();
+        $member = User::factory()->leader()->create();
 
         $this->actingAs($member)
             ->deleteJson(route('admin.api.team.destroy', $member))

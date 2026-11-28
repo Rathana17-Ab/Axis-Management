@@ -4,6 +4,7 @@ namespace Database\Factories;
 
 use App\Enums\ReportType;
 use App\Models\CtoReport;
+use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
@@ -27,5 +28,16 @@ class CtoReportFactory extends Factory
             'blocker' => 'None',
             'hours_logged' => 8,
         ];
+    }
+
+    /**
+     * A report filed by the given team member.
+     */
+    public function authoredBy(User $user): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'user_id' => $user->id,
+            'handler_name' => $user->name,
+        ]);
     }
 }

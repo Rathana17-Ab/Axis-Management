@@ -2,7 +2,9 @@
 
 namespace App\Http\Resources;
 
+use App\Http\Controllers\Controller;
 use App\Models\CtoReport;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -18,6 +20,9 @@ class CtoReportResource extends JsonResource
      */
     public function toArray(Request $request): array
     {
+        $requestUser = $request->user();
+        $actingUser = $requestUser instanceof User ? $requestUser : Controller::currentWorkspaceUser();
+
         return [
             'id' => $this->id,
             'type' => $this->report_type->value,
@@ -31,6 +36,7 @@ class CtoReportResource extends JsonResource
             'content_json' => $this->content_json,
             'blocker' => $this->blocker,
             'hours' => $this->hours_logged,
+            'canEdit' => $this->isEditableBy($actingUser),
             'created_at' => $this->created_at?->toIso8601String(),
         ];
     }
