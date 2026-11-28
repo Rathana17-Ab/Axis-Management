@@ -61,7 +61,10 @@ it('exposes module deletion to a leader', function () {
     $this->get(route('admin.modules.index'))
         ->assertOk()
         ->assertViewHas('canDeleteModules', true)
-        ->assertViewHas('bootstrap', fn (array $bootstrap): bool => $bootstrap['canDeleteModules'] === true);
+        ->assertViewHas('bootstrap', function (array $bootstrap): bool {
+            return $bootstrap['canDeleteModules'] === true
+                && str_contains($bootstrap['routes']['modules.destroy'] ?? '', 'modules/');
+        });
 });
 
 it('does not expose module deletion to a non-leader', function () {

@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Enums\TaskPriority;
 use App\Enums\WorkspacePermission;
 use App\Enums\WorkStatus;
 use App\Http\Requests\ReorderModulesRequest;
@@ -10,7 +9,6 @@ use App\Http\Requests\StoreModuleRequest;
 use App\Http\Requests\UpdateModuleRequest;
 use App\Http\Resources\ModuleResource;
 use App\Models\Module;
-use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -26,7 +24,7 @@ class ModuleController extends Controller
     private const RELATIONS = ['project', 'tasks.issueNotes', 'tasks.employee', 'tasks.assignedBy'];
 
     /**
-     * Create a module under a project, with its initial architecture task.
+     * Create a module under a project.
      */
     public function store(StoreModuleRequest $request): JsonResponse
     {
@@ -34,11 +32,9 @@ class ModuleController extends Controller
 
         $validated = $request->validated();
         $deadline = Carbon::parse($validated['deadline']);
-        $actingMember = $this->actingMember();
-        $actingName = $actingMember?->name;
-        $lead = User::query()->firstWhere('name', $validated['manager_name']);
+        $actingName = $this->actingMember()?->name;
 
-        $module = DB::transaction(function () use ($validated, $deadline, $actingName, $actingMember, $lead): Module {
+        $module = DB::transaction(function () use ($validated, $deadline, $actingName): Module {
             $this->makeRoomAtTopOfModuleOrder();
 
             $module = Module::create([
@@ -59,21 +55,6 @@ class ModuleController extends Controller
                 'team_members' => collect([$validated['manager_name'], $actingName])->filter()->unique()->values()->all(),
                 'status' => WorkStatus::Processing,
                 'overdue_label' => Module::overdueLabel($deadline),
-            ]);
-
-            $module->tasks()->create([
-                'name' => 'Module Architecture & Setup',
-                'description' => "*Initialize module routes & controllers\n*Configure RBAC permissions",
-                'priority' => TaskPriority::High,
-                'start_date' => today(),
-                'deadline' => $deadline,
-                'emp_id' => $lead?->id,
-                'assigned_by_id' => $actingMember?->isLeader() ? $actingMember->id : null,
-                'status' => WorkStatus::Processing,
-                'progress' => 25,
-                'est_hours' => 16,
-                'act_seconds' => 3600,
-                'sort_order' => 1,
             ]);
 
             return $module;

@@ -89,7 +89,7 @@ class AxisWorkspaceController extends Controller
      */
     private const API_ROUTES = [
         'projects.store', 'projects.update', 'projects.destroy',
-        'modules.store', 'modules.update', 'modules.reorder',
+        'modules.store', 'modules.update', 'modules.destroy', 'modules.reorder',
         'tasks.store', 'tasks.update', 'tasks.timer.toggle', 'tasks.timer.reset', 'tasks.destroy',
         'issues.store', 'issues.update', 'issues.cycle', 'issues.destroy',
         'reports.store', 'reports.show', 'reports.update', 'reports.destroy',

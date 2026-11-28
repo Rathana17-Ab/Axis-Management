@@ -16,13 +16,13 @@ beforeEach(function () {
 });
 
 describe('store', function () {
-    it('creates a module at the top of the custom order with the next code and an initial architecture task', function () {
+    it('creates a module at the top of the custom order with the next code and no tasks', function () {
         $this->freezeTime();
         $kong = User::factory()->create(['name' => 'Kong Rathana']);
         $this->actingAs($kong);
         $existing = Module::factory()->create(['code' => 'PROJ-1888', 'sort_order' => 1]);
         $project = Project::factory()->create(['name' => 'EOT Axis']);
-        $lead = User::factory()->create(['name' => 'Ti Tong']);
+        User::factory()->create(['name' => 'Ti Tong']);
 
         $response = $this->postJson(route('admin.api.modules.store'), [
             'project_id' => $project->id,
@@ -39,9 +39,7 @@ describe('store', function () {
             ->assertJsonPath('data.custBadge', 'M')
             ->assertJsonPath('data.team', ['Ti Tong', 'Kong Rathana'])
             ->assertJsonPath('data.overdue', '10 days remaining')
-            ->assertJsonPath('data.tasks.0.name', 'Module Architecture & Setup')
-            ->assertJsonPath('data.tasks.0.handler', 'Ti Tong')
-            ->assertJsonPath('data.tasks.0.employeeId', $lead->id)
+            ->assertJsonPath('data.tasks', [])
             ->assertJsonPath('data.projectId', $project->id)
             ->assertJsonPath('data.customer', 'Ms. Dara')
             ->assertJsonPath('data.customerSub', '(Axis Client)')
@@ -54,7 +52,7 @@ describe('store', function () {
             ->and($module->sort_order)->toBe(1)
             ->and($existing->fresh()->sort_order)->toBe(2)
             ->and($module->status)->toBe(WorkStatus::Processing)
-            ->and($module->tasks()->count())->toBe(1);
+            ->and($module->tasks()->count())->toBe(0);
     });
 
     it('shows a newly created module first in the workspace module list', function () {
