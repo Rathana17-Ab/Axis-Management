@@ -28,6 +28,34 @@ it('opens the workspace on the page matching each admin route', function (string
     'team' => ['admin.team.index', 'team'],
 ]);
 
+it('opens the module details page for the requested module', function () {
+    $this->actingAs(User::factory()->create());
+    $module = Module::factory()->create(['name' => 'Details Module']);
+
+    $this->get(route('admin.modules.details', $module))
+        ->assertOk()
+        ->assertViewIs('axis.workspace')
+        ->assertViewHas('initialPage', 'module-details')
+        ->assertViewHas('bootstrap', fn (array $bootstrap): bool => $bootstrap['activeProjectId'] === $module->id
+            && $bootstrap['pageUrls']['module-details'] === '/admin/module-details/__ID__')
+        ->assertSee('<div id="page-module-details" class="app-page active-page space-y-5">', false)
+        ->assertSee('id="md-identity-badge"', false)
+        ->assertSee('id="md-status-field"', false)
+        ->assertSee('id="md-progress"', false)
+        ->assertSee('id="md-timeline"', false)
+        ->assertSee('id="md-tasks"', false)
+        ->assertSee('id="md-issues"', false)
+        ->assertSee('id="md-lead"', false)
+        ->assertSee('id="md-team"', false)
+        ->assertSee('id="md-customer"', false);
+});
+
+it('returns 404 for the module details of a missing module', function () {
+    $this->actingAs(User::factory()->create());
+
+    $this->get('/admin/module-details/999')->assertNotFound();
+});
+
 it('opens the task list detail for the requested project', function () {
     $this->actingAs(User::factory()->create());
     $project = Module::factory()->create();
@@ -93,7 +121,7 @@ it('renders only the module, project, task and team lists on the dashboard', fun
         ->assertSee('id="dash-modules-count"', false)
         ->assertSee('id="dash-modules-sort-label"', false)
         ->assertSee('Order number')
-        ->assertSee('Click a card to open the Modules page.')
+        ->assertSee('Click a card to open the module details page.')
         ->assertSee('id="dash-project-toolbar"', false)
         ->assertSee('id="dash-project-cards" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 p-5"', false)
         ->assertSee('<h2 id="dash-project-title" class="text-sm font-bold text-white">Project list</h2>', false)

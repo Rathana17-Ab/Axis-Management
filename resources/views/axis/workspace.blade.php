@@ -22,6 +22,7 @@
                 @include('axis.pages.dashboard')
                 @include('axis.pages.projects')
                 @include('axis.pages.modules')
+                @include('axis.pages.module-details')
                 @include('axis.pages.task-detail')
                 @include('axis.pages.reports')
                 @include('axis.pages.team')

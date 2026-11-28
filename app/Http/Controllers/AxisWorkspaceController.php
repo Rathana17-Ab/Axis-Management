@@ -44,6 +44,7 @@ class AxisWorkspaceController extends Controller
         'admin.profile' => 'profile',
         'admin.projects.index' => 'projects',
         'admin.modules.index' => 'modules',
+        'admin.modules.details' => 'module-details',
         'admin.projects.tasks' => 'task-detail',
         'admin.reports.index' => 'reports',
         'admin.team.index' => 'team',
@@ -59,6 +60,16 @@ class AxisWorkspaceController extends Controller
     public function index(Request $request): View
     {
         return $this->workspace(self::PAGES[$request->route()?->getName()] ?? 'projects');
+    }
+
+    /**
+     * Render the workspace shell opened on a module's details page.
+     */
+    public function showModuleDetails(Module $module): View
+    {
+        $this->authorizeWorkspaceRecord('view-record', $module);
+
+        return $this->workspace('module-details', $module->id);
     }
 
     /**
@@ -252,6 +263,7 @@ class AxisWorkspaceController extends Controller
                     'profile' => route('admin.profile', absolute: false),
                     'projects' => route('admin.projects.index', absolute: false),
                     'modules' => route('admin.modules.index', absolute: false),
+                    'module-details' => $this->routeTemplate('admin.modules.details'),
                     'task-detail' => $this->routeTemplate('admin.projects.tasks'),
                     'reports' => route('admin.reports.index', absolute: false),
                     'team' => route('admin.team.index', absolute: false),

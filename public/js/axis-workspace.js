@@ -256,6 +256,13 @@ window.updateDynamicHeader = function(pageId) {
             createLabel: 'New module',
             createModal: 'modal-add-project'
         },
+        'module-details': {
+            section: activeProj.projectName || 'Project Management',
+            route: `admin/module-details/${activeProj.id}`,
+            title: 'Module details',
+            badge: activeProj.code || 'Module',
+            searchPlaceholder: 'Search modules…'
+        },
         'task-detail': {
             section: activeProj.projectName || 'Project Management',
             route: `admin/project-task-list/${activeProj.id}?code=${activeProj.code}`,
@@ -723,12 +730,13 @@ window.triggerHeaderContextCreate = function() {
 
 /** Breadcrumb section link: back to the current project's modules, or to the projects list. */
 window.openHeaderSection = function() {
-    const projectId = activePageId === 'task-detail'
+    const isModulePage = ['task-detail', 'module-details'].includes(activePageId);
+    const projectId = isModulePage
         ? (projects.find(p => p.id === activeProjectId) || {}).projectId
         : activePageId === 'modules' ? Number(document.getElementById('flt-project')?.value) || null : null;
     if (projectId) {
         openModulesOfProject(projectId);
-    } else if (['projects', 'modules', 'task-detail'].includes(activePageId)) {
+    } else if (['projects', 'modules', 'task-detail', 'module-details'].includes(activePageId)) {
         switchPage('projects');
     }
 };
@@ -746,8 +754,8 @@ window.switchPage = function(pageId, history = true) {
         pageId = 'dashboard';
     }
 
-    // The task list belongs to a module; with none yet, guide the user to create one first
-    if (pageId === 'task-detail' && projects.length === 0) {
+    // Module pages need at least one module; with none yet, guide the user to create one first
+    if (['task-detail', 'module-details'].includes(pageId) && projects.length === 0) {
         if (typeof showToast === 'function') showToast('Create a project and a module first, then add tasks to it.');
         pageId = 'projects';
     }
@@ -781,6 +789,9 @@ window.switchPage = function(pageId, history = true) {
         prepareKpiEntrance();
         renderProjectsTable();
     }
+    if (pageId === 'module-details') {
+        renderModuleDetailsPage();
+    }
     if (pageId === 'task-detail') {
         prepareKpiEntrance('task-kpi-strip');
         renderTaskDetailPage();
@@ -804,8 +815,8 @@ window.switchPage = function(pageId, history = true) {
 
 function pageUrlFor(pageId) {
     const urls = AXIS_BOOT.pageUrls || {};
-    if (pageId === 'task-detail') {
-        return (urls['task-detail'] || '').replace('__ID__', encodeURIComponent(activeProjectId));
+    if (['task-detail', 'module-details'].includes(pageId)) {
+        return (urls[pageId] || '').replace('__ID__', encodeURIComponent(activeProjectId));
     }
     if (pageId === 'modules' && urls.modules) {
         const projectFilter = document.getElementById('flt-project')?.value;
@@ -838,6 +849,14 @@ window.openProjectTaskList = function(projectId) {
         activeProjectId = found.id;
     }
     switchPage('task-detail');
+};
+
+window.openModuleDetails = function(moduleId) {
+    const found = projects.find(p => p.id === moduleId);
+    if (found) {
+        activeProjectId = found.id;
+    }
+    switchPage('module-details');
 };
 
 // ---------------------------------------------------------------------
@@ -1164,9 +1183,9 @@ function renderDashboardModules() {
         const left = sortValue(a), right = sortValue(b);
         return (left < right ? -1 : left > right ? 1 : 0) * direction || a.name.localeCompare(b.name);
     });
-    const open = 'openModulesOfProject(null)';
 
     container.innerHTML = sorted.map(m => {
+        const open = `openModuleDetails(${m.id})`;
         const tasks = m.tasks || [];
         const done = tasks.filter(t => t.status === 'Finished').length;
         const pct = Math.round(computeProjectCompletion(m));
@@ -1177,7 +1196,7 @@ function renderDashboardModules() {
         return `
             <article class="axis-list-card dash-module-card min-w-0" role="button" tabindex="0"
                      onclick="${open}" onkeydown="if (event.key === 'Enter' && event.target === this) ${open}"
-                     aria-label="Open the Modules page">
+                     aria-label="Open details for ${name}">
                 <div class="flex items-center gap-2.5 min-w-0">
                     <span class="w-6 h-6 rounded-md grid place-items-center shrink-0 bg-sky-500/10 text-sky-300 text-[11px] font-mono" title="Order ${order}">${order}</span>
                     <span class="w-8 h-8 rounded-lg ${m.badgeClass} font-bold text-xs flex items-center justify-center shrink-0">${escapeHtml(m.projBadge)}</span>
@@ -2850,7 +2869,11 @@ window.updateProjectStatus = function(projId, newStatus) {
 
         AxisAPI.idOf(p)
             .then(id => AxisAPI.request(AxisAPI.url('modules.update', id), 'PATCH', { status: newStatus }))
-            .catch(err => AxisAPI.fail(err, () => { p.status = prevStatus; renderProjectsTable(); }));
+            .catch(err => AxisAPI.fail(err, () => {
+                p.status = prevStatus;
+                renderProjectsTable();
+                if (activePageId === 'module-details') renderModuleDetailsPage();
+            }));
     }
 };
 
@@ -3227,6 +3250,88 @@ document.addEventListener('keydown', e => {
     });
 });
 
+window.renderModuleDetailsPage = function() {
+    const p = projects.find(x => x.id === activeProjectId) || projects[0];
+    if (!p) return;
+    activeProjectId = p.id;
+
+    const setText = (id, value) => {
+        const el = document.getElementById(id);
+        if (el) el.textContent = value;
+    };
+    const setHtml = (id, value) => {
+        const el = document.getElementById(id);
+        if (el) el.innerHTML = value;
+    };
+    const name = escapeHtml(p.name);
+    const product = (p.product || '').replace(/^Axis\s+/, '') || 'No product';
+    const pct = Math.round(computeProjectCompletion(p));
+    const st = moduleStats(p);
+    const due = deadlineInfo(p);
+
+    const identity = document.getElementById('md-identity-badge');
+    if (identity) {
+        identity.textContent = p.projBadge || '—';
+        identity.className = `w-10 h-10 rounded-xl ${p.badgeClass} font-bold text-sm flex items-center justify-center shrink-0`;
+    }
+
+    setText('md-title', p.name || '—');
+    setText('md-code-badge', p.code || '—');
+    setText('md-sort-order', `Order ${p.sortOrder ?? '—'}`);
+    setText('md-description', p.description || 'No description yet.');
+    setText('md-project-name', p.projectName || 'Unassigned project');
+    setText('md-product', product);
+
+    const productEl = document.getElementById('md-product');
+    if (productEl) productEl.title = p.product || '';
+    const productDot = document.getElementById('md-product-dot');
+    if (productDot) productDot.className = `w-1.5 h-1.5 rounded-full ${PRODUCT_DOTS[p.product] || 'bg-slate-400'} shrink-0`;
+
+    setHtml('md-status-field', statusSelectHtml(
+        `updateProjectStatus(${p.id}, this.value); renderModuleDetailsPage();`,
+        p.status,
+        name
+    ) + statusMismatchHtml(statusMismatchText(p.status, pct, (p.tasks || []).length, 'task')));
+
+    setHtml('md-progress', progressBarHtml(pct, moduleProgressExplain(p)));
+    setText('md-timeline', `${shortDate(p.startDate)} → ${shortDate(p.deadline)}`);
+    setText('md-tasks', `${st.tasksDone} / ${st.tasksTotal}`);
+
+    const issues = document.getElementById('md-issues');
+    if (issues) {
+        issues.innerHTML = st.openIssues
+            ? `<span class="inline-flex items-center gap-1.5 text-xs font-semibold text-amber-300"><span class="w-1.5 h-1.5 rounded-full bg-amber-400"></span>${st.openIssues} open</span>`
+            : '<span class="text-slate-500">None</span>';
+    }
+
+    const dueEl = document.getElementById('md-due');
+    if (dueEl) {
+        dueEl.textContent = `Due: ${due.text}`;
+        dueEl.className = `text-xs mt-1 ${due.cls}`;
+        dueEl.title = due.title || due.text;
+    }
+
+    let elapsed = null;
+    if (p.startDate && p.deadline) {
+        const start = new Date(`${p.startDate}T00:00:00`);
+        const span = new Date(`${p.deadline}T00:00:00`) - start;
+        elapsed = span > 0 ? Math.min(100, Math.max(0, ((Date.now() - start) / span) * 100)) : 100;
+    }
+    setHtml('md-time-used', elapsed === null
+        ? '<span class="text-xs text-slate-500">No timeline set</span>'
+        : `<div class="h-1 w-full rounded-full bg-white/[0.08] overflow-hidden" title="${Math.round(elapsed)}% of the time used"><div class="h-full rounded-full bg-sky-400/70" style="width:${elapsed}%"></div></div>`);
+
+    const leadName = p.manager || 'Unassigned';
+    setHtml('md-lead', `
+        <span class="w-7 h-7 rounded-full ${avatarToneFor(p.manager)} text-xs font-semibold inline-flex items-center justify-center shrink-0">${escapeHtml(initialsOf(p.manager))}</span>
+        <span class="truncate" title="${escapeHtml(leadName)}">${escapeHtml(leadName)}</span>`);
+
+    setHtml('md-team', avatarStackHtml(p.team || []));
+    setText('md-team-names', (p.team || []).join(', ') || 'No one yet');
+    setText('md-customer', [p.customer, (p.customerSub || '').replace(/^\((.*)\)$/, '$1')].filter(Boolean).join(' · ') || '—');
+    setText('md-support-ends', p.maintEnd && p.maintEnd !== '-' ? p.maintEnd : '—');
+};
+
 window.renderTaskDetailPage = function() {
     const p = projects.find(x => x.id === activeProjectId) || projects[0];
     if (!p) return;
@@ -3388,6 +3493,10 @@ window.handleUpdateProject = function(e) {
         renderProjectsTable();
         renderAxisProjectsTable();
         if (activePageId === 'task-detail' && activeProjectId === p.id) renderTaskDetailPage();
+        if (activePageId === 'module-details' && activeProjectId === p.id) {
+            renderModuleDetailsPage();
+            updateDynamicHeader(activePageId);
+        }
         showToast(`Saved ${p.name}`);
     });
 };
@@ -3395,6 +3504,7 @@ window.handleUpdateProject = function(e) {
 function refreshDetailSummaryCards() {
     const p = projects.find(x => x.id === activeProjectId);
     if (!p) return;
+    if (activePageId === 'module-details') renderModuleDetailsPage();
     syncQuickModulePercentages();
     if (!document.getElementById('task-kpi-strip')) return;
 

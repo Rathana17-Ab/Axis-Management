@@ -290,6 +290,16 @@ it('denies access to an unshared module and blocks updates without the update ab
         ->assertDatabaseMissing('modules', ['name' => 'Changed without access']);
 });
 
+it('denies module details for an unshared module', function () {
+    $sales = workspaceMemberWithRole(WorkspaceRole::SalesPerson);
+    $project = Project::factory()->create(['name' => 'Private details parent']);
+    $module = Module::factory()->for($project)->create(['name' => 'Private details module']);
+
+    $this->actingAs($sales)
+        ->get(route('admin.modules.details', $module))
+        ->assertForbidden();
+});
+
 it('allows updates through an update share and persists the change', function () {
     $sales = workspaceMemberWithRole(WorkspaceRole::SalesPerson);
     $module = Module::factory()->create(['name' => 'Shared module']);

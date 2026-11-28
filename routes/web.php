@@ -50,6 +50,7 @@ Route::middleware('auth')->prefix('admin')->name('admin.')->group(function () {
     Route::patch('/profile/password', [ProfilePasswordController::class, 'update'])->name('profile.password.update');
     Route::get('/project', [AxisWorkspaceController::class, 'index'])->name('projects.index');
     Route::get('/modules', [AxisWorkspaceController::class, 'index'])->name('modules.index');
+    Route::get('/module-details/{module}', [AxisWorkspaceController::class, 'showModuleDetails'])->name('modules.details');
     Route::get('/project-task-list/{module}', [AxisWorkspaceController::class, 'showTaskList'])->name('projects.tasks');
     Route::get('/cto-reports', [AxisWorkspaceController::class, 'index'])->name('reports.index');
 

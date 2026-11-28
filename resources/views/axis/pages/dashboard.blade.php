@@ -61,7 +61,7 @@
                                             <span id="dash-modules-count" class="px-2 py-0.5 rounded-full bg-emerald-500/15 border border-emerald-400/30 text-emerald-300 text-xs font-semibold">0 modules</span>
                                         </div>
                                         <p class="text-xs text-slate-400">
-                                            Click a card to open the Modules page.
+                                            Click a card to open the module details page.
                                             <span id="dash-modules-sort-label" class="text-slate-500">· Sorted by: Order number</span>
                                         </p>
                                     </div>
