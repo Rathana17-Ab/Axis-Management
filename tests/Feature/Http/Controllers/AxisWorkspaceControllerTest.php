@@ -2,6 +2,7 @@
 
 use App\Enums\WorkspaceRole;
 use App\Enums\WorkStatus;
+use App\Models\CtoReport;
 use App\Models\Module;
 use App\Models\Project;
 use App\Models\ProjectTask;
@@ -31,14 +32,20 @@ it('opens the workspace on the page matching each admin route', function (string
 it('opens the module details page for the requested module', function () {
     $this->actingAs(User::factory()->create());
     $module = Module::factory()->create(['name' => 'Details Module']);
+    $report = CtoReport::factory()->create(['module_name' => 'Details Module', 'summary' => 'Weekly verification summary']);
 
     $this->get(route('admin.modules.details', $module))
         ->assertOk()
         ->assertViewIs('axis.workspace')
         ->assertViewHas('initialPage', 'module-details')
         ->assertViewHas('bootstrap', fn (array $bootstrap): bool => $bootstrap['activeProjectId'] === $module->id
-            && $bootstrap['pageUrls']['module-details'] === '/admin/module-details/__ID__')
+            && $bootstrap['pageUrls']['module-details'] === '/admin/module-details/__ID__'
+            && collect($bootstrap['ctoReports'])->contains(fn (array $data): bool => $data['id'] === $report->id
+                && $data['module'] === 'Details Module'
+                && $data['summary'] === 'Weekly verification summary'))
         ->assertSee('<div id="page-module-details" class="app-page active-page space-y-5">', false)
+        ->assertSee('id="md-reports"', false)
+        ->assertSee('id="md-reports-count"', false)
         ->assertSee('id="md-identity-badge"', false)
         ->assertSee('id="md-status-field"', false)
         ->assertSee('id="md-progress"', false)
@@ -72,17 +79,17 @@ it('returns 404 for the task list of a missing project', function () {
     $this->get('/admin/project-task-list/999')->assertNotFound();
 });
 
-it('offers only developers as assignees and only leaders as assigners in the new task drawer', function () {
+it('offers every active team member as an assignee and only leaders as assigners in the new task drawer', function () {
     $developer = User::factory()->create(['name' => 'Dev One']);
-    $this->actingAs($developer);
     $leader = User::factory()->leader()->create(['name' => 'Lead One']);
+    $this->actingAs($leader);
     User::factory()->inactive()->create(['name' => 'Former Dev']);
 
     $response = $this->get(route('admin.projects.index'));
 
     $response->assertViewHas(
-        'developers',
-        fn ($developers): bool => $developers->pluck('id')->all() === [$developer->id]
+        'assignees',
+        fn ($assignees): bool => $assignees->pluck('id')->all() === [$developer->id, $leader->id]
     )->assertViewHas(
         'handlers',
         fn ($handlers): bool => $handlers->all() === ['Dev One', 'Lead One']
@@ -94,11 +101,13 @@ it('offers only developers as assignees and only leaders as assigners in the new
 
     expect($assignees[1])
         ->toContain('Dev One')
-        ->not->toContain('Lead One')
+        ->toContain('Lead One')
         ->not->toContain('Former Dev')
+        ->toMatch('/<option value="'.$leader->id.'"[^>]*selected/')
         ->and($assigners[1])
         ->toContain('Lead One')
-        ->not->toContain('Dev One');
+        ->not->toContain('Dev One')
+        ->toMatch('/<option value="'.$leader->id.'"[^>]*selected/');
 });
 
 it('renders only the module, project, task and team lists on the dashboard', function () {

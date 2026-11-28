@@ -107,6 +107,22 @@ describe('assignment', function () {
             ->assignedBy->name->toBe('Maco Buntheoun');
     });
 
+    it('lets a leader assign a task to themselves', function () {
+        $module = Module::factory()->create();
+        $leader = User::factory()->leader()->create(['name' => 'Lead One']);
+
+        $this->postJson(route('admin.api.tasks.store', $module), [
+            'name' => 'Own task',
+            'emp_id' => $leader->id,
+            'assigned_by_id' => $leader->id,
+        ])
+            ->assertCreated()
+            ->assertJsonPath('data.employeeId', $leader->id)
+            ->assertJsonPath('data.handler', 'Lead One')
+            ->assertJsonPath('data.assignedById', $leader->id)
+            ->assertJsonPath('data.assignedBy', 'Lead One');
+    });
+
     it('returns 422 when assigning to an inactive employee or by an inactive leader', function () {
         $module = Module::factory()->create();
         $formerDeveloper = User::factory()->inactive()->create();
@@ -173,6 +189,17 @@ describe('update', function () {
         $this->patchJson(route('admin.api.tasks.update', $task), ['progress' => 10])
             ->assertOk()
             ->assertJsonPath('data.status', 'Processing');
+    });
+
+    it('keeps two decimal places when task progress is updated', function () {
+        $task = ProjectTask::factory()->create(['status' => WorkStatus::Processing, 'progress' => 15]);
+
+        $this->patchJson(route('admin.api.tasks.update', $task), ['progress' => 15.35])
+            ->assertOk()
+            ->assertJsonPath('data.progress', 15.35)
+            ->assertJsonPath('data.status', 'Processing');
+
+        expect($task->fresh()->progress)->toBe(15.35);
     });
 
     it('stops the timer and banks elapsed time when the task is completed', function () {
@@ -340,6 +367,45 @@ describe('timer', function () {
         expect($task->fresh()->timer_started_at->toDateTimeString())->toBe(now()->toDateTimeString());
     });
 
+    it('does not start the timer for a finished task', function () {
+        $task = ProjectTask::factory()->create([
+            'status' => WorkStatus::Finished,
+            'progress' => 100,
+            'act_seconds' => 90,
+            'is_running' => false,
+            'timer_started_at' => null,
+        ]);
+
+        $this->postJson(route('admin.api.tasks.timer.toggle', $task))
+            ->assertOk()
+            ->assertJsonPath('data.status', 'Finished')
+            ->assertJsonPath('data.running', false)
+            ->assertJsonPath('data.actSeconds', 90);
+
+        expect($task->fresh()->timer_started_at)->toBeNull()
+            ->and($task->fresh()->is_running)->toBeFalse();
+    });
+
+    it('pauses a stale running timer on a finished task', function () {
+        $this->freezeTime();
+        $task = ProjectTask::factory()->create([
+            'status' => WorkStatus::Finished,
+            'progress' => 100,
+            'act_seconds' => 60,
+            'is_running' => true,
+            'timer_started_at' => now(),
+        ]);
+        $this->travel(30)->seconds();
+
+        $this->postJson(route('admin.api.tasks.timer.toggle', $task))
+            ->assertOk()
+            ->assertJsonPath('data.running', false)
+            ->assertJsonPath('data.actSeconds', 90);
+
+        expect($task->fresh()->is_running)->toBeFalse()
+            ->and($task->fresh()->timer_started_at)->toBeNull();
+    });
+
     it('pauses the timer and accumulates the elapsed seconds', function () {
         $this->freezeTime();
         $task = ProjectTask::factory()->running()->create(['act_seconds' => 3600]);
@@ -362,6 +428,43 @@ describe('timer', function () {
             ->assertOk()
             ->assertJsonPath('data.actSeconds', 0)
             ->assertJsonPath('data.running', false);
+    });
+
+    it('keeps the timer running when an unrelated field is edited', function () {
+        $this->freezeTime();
+        $task = ProjectTask::factory()->running()->create(['act_seconds' => 120]);
+        $startedAt = $task->timer_started_at->toDateTimeString();
+        $this->travel(30)->seconds();
+
+        $this->patchJson(route('admin.api.tasks.update', $task), ['name' => 'Renamed while timing'])
+            ->assertOk()
+            ->assertJsonPath('data.name', 'Renamed while timing')
+            ->assertJsonPath('data.running', true)
+            ->assertJsonPath('data.actSeconds', 150);
+
+        $task->refresh();
+        expect($task->name)->toBe('Renamed while timing')
+            ->and($task->act_seconds)->toBe(120)
+            ->and($task->is_running)->toBeTrue()
+            ->and($task->timer_started_at->toDateTimeString())->toBe($startedAt);
+    });
+
+    it('banks elapsed time when progress reaches 100', function () {
+        $this->freezeTime();
+        $task = ProjectTask::factory()->running()->create(['act_seconds' => 60]);
+        $this->travel(30)->seconds();
+
+        $this->patchJson(route('admin.api.tasks.update', $task), ['progress' => 100])
+            ->assertOk()
+            ->assertJsonPath('data.progress', 100)
+            ->assertJsonPath('data.status', 'Finished')
+            ->assertJsonPath('data.running', false)
+            ->assertJsonPath('data.actSeconds', 90);
+
+        $task->refresh();
+        expect($task->act_seconds)->toBe(90)
+            ->and($task->is_running)->toBeFalse()
+            ->and($task->timer_started_at)->toBeNull();
     });
 });
 

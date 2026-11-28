@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Enums\WorkspacePermission;
 use App\Http\Requests\StoreCtoReportRequest;
 use App\Http\Requests\UpdateCtoReportRequest;
 use App\Http\Resources\CtoReportResource;
@@ -21,11 +20,12 @@ class CtoReportController extends Controller
 
     /**
      * Submit a daily or weekly CTO standup report as the acting team member.
+     *
+     * Filing a report is a personal action available to every signed-in member;
+     * managing existing reports remains guarded by the record gates below.
      */
     public function store(StoreCtoReportRequest $request): JsonResponse
     {
-        $this->authorizeWorkspacePermission(WorkspacePermission::RecordsManageAll);
-
         $validated = $request->validated();
 
         $report = CtoReport::create(

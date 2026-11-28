@@ -180,7 +180,7 @@ class AxisWorkspaceController extends Controller
         $teamMembers = $memberQuery->orderBy('id')->get();
         $activeEmployees = $teamMembers->filter(fn (User $member): bool => $member->status === EmployeeStatus::Active);
         $leaders = $activeEmployees->filter(fn (User $member): bool => $member->isLeader())->values();
-        $developers = $activeEmployees->filter(fn (User $member): bool => $member->isDeveloper())->sortBy('name')->values();
+        $assignees = $activeEmployees->sortBy('name')->values();
 
         $roles = $canAccessAdministration
             ? Role::query()->with('permissions')->orderBy('id')->get()
@@ -218,7 +218,7 @@ class AxisWorkspaceController extends Controller
             'teamMembers' => $teamMembers,
             'employees' => $activeEmployees->sortBy('name')->values(),
             'leaders' => $leaders,
-            'developers' => $developers,
+            'assignees' => $assignees,
             'axisProjects' => $axisProjects,
             'currentUser' => $currentUser,
             'canAccessAdministration' => $canAccessAdministration,

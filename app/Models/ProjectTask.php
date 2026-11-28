@@ -114,7 +114,7 @@ class ProjectTask extends Model
      */
     public function startTimer(): void
     {
-        if ($this->is_running) {
+        if ($this->is_running || $this->status === WorkStatus::Finished) {
             return;
         }
 
@@ -180,7 +180,7 @@ class ProjectTask extends Model
 
     /**
      * Apply a progress change (clamped to 0–100), keeping the status consistent with it:
-     * 100% = Finished; 0% = Not yet started (unless time is logged or running); anything between = Processing.
+     * 100% = Finished (timer stops); 0% = Not yet started (unless time is logged or running); anything between = Processing.
      */
     public function applyProgress(float $progress): void
     {
@@ -188,6 +188,7 @@ class ProjectTask extends Model
 
         if ($this->progress >= 100) {
             $this->status = WorkStatus::Finished;
+            $this->pauseTimer();
         } elseif ($this->progress <= 0 && ! $this->hasStartedWork()) {
             $this->status = WorkStatus::NotStarted;
         } else {

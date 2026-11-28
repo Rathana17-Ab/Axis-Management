@@ -39,9 +39,11 @@ class ModuleController extends Controller
         $lead = User::query()->firstWhere('name', $validated['manager_name']);
 
         $module = DB::transaction(function () use ($validated, $deadline, $actingName, $actingMember, $lead): Module {
+            $this->makeRoomAtTopOfModuleOrder();
+
             $module = Module::create([
                 'project_id' => $validated['project_id'],
-                'sort_order' => ((int) Module::max('sort_order')) + 1,
+                'sort_order' => 1,
                 'code' => Module::nextCode(),
                 'name' => $validated['name'],
                 'description' => $validated['description'] ?? null,
@@ -80,6 +82,21 @@ class ModuleController extends Controller
         return ModuleResource::make($module->load(self::RELATIONS))
             ->response()
             ->setStatusCode(201);
+    }
+
+    /**
+     * Shift the existing modules down so a newly created module can take the first position.
+     */
+    private function makeRoomAtTopOfModuleOrder(): void
+    {
+        Module::query()
+            ->orderBy('sort_order')
+            ->orderBy('id')
+            ->lockForUpdate()
+            ->pluck('id')
+            ->each(function (mixed $id, int $index): void {
+                Module::whereKey($id)->update(['sort_order' => $index + 2]);
+            });
     }
 
     /**

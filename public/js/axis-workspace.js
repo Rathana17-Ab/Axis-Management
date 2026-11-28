@@ -41,14 +41,16 @@ const employees = (keepIds = []) => teamMembers
     .filter(m => m.status !== 'inactive' || keepIds.includes(m.id))
     .sort((a, b) => a.name.localeCompare(b.name));
 const leaders = (keepIds = []) => employees(keepIds).filter(m => m.position === 'leader');
-const developers = (keepIds = []) => employees(keepIds).filter(m => m.position === 'developer');
 // Shared status for projects, modules and tasks (CTO sheet).
 const WORK_STATUSES = ['Not yet started', 'Processing', 'Finished'];
 const workStatusOptions = current => WORK_STATUSES
     .map(status => `<option value="${status}" ${current === status ? 'selected' : ''}>${status}</option>`).join('');
 const employeeName = id => (teamMembers.find(m => m.id === Number(id)) || {}).name || '';
 
-projects.forEach(p => (p.tasks || []).forEach(t => { if (!Array.isArray(t.issues)) t.issues = []; }));
+projects.forEach(p => (p.tasks || []).forEach(t => {
+    if (!Array.isArray(t.issues)) t.issues = [];
+    t._timerClientStart = t.running ? Date.now() : null;
+}));
 
 // =====================================================================
 // HELPER: ESCAPE USER-SUPPLIED TEXT BEFORE INTERPOLATING INTO innerHTML
@@ -159,6 +161,22 @@ window.AxisAPI = {
  */
 const SERVER_DERIVED_TASK_FIELDS = ['status', 'progress', 'running', 'actSeconds'];
 
+/** Seconds to display for a task: banked time plus the current wall-clock run segment. */
+function taskLiveSeconds(t) {
+    if (!t) return 0;
+    const banked = parseInt(t.actSeconds, 10) || 0;
+    if (!t.running || !t._timerClientStart) return banked;
+    return banked + Math.max(0, Math.floor((Date.now() - t._timerClientStart) / 1000));
+}
+
+/** Rebase the client stopwatch onto an authoritative server payload (or a local snapshot). */
+function setTaskTimerState(t, actSeconds, running) {
+    t.actSeconds = Math.max(0, parseInt(actSeconds, 10) || 0);
+    t.running = Boolean(running);
+    t._timerClientStart = t.running ? Date.now() : null;
+    return t;
+}
+
 /** Merge the authoritative server copy into a local task (`full` for newly created tasks). */
 function mergeServerTask(t, serverTask, full = false) {
     if (!t || !serverTask) return t;
@@ -166,11 +184,15 @@ function mergeServerTask(t, serverTask, full = false) {
         const keepIssues = t.issues;
         Object.assign(t, serverTask);
         if (!Array.isArray(serverTask.issues)) t.issues = keepIssues || [];
+        setTaskTimerState(t, serverTask.actSeconds ?? t.actSeconds, serverTask.running ?? t.running);
         return t;
     }
     SERVER_DERIVED_TASK_FIELDS.forEach(field => {
         if (field in serverTask) t[field] = serverTask[field];
     });
+    if ('running' in serverTask || 'actSeconds' in serverTask) {
+        setTaskTimerState(t, serverTask.actSeconds ?? t.actSeconds, serverTask.running ?? t.running);
+    }
     return t;
 }
 
@@ -180,6 +202,20 @@ function findTaskById(taskId) {
         if (t) return t;
     }
     return null;
+}
+
+/** Task progress is stored with two decimals; keep typed values consistent with that. */
+function normalizeProgress(raw) {
+    if (raw === '' || raw === null || raw === undefined) return null;
+    const value = Number(raw);
+    if (!Number.isFinite(value)) return null;
+    return Math.min(100, Math.max(0, Math.round(value * 100) / 100));
+}
+
+/** Show a stored progress percentage without rounding it to a whole number. */
+function formatProgressValue(raw) {
+    const value = normalizeProgress(raw);
+    return value === null ? '0' : String(value);
 }
 
 let activeProjectId = AXIS_BOOT.activeProjectId || (projects[0] ? projects[0].id : null);
@@ -432,7 +468,7 @@ const AxisSearch = (() => {
                 items.push({
                     type: 'task', key: t.id, title: t.name,
                     subtitle: `${p.name} · ${t.handler} · ${t.status}`,
-                    meta: `${Math.round(t.progress)}%`,
+                    meta: `${formatProgressValue(t.progress)}%`,
                     haystack: [t.name, t.description, t.handler, p.name, p.code, `task-${t.id}`].join(' '),
                     run: () => focusTaskRow(p.id, t.id),
                 });
@@ -1308,7 +1344,7 @@ function renderDashboardTaskCards() {
             : t.status === 'Processing' ? 'text-sky-300'
             : 'text-amber-300';
         const issues = (t.issues || []).filter(i => i.status !== 'Resolved').length;
-        const pct = Math.round(Number(t.progress) || 0);
+        const pct = formatProgressValue(t.progress);
         const due = deadlineInfo({ status: t.status, deadline: t.endDate });
         const taskName = escapeHtml(t.name);
         const moduleName = escapeHtml(m.name);
@@ -1353,7 +1389,7 @@ function renderDashboardTeam() {
             open: open.length,
             overdue: open.filter(({ t }) => t.endDate && daysFromToday(t.endDate) < 0).length,
             finished: mine.length - open.length,
-            seconds: mine.reduce((sum, { t }) => sum + (parseInt(t.actSeconds, 10) || 0), 0),
+            seconds: mine.reduce((sum, { t }) => sum + taskLiveSeconds(t), 0),
             running: mine.find(({ t }) => t.running),
             leads: projects.filter(m => m.manager === p.name).length,
         };
@@ -1474,7 +1510,7 @@ function moduleProgressExplain(m) {
     const tasks = m.tasks || [];
     const pct = Math.round(computeProjectCompletion(m));
     if (tasks.length === 0) return `${pct}%: no tasks yet. Add tasks to track progress.`;
-    const values = tasks.map(t => `${Math.round(parseFloat(t.progress) || 0)}%`);
+    const values = tasks.map(t => `${formatProgressValue(t.progress)}%`);
     const listed = values.length > 6 ? `${values.slice(0, 6).join(', ')}, …` : values.join(', ');
     return `${pct}%: average of ${tasks.length} task${tasks.length === 1 ? '' : 's'} (${listed}). Update its tasks to change it.`;
 }
@@ -2905,7 +2941,8 @@ window.handleAddProject = function(e) {
             deadline: deadline
         });
         const created = res.data;
-        projects.push(created);
+        projects.unshift(created);
+        projects.forEach((p, index) => { p.sortOrder = index + 1; });
         const parent = axisProjects.find(ap => ap.id === created.projectId);
         if (parent && typeof parent.moduleCount === 'number') parent.moduleCount++;
 
@@ -3094,7 +3131,7 @@ window.exportActiveTasksCSV = function() {
             t.startDate,
             t.endDate,
             t.estHours,
-            formatHMS(t.actSeconds),
+            formatHMS(taskLiveSeconds(t)),
             (t.issues || []).length
         ]);
     });
@@ -3250,6 +3287,39 @@ document.addEventListener('keydown', e => {
     });
 });
 
+/** Reports filed for a module, matched by the module name stored on each report. */
+function reportsForModule(module) {
+    const name = (module.name || '').trim().toLowerCase();
+    return ctoReports.filter(report => (report.module || '').trim().toLowerCase() === name);
+}
+
+function moduleReportsHtml(reports) {
+    if (reports.length === 0) {
+        return '<p class="py-4 text-center text-xs text-slate-500">No reports filed for this module yet.</p>';
+    }
+
+    return `<div class="space-y-2">${reports.map(report => {
+        const isWeekly = report.type === 'Weekly';
+        const period = (report.date_from && report.date_to)
+            ? `${formatShortDate(report.date_from)} – ${formatShortDate(report.date_to)}`
+            : (report.date ? formatShortDate(report.date) : 'Today');
+        const blocker = report.blocker && report.blocker.toLowerCase() !== 'none';
+
+        return `
+            <button type="button" onclick="openReportDetail(${report.id})"
+                    class="w-full text-left p-3 rounded-lg border border-white/[0.06] bg-white/[0.02] hover:bg-white/[0.04] transition-colors flex flex-wrap items-center gap-x-3 gap-y-2">
+                <span class="px-2 py-0.5 rounded text-xs font-semibold shrink-0 ${isWeekly ? 'bg-indigo-500/15 text-indigo-300 border border-indigo-400/25' : 'bg-sky-500/15 text-sky-300 border border-sky-400/25'}">${escapeHtml(report.type)}</span>
+                <div class="min-w-0 flex-1">
+                    <div class="text-xs font-semibold text-white truncate">${escapeHtml(period)} · ${escapeHtml(report.handler || 'Unknown')}</div>
+                    <div class="text-[11px] text-slate-400 line-clamp-2 mt-0.5">${escapeHtml(report.summary || 'No summary text')}</div>
+                </div>
+                ${blocker ? `<span class="px-2 py-0.5 rounded text-[10px] font-semibold bg-rose-500/15 text-rose-300 border border-rose-400/25 truncate max-w-[160px]" title="${escapeHtml(report.blocker)}">${escapeHtml(report.blocker)}</span>` : ''}
+                <span class="text-xs font-mono text-emerald-300 shrink-0">${escapeHtml(String(report.hours ?? 0))}h</span>
+            </button>
+        `;
+    }).join('')}</div>`;
+}
+
 window.renderModuleDetailsPage = function() {
     const p = projects.find(x => x.id === activeProjectId) || projects[0];
     if (!p) return;
@@ -3330,6 +3400,10 @@ window.renderModuleDetailsPage = function() {
     setText('md-team-names', (p.team || []).join(', ') || 'No one yet');
     setText('md-customer', [p.customer, (p.customerSub || '').replace(/^\((.*)\)$/, '$1')].filter(Boolean).join(' · ') || '—');
     setText('md-support-ends', p.maintEnd && p.maintEnd !== '-' ? p.maintEnd : '—');
+
+    const moduleReports = reportsForModule(p);
+    setText('md-reports-count', `${moduleReports.length} report${moduleReports.length === 1 ? '' : 's'}`);
+    setHtml('md-reports', moduleReportsHtml(moduleReports));
 };
 
 window.renderTaskDetailPage = function() {
@@ -3514,7 +3588,7 @@ function refreshDetailSummaryCards() {
     const done = byStatus('Finished');
     const pct = computeProjectCompletion(p);
     const estTotal = tasks.reduce((sum, t) => sum + (parseFloat(t.estHours) || 0), 0);
-    const actSecTotal = tasks.reduce((sum, t) => sum + (parseInt(t.actSeconds, 10) || 0), 0);
+    const actSecTotal = tasks.reduce((sum, t) => sum + taskLiveSeconds(t), 0);
     const anyRunning = tasks.some(t => t.running);
     const issues = tasks.flatMap(t => t.issues || []);
     const openIssues = issues.filter(i => i.status === 'Open').length;
@@ -3534,16 +3608,16 @@ function refreshDetailSummaryCards() {
     setKpiValue(document.getElementById('kpi-td-progress'), +pct.toFixed(1), { decimals: 1, unit: '%' });
     setKpiStatus('td-progress', p.status);
     setKpiText('kpi-td-progress-desc', `Average across ${plural(count, 'task')}`);
-    const progressSig = tasks.map(t => `${t.id}:${Math.round(t.progress)}`).join('|');
+    const progressSig = tasks.map(t => `${t.id}:${formatProgressValue(t.progress)}`).join('|');
     paint('progress', progressSig, () => {
         const sorted = [...tasks].sort((a, b) => b.progress - a.progress);
         document.getElementById('kpi-td-progress-visual').innerHTML = count
             ? `<div class="axis-kpi-columns" role="img" aria-label="Progress per task, highest to lowest">
-                ${sorted.map((t, i) => `<span class="axis-kpi-columns__bar" style="height:${Math.max(4, t.progress)}%;transition-delay:${i * 40}ms" title="${escapeHtml(t.name)}: ${Math.round(t.progress)}%"></span>`).join('')}
+                ${sorted.map((t, i) => `<span class="axis-kpi-columns__bar" style="height:${Math.max(4, t.progress)}%;transition-delay:${i * 40}ms" title="${escapeHtml(t.name)}: ${formatProgressValue(t.progress)}%"></span>`).join('')}
                </div>`
             : '';
         document.getElementById('kpi-td-progress-footer').innerHTML = count
-            ? `<span>Lowest <span class="text-slate-200 font-mono">${Math.round(sorted[count - 1].progress)}%</span></span><span>Highest <span class="text-slate-200 font-mono">${Math.round(sorted[0].progress)}%</span></span>`
+            ? `<span>Lowest <span class="text-slate-200 font-mono">${formatProgressValue(sorted[count - 1].progress)}%</span></span><span>Highest <span class="text-slate-200 font-mono">${formatProgressValue(sorted[0].progress)}%</span></span>`
             : '<span>No tasks yet</span>';
     });
 
@@ -3701,7 +3775,7 @@ window.renderDevIssueDrawerContent = function() {
     const titleEl = document.getElementById('did-task-title');
     const authorEl = document.getElementById('did-author-pill');
 
-    if (statusBadge) statusBadge.textContent = `${t.status} (${Math.round(t.progress)}%)`;
+    if (statusBadge) statusBadge.textContent = `${t.status} (${formatProgressValue(t.progress)}%)`;
     if (titleEl) titleEl.textContent = `Task ${tIdx + 1}: ${t.name} · ${t.handler}`;
     AxisDrawer.configure('dev-issue-drawer', {
         title: `Task ${tIdx + 1}: ${t.name}`,
@@ -4116,8 +4190,9 @@ function renderTasksTableRows(flashCard = false) {
     // Render Bento Card Grid View if active
     if (cardsWrap) {
         cardsWrap.innerHTML = filteredTasks.map((t, idx) => {
-            const hms = formatHMS(t.actSeconds);
+            const hms = formatHMS(taskLiveSeconds(t));
             const prog = Math.min(100, Math.max(0, parseFloat(t.progress) || 0));
+            const timerDisabled = taskTimerStartDisabled(t);
             const issues = t.issues || [];
             const openIss = issues.filter(i => i.status !== 'Resolved').length;
             return `
@@ -4135,7 +4210,7 @@ function renderTasksTableRows(flashCard = false) {
                     <div class="space-y-2.5 pt-2 border-t border-sky-400/15">
                         <div class="flex items-center justify-between text-xs">
                             <span class="text-slate-100 font-semibold"><i class="fa-solid fa-user-astronaut text-indigo-400 mr-1"></i>${escapeHtml(t.handler)}</span>
-                            <span class="font-mono font-bold text-emerald-300">${hms} / ${t.estHours}h</span>
+                            <span class="font-mono font-bold text-emerald-300"><span id="task-card-act-${t.id}">${hms}</span> / ${t.estHours}h</span>
                         </div>
                         <div class="w-full h-2 bg-white/[0.05] rounded-full overflow-hidden p-0.5 border border-sky-400/20">
                             <div class="h-full liquid-progress-bar rounded-full" style="width:${prog}%"></div>
@@ -4145,7 +4220,8 @@ function renderTasksTableRows(flashCard = false) {
                                 <i class="fa-solid fa-bug mr-1"></i>${issues.length} notes (${openIss} open)
                             </button>
                             <div class="flex items-center gap-2">
-                                <button type="button" onclick="toggleTaskStopwatch(${t.id})" class="btn-glass px-2.5 py-1 text-xs font-semibold ${t.running ? 'text-amber-300' : 'text-sky-300'}" aria-label="${t.running ? 'Pause timer' : 'Start timer'}">
+                                <button type="button" onclick="toggleTaskStopwatch(${t.id})" ${timerDisabled ? 'disabled aria-disabled="true"' : ''} title="${timerDisabled ? 'Finished tasks cannot be timed' : (t.running ? 'Pause timer' : 'Start timer')}"
+                                    class="btn-glass px-2.5 py-1 text-xs font-semibold ${timerDisabled ? 'text-slate-400 opacity-40 cursor-not-allowed' : (t.running ? 'text-amber-300' : 'text-sky-300')}" aria-label="${t.running ? 'Pause timer' : 'Start timer'}">
                                     <i class="fa-solid ${t.running ? 'fa-pause' : 'fa-play'} mr-1" aria-hidden="true"></i>${t.running ? 'Pause' : 'Start'}
                                 </button>
                                 ${taskActionsHtml(t)}
@@ -4446,7 +4522,12 @@ window.sortTasksByDeadline = function() {
 
 /** Work has begun once the timer runs or has logged time (mirrors ProjectTask::hasStartedWork). */
 function taskHasStartedWork(t) {
-    return Boolean(t.running) || (parseInt(t.actSeconds, 10) || 0) > 0;
+    return Boolean(t.running) || taskLiveSeconds(t) > 0;
+}
+
+/** A finished task cannot be started; a stale running timer may still be paused. */
+function taskTimerStartDisabled(t) {
+    return !t.running && (t.status === 'Finished' || (parseFloat(t.progress) || 0) >= 100);
 }
 
 /** Action buttons for a task, shared by the table and card views so both offer the same actions. */
@@ -4470,7 +4551,7 @@ function taskActionsHtml(t) {
 }
 
 function renderTaskRow(t) {
-    const hms = formatHMS(t.actSeconds);
+    const hms = formatHMS(taskLiveSeconds(t));
     const prog = Math.min(100, Math.max(0, parseFloat(t.progress) || 0));
     const barColor = prog >= 100 ? 'bg-emerald-400' : 'bg-cyan-400';
     const priority = TASK_PRIORITY_STYLES[t.priority] || TASK_PRIORITY_STYLES.High;
@@ -4478,10 +4559,11 @@ function renderTaskRow(t) {
     const name = escapeHtml(t.name);
     const due = deadlineInfo({ status: t.status, deadline: t.endDate });
     const estSeconds = (parseFloat(t.estHours) || 0) * 3600;
-    const timeUsed = estSeconds ? Math.min(100, (t.actSeconds / estSeconds) * 100) : 0;
+    const timeUsed = estSeconds ? Math.min(100, (taskLiveSeconds(t) / estSeconds) * 100) : 0;
+    const timerDisabled = taskTimerStartDisabled(t);
     const chevron = '<i class="fa-solid fa-chevron-down text-[9px] text-slate-500 opacity-0 group-hover:opacity-100 transition-opacity absolute right-1.5 top-1/2 -translate-y-1/2 pointer-events-none" aria-hidden="true"></i>';
 
-    const handlerOptions = (t.employeeId ? '' : '<option value="" selected>Unassigned</option>') + developers([t.employeeId]).map(m =>
+    const handlerOptions = (t.employeeId ? '' : '<option value="" selected>Unassigned</option>') + employees([t.employeeId]).map(m =>
         `<option value="${m.id}" ${t.employeeId === m.id ? 'selected' : ''}>${escapeHtml(m.name)}</option>`
     ).join('');
     const assignerOptions = `<option value="" ${t.assignedById ? '' : 'selected'}>Not recorded</option>` + leaders([t.assignedById]).map(m =>
@@ -4522,7 +4604,7 @@ function renderTaskRow(t) {
             <td class="py-3 px-3">
                 <div class="flex items-center gap-2 w-[150px]">
                     <div class="axis-progress-track" id="task-track-${t.id}" role="slider" tabindex="0"
-                        aria-label="Progress of ${name}" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${Math.round(prog)}" aria-valuetext="${Math.round(prog)}%"
+                        aria-label="Progress of ${name}" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${formatProgressValue(prog)}" aria-valuetext="${formatProgressValue(prog)}%"
                         title="${prog <= 0 && t.status === 'Processing' ? 'Started (time is logged) but nothing marked done yet. ' : ''}Drag or click to set progress"
                         onpointerdown="startTaskProgressDrag(event, ${t.id}, this)"
                         onkeydown="handleTaskProgressSliderKey(event, ${t.id})">
@@ -4532,9 +4614,9 @@ function renderTaskRow(t) {
                         <span id="task-thumb-${t.id}" class="axis-progress-track__thumb" style="--p: ${prog}" aria-hidden="true"></span>
                     </div>
                     <span class="flex items-center shrink-0">
-                        <input type="number" min="0" max="100" step="5" inputmode="numeric" value="${Math.round(prog)}" data-committed="${Math.round(prog)}"
+                        <input type="number" min="0" max="100" step="0.01" inputmode="decimal" value="${formatProgressValue(prog)}" data-committed="${formatProgressValue(prog)}"
                             id="task-pct-input-${t.id}" aria-label="Progress percent. Press Enter to save, Escape to cancel, arrow keys to change by 5."
-                            title="Type a number, then press Enter (Esc cancels, ↑/↓ change by 5)"
+                            title="Type a number with up to two decimals, then press Enter (Esc cancels, ↑/↓ change by 5)"
                             oninput="previewTaskProgress(${t.id}, this.value)"
                             onchange="commitTaskProgressInput(${t.id}, this)"
                             onkeydown="handleTaskProgressKey(event, ${t.id}, this)"
@@ -4575,8 +4657,8 @@ function renderTaskRow(t) {
             </td>
             <td class="py-3 px-3">
                 <div class="flex items-center gap-2.5 w-[200px]">
-                    <button type="button" onclick="toggleTaskStopwatch(${t.id})" aria-label="${t.running ? 'Pause timer' : 'Start timer'}" title="${t.running ? 'Pause timer' : 'Start timer'}"
-                        class="w-8 h-8 rounded-full shrink-0 inline-flex items-center justify-center transition-colors ${t.running ? 'bg-amber-500/20 text-amber-300 hover:bg-amber-500/30' : 'bg-sky-500/15 text-sky-300 hover:bg-sky-500/25'}">
+                    <button type="button" onclick="toggleTaskStopwatch(${t.id})" aria-label="${t.running ? 'Pause timer' : 'Start timer'}" title="${timerDisabled ? 'Finished tasks cannot be timed' : (t.running ? 'Pause timer' : 'Start timer')}" ${timerDisabled ? 'disabled aria-disabled="true"' : ''}
+                        class="w-8 h-8 rounded-full shrink-0 inline-flex items-center justify-center transition-colors ${timerDisabled ? 'bg-white/5 text-slate-500 cursor-not-allowed opacity-50' : (t.running ? 'bg-amber-500/20 text-amber-300 hover:bg-amber-500/30' : 'bg-sky-500/15 text-sky-300 hover:bg-sky-500/25')}">
                         <i class="fa-solid ${t.running ? 'fa-pause' : 'fa-play'} text-[10px]" aria-hidden="true"></i>
                     </button>
                     <div class="min-w-0 flex-1">
@@ -4671,26 +4753,39 @@ window.updateTaskStatus = function(taskId, newStatus) {
     if (!p) return;
     const t = p.tasks.find(x => x.id === taskId);
     if (!t) return;
-    const snapshot = { status: t.status, progress: t.progress, running: t.running };
+    const snapshot = {
+        status: t.status,
+        progress: t.progress,
+        running: t.running,
+        actSeconds: t.actSeconds,
+        timerClientStart: t._timerClientStart || null,
+    };
+    const timerSeq = (t._timerSeq = (t._timerSeq || 0) + 1);
     t.status = newStatus;
     // Same rules as the server (ProjectTask::applyStatus): Finished = 100%, Not yet started = 0%, Processing < 100%
     if (newStatus === 'Finished') {
         t.progress = 100;
-        t.running = false;
+        setTaskTimerState(t, taskLiveSeconds(t), false);
     } else {
-        if (newStatus === 'Not yet started') t.progress = 0;
-        else if (t.progress >= 100) t.progress = 99;
+        if (newStatus === 'Not yet started') {
+            t.progress = 0;
+            setTaskTimerState(t, taskLiveSeconds(t), false);
+        } else if (t.progress >= 100) {
+            t.progress = 99;
+        }
     }
     renderTasksTableRows();
     refreshDetailSummaryCards();
     syncHeaderTimerPill();
 
     persistTask(t, { status: newStatus }, () => {
+        if (timerSeq !== t._timerSeq) return;
         Object.assign(t, snapshot);
+        t._timerClientStart = snapshot.timerClientStart;
         renderTasksTableRows();
         refreshDetailSummaryCards();
     }).then(serverTask => {
-        if (!serverTask) return;
+        if (!serverTask || timerSeq !== t._timerSeq) return;
         mergeServerTask(t, serverTask);
         renderTasksTableRows();
         refreshDetailSummaryCards();
@@ -4707,12 +4802,9 @@ function syncTaskStatusField(t) {
     }
 }
 
-/** A typed progress value as a whole number 0–100, or null when it isn't a usable number. */
+/** A typed progress value from 0 to 100 with up to two decimals, or null when unusable. */
 function parseProgressInput(raw) {
-    const text = String(raw ?? '').trim();
-    if (text === '') return null;
-    const value = Number(text);
-    return Number.isFinite(value) ? Math.min(100, Math.max(0, Math.round(value))) : null;
+    return normalizeProgress(String(raw ?? '').trim());
 }
 
 function paintTaskProgressBar(taskId, pct) {
@@ -4810,7 +4902,7 @@ window.commitTaskProgressInput = function(taskId, input) {
         showToast('Progress must be a number from 0 to 100');
         return;
     }
-    input.value = pct;
+    input.value = formatProgressValue(pct);
     // Same number and a status that already matches it: nothing to do. (A status that doesn't match,
     // e.g. 0% still "Processing" from before, is corrected by re-applying the rules.)
     const t = (projects.find(x => x.id === activeProjectId)?.tasks || []).find(x => x.id === taskId);
@@ -4819,7 +4911,7 @@ window.commitTaskProgressInput = function(taskId, input) {
         paintTaskProgressBar(taskId, pct);
         return;
     }
-    input.dataset.committed = pct;
+    input.dataset.committed = formatProgressValue(pct);
     updateTaskProgress(taskId, pct);
 };
 
@@ -4837,7 +4929,7 @@ window.handleTaskProgressKey = function(e, taskId, input) {
     } else if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
         e.preventDefault();
         const base = parseProgressInput(input.value) ?? (Number(input.dataset.committed) || 0);
-        input.value = Math.min(100, Math.max(0, base + (e.key === 'ArrowUp' ? 5 : -5)));
+        input.value = formatProgressValue(base + (e.key === 'ArrowUp' ? 5 : -5));
         commitTaskProgressInput(taskId, input);
     }
 };
@@ -4848,12 +4940,13 @@ window.updateTaskProgress = function(taskId, val) {
     const t = p.tasks.find(x => x.id === taskId);
     if (!t) return;
     const prev = t.progress;
-    const pct = Math.min(100, Math.max(0, parseFloat(val) || 0));
+    const pct = normalizeProgress(val) ?? 0;
     t.progress = pct;
     // Same rules as the server (ProjectTask::applyProgress):
     // 100% = Finished; 0% = Not yet started (unless its timer is running); anything between = Processing
     if (pct === 100) {
         t.status = 'Finished';
+        setTaskTimerState(t, taskLiveSeconds(t), false);
     } else {
         t.status = pct === 0 && !taskHasStartedWork(t) ? 'Not yet started' : 'Processing';
     }
@@ -4862,8 +4955,8 @@ window.updateTaskProgress = function(taskId, val) {
     paintTaskProgressBar(taskId, pct);
     const input = document.getElementById('task-pct-input-' + taskId);
     if (input && document.activeElement !== input) {
-        input.value = Math.round(pct);
-        input.dataset.committed = Math.round(pct);
+        input.value = formatProgressValue(pct);
+        input.dataset.committed = formatProgressValue(pct);
     }
     refreshDetailSummaryCards();
 
@@ -4871,8 +4964,9 @@ window.updateTaskProgress = function(taskId, val) {
     // older save is ignored so it can never overwrite a newer value
     const saveSeq = (t._progressSaveSeq = (t._progressSaveSeq || 0) + 1);
     AxisAPI.debounce(`task:${taskId}:progress`, () => {
+        const timerSeq = (t._timerSeq = (t._timerSeq || 0) + 1);
         persistTask(t, { progress: t.progress }).then(serverTask => {
-            if (!serverTask || saveSeq !== t._progressSaveSeq) return;
+            if (!serverTask || saveSeq !== t._progressSaveSeq || timerSeq !== t._timerSeq) return;
             const statusChanged = serverTask.status !== t.status || serverTask.running !== t.running;
             mergeServerTask(t, serverTask);
             if (statusChanged) {
@@ -4902,8 +4996,19 @@ window.toggleTaskStopwatch = function(taskId) {
     if (!p) return;
     const t = p.tasks.find(x => x.id === taskId);
     if (!t) return;
-    const snapshot = { running: t.running, status: t.status };
-    t.running = !t.running;
+    if (taskTimerStartDisabled(t)) return;
+    const snapshot = {
+        running: t.running,
+        status: t.status,
+        actSeconds: t.actSeconds,
+        timerClientStart: t._timerClientStart || null,
+    };
+    const timerSeq = (t._timerSeq = (t._timerSeq || 0) + 1);
+    if (t.running) {
+        setTaskTimerState(t, taskLiveSeconds(t), false);
+    } else {
+        setTaskTimerState(t, t.actSeconds, true);
+    }
     if (t.running && t.status === 'Not yet started') t.status = 'Processing';
     renderTasksTableRows();
     syncHeaderTimerPill();
@@ -4912,16 +5017,21 @@ window.toggleTaskStopwatch = function(taskId) {
     AxisAPI.idOf(t)
         .then(id => AxisAPI.request(AxisAPI.url('tasks.timer.toggle', id), 'POST'))
         .then(res => {
+            if (timerSeq !== t._timerSeq) return;
             mergeServerTask(t, res.data);
             renderTasksTableRows();
             refreshDetailSummaryCards();
             syncHeaderTimerPill();
         })
-        .catch(err => AxisAPI.fail(err, () => {
-            Object.assign(t, snapshot);
-            renderTasksTableRows();
-            syncHeaderTimerPill();
-        }));
+        .catch(err => {
+            if (timerSeq !== t._timerSeq) return;
+            AxisAPI.fail(err, () => {
+                Object.assign(t, snapshot);
+                t._timerClientStart = snapshot.timerClientStart;
+                renderTasksTableRows();
+                syncHeaderTimerPill();
+            });
+        });
 };
 
 window.resetTaskStopwatch = function(taskId) {
@@ -4929,9 +5039,14 @@ window.resetTaskStopwatch = function(taskId) {
     if (!p) return;
     const t = p.tasks.find(x => x.id === taskId);
     if (!t) return;
-    const snapshot = { running: t.running, actSeconds: t.actSeconds, status: t.status };
-    t.running = false;
-    t.actSeconds = 0;
+    const snapshot = {
+        running: t.running,
+        status: t.status,
+        actSeconds: t.actSeconds,
+        timerClientStart: t._timerClientStart || null,
+    };
+    const timerSeq = (t._timerSeq = (t._timerSeq || 0) + 1);
+    setTaskTimerState(t, 0, false);
     // Same rule as the server: no time and nothing done means not started
     if (t.status === 'Processing' && (parseFloat(t.progress) || 0) <= 0) t.status = 'Not yet started';
     renderTasksTableRows();
@@ -4940,13 +5055,23 @@ window.resetTaskStopwatch = function(taskId) {
 
     AxisAPI.idOf(t)
         .then(id => AxisAPI.request(AxisAPI.url('tasks.timer.reset', id), 'POST'))
-        .then(res => mergeServerTask(t, res.data))
-        .catch(err => AxisAPI.fail(err, () => {
-            Object.assign(t, snapshot);
+        .then(res => {
+            if (timerSeq !== t._timerSeq) return;
+            mergeServerTask(t, res.data);
             renderTasksTableRows();
             refreshDetailSummaryCards();
             syncHeaderTimerPill();
-        }));
+        })
+        .catch(err => {
+            if (timerSeq !== t._timerSeq) return;
+            AxisAPI.fail(err, () => {
+                Object.assign(t, snapshot);
+                t._timerClientStart = snapshot.timerClientStart;
+                renderTasksTableRows();
+                refreshDetailSummaryCards();
+                syncHeaderTimerPill();
+            });
+        });
 };
 
 window.deleteTaskRow = async function(taskId) {
@@ -4960,8 +5085,8 @@ window.deleteTaskRow = async function(taskId) {
         title: 'Delete this task?',
         breadcrumb: `${p.code} · Tasks`,
         message: notes
-            ? `"${removed.name}" and its ${notes} note${notes === 1 ? '' : 's'} will be removed, along with ${formatHMS(removed.actSeconds)} of logged time.`
-            : `"${removed.name}" will be removed, along with ${formatHMS(removed.actSeconds)} of logged time.`,
+            ? `"${removed.name}" and its ${notes} note${notes === 1 ? '' : 's'} will be removed, along with ${formatHMS(taskLiveSeconds(removed))} of logged time.`
+            : `"${removed.name}" will be removed, along with ${formatHMS(taskLiveSeconds(removed))} of logged time.`,
         confirmLabel: 'Delete task'
     });
     if (!confirmed) return;
@@ -5008,13 +5133,13 @@ window.openTaskEdit = function(taskId) {
     document.getElementById('edit-task-desc').value = t.description || '';
     document.getElementById('edit-task-handler').innerHTML =
         (t.employeeId ? '' : '<option value="" selected disabled>Choose someone</option>') +
-        developers([t.employeeId]).map(m => `<option value="${m.id}" ${m.id === t.employeeId ? 'selected' : ''}>${escapeHtml(m.name)}</option>`).join('');
+        employees([t.employeeId]).map(m => `<option value="${m.id}" ${m.id === t.employeeId ? 'selected' : ''}>${escapeHtml(m.name)}</option>`).join('');
     document.getElementById('edit-task-assigned-by').innerHTML =
         `<option value="" ${t.assignedById ? '' : 'selected'}>Not recorded</option>` +
         leaders([t.assignedById]).map(m => `<option value="${m.id}" ${m.id === t.assignedById ? 'selected' : ''}>${escapeHtml(m.name)}</option>`).join('');
     document.getElementById('edit-task-priority').value = t.priority || 'High';
     document.getElementById('edit-task-status').value = t.status;
-    document.getElementById('edit-task-progress').value = Math.round(parseFloat(t.progress) || 0);
+    document.getElementById('edit-task-progress').value = formatProgressValue(t.progress);
     document.getElementById('edit-task-start').value = t.startDate || '';
     document.getElementById('edit-task-end').value = t.endDate || '';
     syncDateRangeField(document.getElementById('edit-task-schedule'));
@@ -5055,6 +5180,7 @@ window.handleUpdateTask = function(e) {
     const estRaw = document.getElementById('edit-task-est').value;
 
     AxisDrawer.submit('drawer-task-edit', async () => {
+        const timerSeq = (t._timerSeq = (t._timerSeq || 0) + 1);
         const id = await AxisAPI.idOf(t);
         const res = await AxisAPI.request(AxisAPI.url('tasks.update', id), 'PATCH', {
             name,
@@ -5063,7 +5189,7 @@ window.handleUpdateTask = function(e) {
             assigned_by_id: Number(document.getElementById('edit-task-assigned-by').value) || null,
             priority: document.getElementById('edit-task-priority').value,
             // Progress first, then status: the server applies them in that order, so the chosen status wins
-            ...(progressRaw === '' ? {} : { progress: Math.min(100, Math.max(0, parseFloat(progressRaw) || 0)) }),
+            ...(progressRaw === '' ? {} : { progress: normalizeProgress(progressRaw) ?? 0 }),
             status: document.getElementById('edit-task-status').value,
             start_date: document.getElementById('edit-task-start').value || null,
             deadline: document.getElementById('edit-task-end').value || null,
@@ -5071,7 +5197,19 @@ window.handleUpdateTask = function(e) {
         });
         const updated = res.data;
         if (!Array.isArray(updated.issues)) updated.issues = t.issues || [];
+        const timerSeqMatches = timerSeq === t._timerSeq;
+        const currentTimer = timerSeqMatches ? null : {
+            actSeconds: t.actSeconds,
+            running: t.running,
+            timerClientStart: t._timerClientStart || null,
+        };
         Object.assign(t, updated);
+        if (timerSeqMatches) {
+            setTaskTimerState(t, updated.actSeconds, updated.running);
+        } else {
+            setTaskTimerState(t, currentTimer.actSeconds, currentTimer.running);
+            t._timerClientStart = currentTimer.timerClientStart;
+        }
         closeModal('drawer-task-edit');
         renderTasksTableRows();
         refreshDetailSummaryCards();
@@ -5088,7 +5226,7 @@ window.handleCreateTask = function(e) {
         return;
     }
 
-    const prog = Math.min(100, Math.max(0, parseFloat(document.getElementById('new-task-progress').value) || 0));
+    const prog = normalizeProgress(document.getElementById('new-task-progress').value) ?? 0;
     const initEnc = (document.getElementById('new-task-issue-enc')?.value || '').trim();
     const initFix = (document.getElementById('new-task-issue-fix')?.value || '').trim();
 
@@ -5130,8 +5268,7 @@ window.handleCreateTask = function(e) {
 
 function startGlobalStopwatchLoop() {
     if (tickerId) clearInterval(tickerId);
-    let globalSec = 0;
-    // Wall-clock based so throttled background tabs stay accurate (server remains authoritative)
+    // Only repaint from the wall clock; server payloads remain the source of truth for banked seconds.
     let lastTickAt = Date.now();
     let carryMs = 0;
     tickerId = setInterval(() => {
@@ -5142,16 +5279,16 @@ function startGlobalStopwatchLoop() {
         const step = Math.floor(carryMs / 1000);
         carryMs -= step * 1000;
         if (step <= 0) return;
-        globalSec += step;
         projects.forEach(p => {
             p.tasks.forEach(t => {
                 if (t.running) {
                     anyRunning = true;
-                    t.actSeconds = (t.actSeconds || 0) + step;
                     if (p.id === activeProjectId) {
-                        const hms = formatHMS(t.actSeconds);
+                        const hms = formatHMS(taskLiveSeconds(t));
                         const mainCell = document.getElementById('task-main-act-' + t.id);
                         if (mainCell) mainCell.textContent = hms;
+                        const cardCell = document.getElementById('task-card-act-' + t.id);
+                        if (cardCell) cardCell.textContent = hms;
                     }
                 }
             });
@@ -5178,7 +5315,7 @@ function syncHeaderTimerPill() {
     if (runningTask) {
         pill.classList.remove('hidden');
         pill.classList.add('flex');
-        lbl.textContent = runningTask.name + ': ' + formatHMS(runningTask.actSeconds);
+        lbl.textContent = runningTask.name + ': ' + formatHMS(taskLiveSeconds(runningTask));
     } else {
         pill.classList.add('hidden');
         pill.classList.remove('flex');
@@ -5832,6 +5969,7 @@ window.handleSaveReport = function(e) {
 
         closeModal('modal-report');
         renderReportsPage();
+        if (activePageId === 'module-details') renderModuleDetailsPage();
         updateDynamicHeader(activePageId);
     });
 };
@@ -6066,6 +6204,7 @@ window.deleteReportById = async function(id, e) {
             closeModal('modal-report-view');
         }
         renderReportsPage();
+        if (activePageId === 'module-details') renderModuleDetailsPage();
         updateDynamicHeader(activePageId);
         showToast('Report deleted');
     } catch (err) {

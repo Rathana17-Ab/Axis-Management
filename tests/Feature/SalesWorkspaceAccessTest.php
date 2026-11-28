@@ -165,6 +165,29 @@ it('hydrates the workspace with permission-aware client flags', function () {
         });
 });
 
+it('lets Sales Person file a report', function () {
+    $this->freezeTime();
+    $sales = workspaceMemberWithRole(WorkspaceRole::SalesPerson);
+
+    $this->actingAs($sales)
+        ->postJson(route('admin.api.reports.store'), [
+            'report_type' => 'Daily',
+            'module_name' => 'Axis Sales',
+            'summary' => 'Verified shared report submission.',
+            'hours_logged' => 8,
+        ])
+        ->assertCreated()
+        ->assertJsonPath('data.handler', $sales->name)
+        ->assertJsonPath('data.module', 'Axis Sales')
+        ->assertJsonPath('data.date', now()->toDateString());
+
+    $this->assertDatabaseHas('cto_reports', [
+        'handler_name' => $sales->name,
+        'module_name' => 'Axis Sales',
+        'summary' => 'Verified shared report submission.',
+    ]);
+});
+
 it('redirects guests to sign-in before the workspace shell opens', function () {
     $this->get(route('admin.dashboard'))
         ->assertRedirect(route('login'));
@@ -298,6 +321,62 @@ it('denies module details for an unshared module', function () {
     $this->actingAs($sales)
         ->get(route('admin.modules.details', $module))
         ->assertForbidden();
+});
+
+it('lets Sales Person start and pause the timer on a task assigned to them', function () {
+    $this->freezeTime();
+    $sales = workspaceMemberWithRole(WorkspaceRole::SalesPerson);
+    $task = ProjectTask::factory()->create(['emp_id' => $sales->id]);
+
+    $this->actingAs($sales)
+        ->postJson(route('admin.api.tasks.timer.toggle', $task))
+        ->assertOk()
+        ->assertJsonPath('data.running', true);
+
+    expect($task->fresh()->is_running)->toBeTrue();
+
+    $this->travel(30)->seconds();
+
+    $this->actingAs($sales)
+        ->postJson(route('admin.api.tasks.timer.toggle', $task))
+        ->assertOk()
+        ->assertJsonPath('data.running', false)
+        ->assertJsonPath('data.actSeconds', 30);
+
+    expect($task->fresh())
+        ->act_seconds->toBe(30)
+        ->timer_started_at->toBeNull();
+});
+
+it('keeps logged time when Sales Person edits an assigned task', function () {
+    $this->freezeTime();
+    $sales = workspaceMemberWithRole(WorkspaceRole::SalesPerson);
+    $task = ProjectTask::factory()->running()->create([
+        'emp_id' => $sales->id,
+        'act_seconds' => 120,
+    ]);
+    $this->travel(30)->seconds();
+
+    $this->actingAs($sales)
+        ->patchJson(route('admin.api.tasks.update', $task), ['progress' => 50])
+        ->assertOk()
+        ->assertJsonPath('data.progress', 50)
+        ->assertJsonPath('data.actSeconds', 150);
+
+    expect($task->fresh())
+        ->act_seconds->toBe(120)
+        ->is_running->toBeTrue();
+});
+
+it('does not let Sales Person time-track a task assigned to someone else', function () {
+    $sales = workspaceMemberWithRole(WorkspaceRole::SalesPerson);
+    $task = ProjectTask::factory()->create();
+
+    $this->actingAs($sales)
+        ->postJson(route('admin.api.tasks.timer.toggle', $task))
+        ->assertForbidden();
+
+    expect($task->fresh()->is_running)->toBeFalse();
 });
 
 it('allows updates through an update share and persists the change', function () {

@@ -118,10 +118,15 @@ class AuthServiceProvider extends ServiceProvider
 
     /**
      * Update access follows the same hierarchy, but requires the update ability.
+     * A task's assignee can time-track and update their own task.
      */
     private function hasUpdateAccess(User $user, object $record): bool
     {
         if ($this->hasShare($user, $record, RecordShareAbility::Update)) {
+            return true;
+        }
+
+        if ($record instanceof ProjectTask && $record->emp_id === $user->id) {
             return true;
         }
 

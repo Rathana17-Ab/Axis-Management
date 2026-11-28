@@ -15,11 +15,11 @@ beforeEach(function () {
 });
 
 describe('store', function () {
-    it('creates a module with the next code and an initial architecture task', function () {
+    it('creates a module at the top of the custom order with the next code and an initial architecture task', function () {
         $this->freezeTime();
         $kong = User::factory()->create(['name' => 'Kong Rathana']);
         $this->actingAs($kong);
-        Module::factory()->create(['code' => 'PROJ-1888']);
+        $existing = Module::factory()->create(['code' => 'PROJ-1888', 'sort_order' => 1]);
         $project = Project::factory()->create(['name' => 'EOT Axis']);
         $lead = User::factory()->create(['name' => 'Ti Tong']);
 
@@ -33,7 +33,7 @@ describe('store', function () {
 
         $response->assertCreated()
             ->assertJsonPath('data.code', 'PROJ-1889')
-            ->assertJsonPath('data.sortOrder', 2)
+            ->assertJsonPath('data.sortOrder', 1)
             ->assertJsonPath('data.projBadge', 'A')
             ->assertJsonPath('data.custBadge', 'M')
             ->assertJsonPath('data.team', ['Ti Tong', 'Kong Rathana'])
@@ -50,9 +50,30 @@ describe('store', function () {
 
         $module = Module::firstWhere('code', 'PROJ-1889');
         expect($module->project_id)->toBe($project->id)
-            ->and($module->sort_order)->toBe(2)
+            ->and($module->sort_order)->toBe(1)
+            ->and($existing->fresh()->sort_order)->toBe(2)
             ->and($module->status)->toBe(WorkStatus::Processing)
             ->and($module->tasks()->count())->toBe(1);
+    });
+
+    it('shows a newly created module first in the workspace module list', function () {
+        $project = Project::factory()->create();
+        $zeta = Module::factory()->create(['code' => 'PROJ-1887', 'name' => 'Zeta Module', 'sort_order' => 1]);
+        $alpha = Module::factory()->create(['code' => 'PROJ-1888', 'name' => 'Alpha Module', 'sort_order' => 2]);
+
+        $createdId = $this->postJson(route('admin.api.modules.store'), [
+            'project_id' => $project->id,
+            'name' => 'Axis Payroll',
+            'customer_name' => 'Ms. Dara',
+            'manager_name' => 'Ti Tong',
+            'deadline' => now()->addDays(10)->toDateString(),
+        ])->assertCreated()->json('data.id');
+
+        $bootstrap = $this->get(route('admin.dashboard'))->viewData('bootstrap');
+        $moduleData = collect($bootstrap['projects']);
+
+        expect($moduleData->pluck('id')->all())->toBe([$createdId, $zeta->id, $alpha->id])
+            ->and($moduleData->pluck('sortOrder')->all())->toBe([1, 2, 3]);
     });
 
     it('stores the module description and start date', function () {

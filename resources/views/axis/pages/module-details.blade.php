@@ -113,4 +113,16 @@
                             </div>
                         </section>
                     </div>
+
+                    <!-- Reports filed for this module -->
+                    <section class="ent-card overflow-hidden" aria-labelledby="md-reports-title">
+                        <div class="flex flex-wrap items-center justify-between gap-3 border-b border-white/[0.06] px-5 py-4">
+                            <div>
+                                <h2 id="md-reports-title" class="text-sm font-bold text-white">Reports</h2>
+                                <p class="mt-0.5 text-xs text-slate-400">Daily and weekly reports filed for this module.</p>
+                            </div>
+                            <span id="md-reports-count" class="text-xs text-slate-400">0 reports</span>
+                        </div>
+                        <div id="md-reports" class="p-5"></div>
+                    </section>
                 </div>

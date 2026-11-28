@@ -32,8 +32,8 @@
             </select>
         </x-axis.drawer.field>
         <x-axis.drawer.field label="Progress (%)" for="edit-task-progress" name="progress" span="full"
-                             hint="Follows the status: 0% is Not yet started, 100% is Finished.">
-            <input type="number" id="edit-task-progress" min="0" max="100" step="5" class="axis-input sm:max-w-[200px]"
+                             hint="Up to two decimals, e.g. 15.35. Follows the status: 0% is Not yet started, 100% is Finished.">
+            <input type="number" id="edit-task-progress" min="0" max="100" step="0.01" inputmode="decimal" class="axis-input sm:max-w-[200px]"
                    oninput="syncTaskEditStatusFromProgress(this.value)">
         </x-axis.drawer.field>
     </x-axis.drawer.section>
